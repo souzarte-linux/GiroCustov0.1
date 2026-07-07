@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ui.GiroCustoMainApp
+import com.example.ui.navigation.GiroCustoMainApp
 import com.example.ui.GiroCustoViewModel
 
 class MainActivity : ComponentActivity() {
