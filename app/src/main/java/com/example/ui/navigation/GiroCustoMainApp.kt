@@ -1,4 +1,4 @@
-// TODO: Deixe um comentário // TODO no topo de ui/navigation/GiroCustoMainApp.kt indicando que este é o lugar previsto para futura implementação de menu lateral (drawer) e navegação para tela de perfil de usuário.
+// TODO: Implementar menu lateral (drawer) com acesso ao perfil de usuário, substituindo a navegação da aba Veículo.
 
 package com.example.ui.navigation
 
@@ -33,19 +33,25 @@ import com.example.ui.screens.HistoryScreen
 import com.example.ui.screens.LaunchScreen
 import com.example.ui.screens.ReportsScreen
 import com.example.ui.screens.VehicleScreen
+import com.example.ui.screens.ProfileScreen
+import kotlinx.coroutines.launch
 
 enum class GiroTab(val title: String, val icon: ImageVector) {
     PAINEL("Painel", Icons.Filled.Dashboard),
     LANCAR("Lançar", Icons.Filled.AddCircle),
     RELATORIOS("Relatórios", Icons.Filled.Analytics),
-    VEICULO("Veículo", Icons.Filled.TwoWheeler),
     HISTORICO("Histórico", Icons.Filled.History)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
     var currentTab by remember { mutableStateOf(GiroTab.PAINEL) }
+    var drawerDestination by remember { mutableStateOf(DrawerDestination.NONE) }
     
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val coroutineScope = rememberCoroutineScope()
+
     val vehicle by viewModel.vehicle.collectAsStateWithLifecycle()
     val parts by viewModel.parts.collectAsStateWithLifecycle()
     val records by viewModel.records.collectAsStateWithLifecycle()
@@ -92,69 +98,132 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
         )
     }
 
+    val currentScreen = remember(currentTab, drawerDestination) {
+        if (drawerDestination != DrawerDestination.NONE) {
+            drawerDestination
+        } else {
+            currentTab
+        }
+    }
+
     MaterialTheme(colorScheme = customColorScheme) {
         SmartphoneSimulator(isDark = isDark) {
-            Scaffold(
-                modifier = Modifier.fillMaxSize(),
-                bottomBar = {
-                    NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surface, // matching surface background
-                        tonalElevation = 0.dp,
-                        modifier = Modifier
-                            .windowInsetsPadding(WindowInsets.navigationBars)
-                            .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RectangleShape) // Subtle line border
-                    ) {
-                        GiroTab.values().forEach { tab ->
-                            val selected = currentTab == tab
-                            NavigationBarItem(
-                                selected = selected,
-                                onClick = { currentTab = tab },
-                                icon = {
-                                    Icon(
-                                        imageVector = tab.icon,
-                                        contentDescription = tab.title,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                },
-                                label = {
-                                    Text(
-                                        text = tab.title,
-                                        fontSize = 11.sp,
-                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = Color(0xFF10B981),
-                                    selectedTextColor = Color(0xFF10B981),
-                                    unselectedIconColor = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8), // slate-500 or slate-400
-                                    unselectedTextColor = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8),
-                                    indicatorColor = if (isDark) Color(0xFF064E3B) else Color(0xFFD1FAE5) // soft dark/light emerald capsule
-                                ),
-                                modifier = Modifier.testTag("nav_tab_${tab.name.lowercase()}")
-                            )
-                        }
+            AppDrawer(
+                drawerState = drawerState,
+                selectedDestination = drawerDestination,
+                onDestinationSelected = { dest ->
+                    drawerDestination = dest
+                    coroutineScope.launch {
+                        drawerState.close()
                     }
                 }
-            ) { paddingValues ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .background(MaterialTheme.colorScheme.background)
-                ) {
-                    AnimatedContent(
-                        targetState = currentTab,
-                        transitionSpec = {
-                            fadeIn() togetherWith fadeOut()
-                        },
-                        label = "tab_animation"
-                    ) { tab ->
-                        when (tab) {
-                            GiroTab.PAINEL -> DashboardScreen(viewModel, vehicle, parts, records)
-                            GiroTab.LANCAR -> LaunchScreen(viewModel, vehicle, parts)
-                            GiroTab.RELATORIOS -> ReportsScreen(viewModel, vehicle, parts, records)
-                            GiroTab.VEICULO -> VehicleScreen(viewModel, vehicle, parts)
-                            GiroTab.HISTORICO -> HistoryScreen(viewModel, vehicle, records)
+            ) {
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    topBar = {
+                        CenterAlignedTopAppBar(
+                            title = {
+                                Text(
+                                    text = when (currentScreen) {
+                                        DrawerDestination.VEICULO -> "Veículo"
+                                        DrawerDestination.PERFIL -> "Perfil"
+                                        GiroTab.PAINEL -> "Painel"
+                                        GiroTab.LANCAR -> "Lançar"
+                                        GiroTab.RELATORIOS -> "Relatórios"
+                                        GiroTab.HISTORICO -> "Histórico"
+                                        else -> "GiroCusto"
+                                    },
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp
+                                )
+                            },
+                            navigationIcon = {
+                                IconButton(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            drawerState.open()
+                                        }
+                                    },
+                                    modifier = Modifier.testTag("drawer_menu_btn")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Menu,
+                                        contentDescription = "Abrir Menu"
+                                    )
+                                }
+                            },
+                            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                titleContentColor = MaterialTheme.colorScheme.onSurface,
+                                navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            modifier = Modifier.border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RectangleShape)
+                        )
+                    },
+                    bottomBar = {
+                        NavigationBar(
+                            containerColor = MaterialTheme.colorScheme.surface, // matching surface background
+                            tonalElevation = 0.dp,
+                            modifier = Modifier
+                                .windowInsetsPadding(WindowInsets.navigationBars)
+                                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RectangleShape) // Subtle line border
+                        ) {
+                            GiroTab.values().forEach { tab ->
+                                val selected = drawerDestination == DrawerDestination.NONE && currentTab == tab
+                                NavigationBarItem(
+                                    selected = selected,
+                                    onClick = {
+                                        drawerDestination = DrawerDestination.NONE
+                                        currentTab = tab
+                                    },
+                                    icon = {
+                                        Icon(
+                                            imageVector = tab.icon,
+                                            contentDescription = tab.title,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    },
+                                    label = {
+                                        Text(
+                                            text = tab.title,
+                                            fontSize = 11.sp,
+                                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = Color(0xFF10B981),
+                                        selectedTextColor = Color(0xFF10B981),
+                                        unselectedIconColor = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8), // slate-500 or slate-400
+                                        unselectedTextColor = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8),
+                                        indicatorColor = if (isDark) Color(0xFF064E3B) else Color(0xFFD1FAE5) // soft dark/light emerald capsule
+                                    ),
+                                    modifier = Modifier.testTag("nav_tab_${tab.name.lowercase()}")
+                                )
+                            }
+                        }
+                    }
+                ) { paddingValues ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues)
+                            .background(MaterialTheme.colorScheme.background)
+                    ) {
+                        AnimatedContent(
+                            targetState = currentScreen,
+                            transitionSpec = {
+                                fadeIn() togetherWith fadeOut()
+                            },
+                            label = "screen_animation"
+                        ) { screen ->
+                            when (screen) {
+                                DrawerDestination.VEICULO -> VehicleScreen(viewModel, vehicle, parts)
+                                DrawerDestination.PERFIL -> ProfileScreen(viewModel)
+                                GiroTab.PAINEL -> DashboardScreen(viewModel, vehicle, parts, records)
+                                GiroTab.LANCAR -> LaunchScreen(viewModel, vehicle, parts)
+                                GiroTab.RELATORIOS -> ReportsScreen(viewModel, vehicle, parts, records)
+                                GiroTab.HISTORICO -> HistoryScreen(viewModel, vehicle, records)
+                            }
                         }
                     }
                 }

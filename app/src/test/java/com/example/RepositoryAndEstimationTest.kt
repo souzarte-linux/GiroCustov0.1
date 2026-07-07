@@ -397,4 +397,37 @@ class RepositoryAndEstimationTest {
         viewModel.viewModelScope.cancel()
         advanceTimeBy(6000)
     }
+
+    @Test
+    fun testUserProfileCreationAndUpdate() = runTest(testDispatcher) {
+        val initialProfile = repository.userProfileFlow.first()
+        assertNull(initialProfile)
+
+        val profile = UserProfile(
+            name = "John Doe",
+            phone = "11999998888",
+            city = "São Paulo",
+            platforms = "iFood, Uber"
+        )
+        repository.saveUserProfile(profile)
+
+        val savedProfile = repository.userProfileFlow.first()
+        assertNotNull(savedProfile)
+        assertEquals("John Doe", savedProfile!!.name)
+        assertEquals("11999998888", savedProfile.phone)
+        assertEquals("São Paulo", savedProfile.city)
+        assertEquals("iFood, Uber", savedProfile.platforms)
+
+        val updatedProfile = savedProfile.copy(
+            name = "Jane Doe",
+            platforms = "Rappi, Loggi"
+        )
+        repository.saveUserProfile(updatedProfile)
+
+        val finalProfile = repository.getUserProfile()
+        assertNotNull(finalProfile)
+        assertEquals("Jane Doe", finalProfile!!.name)
+        assertEquals("11999998888", finalProfile.phone)
+        assertEquals("Rappi, Loggi", finalProfile.platforms)
+    }
 }

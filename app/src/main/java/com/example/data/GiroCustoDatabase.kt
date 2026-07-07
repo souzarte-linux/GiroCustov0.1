@@ -8,14 +8,15 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Vehicle::class, VehiclePart::class, DailyRecord::class],
-    version = 2,
+    entities = [Vehicle::class, VehiclePart::class, DailyRecord::class, UserProfile::class],
+    version = 3,
     exportSchema = true
 )
 abstract class GiroCustoDatabase : RoomDatabase() {
     abstract fun vehicleDao(): VehicleDao
     abstract fun vehiclePartDao(): VehiclePartDao
     abstract fun dailyRecordDao(): DailyRecordDao
+    abstract fun userProfileDao(): UserProfileDao
 
     companion object {
         @Volatile
@@ -27,6 +28,20 @@ abstract class GiroCustoDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `user_profile` (" +
+                    "`id` INTEGER NOT NULL, " +
+                    "`name` TEXT NOT NULL, " +
+                    "`phone` TEXT NOT NULL, " +
+                    "`city` TEXT NOT NULL, " +
+                    "`platforms` TEXT NOT NULL, " +
+                    "PRIMARY KEY(`id`))"
+                )
+            }
+        }
+
         fun getDatabase(context: Context): GiroCustoDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -34,7 +49,7 @@ abstract class GiroCustoDatabase : RoomDatabase() {
                     GiroCustoDatabase::class.java,
                     "giro_custo_database"
                 )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
                 INSTANCE = instance
                 instance

@@ -11,13 +11,18 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
     private val vehicleDao = db.vehicleDao()
     private val partDao = db.vehiclePartDao()
     private val recordDao = db.dailyRecordDao()
+    private val userProfileDao = db.userProfileDao()
 
     val vehicleFlow: Flow<Vehicle?> = vehicleDao.getVehicleFlow()
     val allPartsFlow: Flow<List<VehiclePart>> = partDao.getAllPartsFlow()
     val allRecordsFlow: Flow<List<DailyRecord>> = recordDao.getAllRecordsFlow()
+    val userProfileFlow: Flow<UserProfile?> = userProfileDao.getUserProfileFlow()
 
     suspend fun getVehicle(): Vehicle? = vehicleDao.getVehicle()
     suspend fun saveVehicle(vehicle: Vehicle) = vehicleDao.insertOrUpdateVehicle(vehicle)
+
+    suspend fun getUserProfile(): UserProfile? = userProfileDao.getUserProfile()
+    suspend fun saveUserProfile(userProfile: UserProfile) = userProfileDao.insertOrUpdateUserProfile(userProfile)
 
     suspend fun savePart(part: VehiclePart) = partDao.insertPart(part)
     suspend fun updatePart(part: VehiclePart) = partDao.updatePart(part)

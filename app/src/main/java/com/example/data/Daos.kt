@@ -59,3 +59,16 @@ interface DailyRecordDao {
     @Query("SELECT * FROM daily_records ORDER BY dateTimestamp DESC LIMIT 1")
     suspend fun getMostRecentRecord(): DailyRecord?
 }
+
+@Dao
+interface UserProfileDao {
+    @Query("SELECT * FROM user_profile WHERE id = 1 LIMIT 1")
+    fun getUserProfileFlow(): Flow<UserProfile?>
+
+    @Query("SELECT * FROM user_profile WHERE id = 1 LIMIT 1")
+    suspend fun getUserProfile(): UserProfile?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdateUserProfile(userProfile: UserProfile)
+}
+

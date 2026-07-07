@@ -25,6 +25,9 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     val vehicle: StateFlow<Vehicle?> = repository.vehicleFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    val userProfile: StateFlow<UserProfile?> = repository.userProfileFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     val parts: StateFlow<List<VehiclePart>> = repository.allPartsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -181,6 +184,25 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
                 plannedWorkDays = workDays
             )
             repository.saveVehicle(updated)
+        }
+    }
+
+    // Ações do Perfil de Usuário
+    fun updateUserProfile(
+        name: String,
+        phone: String,
+        city: String,
+        platforms: String
+    ) {
+        viewModelScope.launch {
+            val current = repository.getUserProfile() ?: UserProfile()
+            val updated = current.copy(
+                name = name,
+                phone = phone,
+                city = city,
+                platforms = platforms
+            )
+            repository.saveUserProfile(updated)
         }
     }
 

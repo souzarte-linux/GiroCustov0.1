@@ -52,3 +52,13 @@ data class DailyRecord(
     val kmRodados: Double
         get() = (endOdometer - startOdometer).coerceAtLeast(0.0)
 }
+
+@Entity(tableName = "user_profile")
+data class UserProfile(
+    @PrimaryKey val id: Int = 1,
+    val name: String = "",
+    val phone: String = "",
+    val city: String = "",
+    val platforms: String = "" // plataformas que atua, ex: "iFood, Uber Flash"
+)
+
