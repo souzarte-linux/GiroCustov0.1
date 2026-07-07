@@ -37,6 +37,7 @@ data class DailyRecord(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val dateString: String, // formato "YYYY-MM-DD"
     val dateTimestamp: Long, // timestamp para ordenação e busca por período
+    val platform: String = "Geral", // Nome da plataforma (ex: iFood, Uber Flash)
     val grossEarnings: Double, // Faturamento Bruto
     val deliveriesCount: Int, // Quantidade de entregas
     val startOdometer: Double, // Hodômetro Inicial

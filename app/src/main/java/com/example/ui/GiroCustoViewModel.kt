@@ -11,9 +11,10 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 enum class Period {
-    LAST_7_DAYS,
-    LAST_30_DAYS,
-    ALL_TIME
+    SEMANA,
+    QUINZENA,
+    MENSAL,
+    PERSONALIZADO
 }
 
 class GiroCustoViewModel(application: Application) : AndroidViewModel(application) {
@@ -31,8 +32,17 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Estado de Período Selecionado no Dashboard
-    private val _selectedPeriod = MutableStateFlow(Period.LAST_7_DAYS)
+    private val _selectedPeriod = MutableStateFlow(Period.SEMANA)
     val selectedPeriod: StateFlow<Period> = _selectedPeriod.asStateFlow()
+
+    // Estados para Período Personalizado
+    val customStartDate = MutableStateFlow(System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000)
+    val customEndDate = MutableStateFlow(System.currentTimeMillis())
+
+    fun setCustomPeriod(start: Long, end: Long) {
+        customStartDate.value = start
+        customEndDate.value = end
+    }
 
     // Estado do Formulário de Lançamento (Lançar Novo Dia)
     var startOdometer = MutableStateFlow("")
@@ -41,6 +51,12 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     var deliveriesCount = MutableStateFlow("")
     var fuelPrice = MutableStateFlow("")
     var foodExpense = MutableStateFlow("")
+    val launchDateTimestamp = MutableStateFlow(System.currentTimeMillis())
+    val platform = MutableStateFlow("iFood")
+
+    fun setLaunchDate(timestamp: Long) {
+        launchDateTimestamp.value = timestamp
+    }
 
     // Preferências de Metas
     private val prefs = application.getSharedPreferences("giro_custo_goals", Context.MODE_PRIVATE)
@@ -102,6 +118,8 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
         grossEarnings.value = ""
         deliveriesCount.value = ""
         foodExpense.value = ""
+        launchDateTimestamp.value = System.currentTimeMillis()
+        platform.value = "iFood"
     }
 
     // Salvar Metas nas SharedPreferences
@@ -215,12 +233,15 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
 
             try {
                 val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                val todayStr = dateFormat.format(Date())
-                val todayTimestamp = System.currentTimeMillis()
+                val dateToUse = Date(launchDateTimestamp.value)
+                val dateStr = dateFormat.format(dateToUse)
+                val timestampToUse = launchDateTimestamp.value
+                val platformVal = platform.value.trim().ifBlank { "iFood" }
 
                 repository.insertDailyRecord(
-                    dateString = todayStr,
-                    dateTimestamp = todayTimestamp,
+                    dateString = dateStr,
+                    dateTimestamp = timestampToUse,
+                    platform = platformVal,
                     grossEarnings = grossVal,
                     deliveriesCount = deliveriesVal,
                     startOdometer = startOdoVal,
@@ -241,6 +262,45 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     fun deleteDailyRecord(record: DailyRecord) {
         viewModelScope.launch {
             repository.deleteRecord(record)
+        }
+    }
+
+    fun updateDailyRecord(
+        recordId: Long,
+        dateString: String,
+        dateTimestamp: Long,
+        platform: String,
+        grossEarnings: Double,
+        deliveriesCount: Int,
+        startOdometer: Double,
+        endOdometer: Double,
+        fuelPrice: Double,
+        foodExpense: Double,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            if (endOdometer < startOdometer) {
+                onError("O hodômetro final não pode ser menor que o inicial.")
+                return@launch
+            }
+            try {
+                repository.updateDailyRecord(
+                    recordId = recordId,
+                    dateString = dateString,
+                    dateTimestamp = dateTimestamp,
+                    platform = platform,
+                    grossEarnings = grossEarnings,
+                    deliveriesCount = deliveriesCount,
+                    startOdometer = startOdometer,
+                    endOdometer = endOdometer,
+                    fuelPrice = fuelPrice,
+                    foodExpense = foodExpense
+                )
+                onSuccess()
+            } catch (e: Exception) {
+                onError("Erro ao atualizar lançamento: ${e.localizedMessage}")
+            }
         }
     }
 

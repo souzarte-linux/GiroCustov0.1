@@ -3,6 +3,8 @@ package com.example.ui
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -45,7 +47,8 @@ enum class GiroTab(val title: String, val icon: ImageVector) {
     PAINEL("Painel", Icons.Filled.Dashboard),
     LANCAR("Lançar", Icons.Filled.AddCircle),
     RELATORIOS("Relatórios", Icons.Filled.Analytics),
-    VEICULO("Veículo", Icons.Filled.TwoWheeler)
+    VEICULO("Veículo", Icons.Filled.TwoWheeler),
+    HISTORICO("Histórico", Icons.Filled.History)
 }
 
 // Smartphone Simulator Wrapper
@@ -302,6 +305,7 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
                             GiroTab.LANCAR -> LaunchScreen(viewModel, vehicle, parts)
                             GiroTab.RELATORIOS -> ReportsScreen(viewModel, vehicle, parts, records)
                             GiroTab.VEICULO -> VehicleScreen(viewModel, vehicle, parts)
+                            GiroTab.HISTORICO -> HistoryScreen(viewModel, vehicle, records)
                         }
                     }
                 }
@@ -319,18 +323,40 @@ fun DashboardScreen(
     records: List<DailyRecord>
 ) {
     val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
+    val customStart by viewModel.customStartDate.collectAsStateWithLifecycle()
+    val customEnd by viewModel.customEndDate.collectAsStateWithLifecycle()
     val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
+    var showCustomPeriodDialog by remember { mutableStateOf(false) }
 
     // Filtrar registros por período
-    val filteredRecords = remember(records, selectedPeriod) {
+    val filteredRecords = remember(records, selectedPeriod, customStart, customEnd) {
         val now = System.currentTimeMillis()
-        val limit = when (selectedPeriod) {
-            Period.LAST_7_DAYS -> now - 7L * 24 * 60 * 60 * 1000
-            Period.LAST_30_DAYS -> now - 30L * 24 * 60 * 60 * 1000
-            Period.ALL_TIME -> 0L
+        if (selectedPeriod == Period.PERSONALIZADO) {
+            val calStart = Calendar.getInstance().apply {
+                timeInMillis = customStart
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val calEnd = Calendar.getInstance().apply {
+                timeInMillis = customEnd
+                set(Calendar.HOUR_OF_DAY, 23)
+                set(Calendar.MINUTE, 59)
+                set(Calendar.SECOND, 59)
+                set(Calendar.MILLISECOND, 999)
+            }
+            records.filter { it.dateTimestamp in calStart.timeInMillis..calEnd.timeInMillis }
+        } else {
+            val limit = when (selectedPeriod) {
+                Period.SEMANA -> now - 7L * 24 * 60 * 60 * 1000
+                Period.QUINZENA -> now - 15L * 24 * 60 * 60 * 1000
+                Period.MENSAL -> now - 30L * 24 * 60 * 60 * 1000
+                else -> 0L
+            }
+            records.filter { it.dateTimestamp >= limit }
         }
-        records.filter { it.dateTimestamp >= limit }
     }
 
     // Cálculos de Métricas
@@ -400,35 +426,125 @@ fun DashboardScreen(
                     )
                 }
 
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.surface) // Dynamic Surface Charcoal
-                        .padding(2.dp)
-                        .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(10.dp))
-                ) {
-                    listOf(
-                        Period.LAST_7_DAYS to "7D",
-                        Period.LAST_30_DAYS to "30D",
-                        Period.ALL_TIME to "Tudo"
-                    ).forEach { (period, label) ->
-                        val isSelected = selectedPeriod == period
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) Color(0xFF10B981) else Color.Transparent)
-                                .clickable { viewModel.setPeriod(period) }
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Text(
-                                text = label,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSelected) Color(0xFF064E3B) else MaterialTheme.colorScheme.onSurfaceVariant // high contrast selected text
-                            )
+                var dropdownExpanded by remember { mutableStateOf(false) }
+
+                Box {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.surface) // Dynamic Surface Charcoal
+                            .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(10.dp))
+                            .clickable { dropdownExpanded = true }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val selectedLabel = when (selectedPeriod) {
+                            Period.SEMANA -> "Semana"
+                            Period.QUINZENA -> "Quinzena"
+                            Period.MENSAL -> "Mensal"
+                            Period.PERSONALIZADO -> "Personalizado"
                         }
+                        Text(
+                            text = selectedLabel,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Icon(
+                            imageVector = Icons.Filled.ArrowDropDown,
+                            contentDescription = "Selecionar Período",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = dropdownExpanded,
+                        onDismissRequest = { dropdownExpanded = false },
+                        modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Semana", fontSize = 14.sp) },
+                            onClick = {
+                                viewModel.setPeriod(Period.SEMANA)
+                                dropdownExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Quinzena", fontSize = 14.sp) },
+                            onClick = {
+                                viewModel.setPeriod(Period.QUINZENA)
+                                dropdownExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Mensal", fontSize = 14.sp) },
+                            onClick = {
+                                viewModel.setPeriod(Period.MENSAL)
+                                dropdownExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Personalizado", fontSize = 14.sp) },
+                            onClick = {
+                                viewModel.setPeriod(Period.PERSONALIZADO)
+                                dropdownExpanded = false
+                                showCustomPeriodDialog = true
+                            }
+                        )
                     }
                 }
+            }
+        }
+
+        if (showCustomPeriodDialog) {
+            CustomPeriodDialog(
+                initialStart = customStart,
+                initialEnd = customEnd,
+                onDismiss = { showCustomPeriodDialog = false },
+                onConfirm = { start, end ->
+                    viewModel.setCustomPeriod(start, end)
+                    showCustomPeriodDialog = false
+                }
+            )
+        }
+
+        if (selectedPeriod == Period.PERSONALIZADO) {
+            val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
+                    .clickable { showCustomPeriodDialog = true }
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.DateRange,
+                        contentDescription = "Calendário",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "Filtro: ${dateFormat.format(Date(customStart))} até ${dateFormat.format(Date(customEnd))}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Filled.Edit,
+                    contentDescription = "Alterar Período",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
 
@@ -450,12 +566,19 @@ fun DashboardScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val displayFormat = remember { SimpleDateFormat("dd/MM", Locale.getDefault()) }
+                    val labelPeriod = when (selectedPeriod) {
+                        Period.SEMANA -> "LUCRO LÍQUIDO (SEMANA)"
+                        Period.QUINZENA -> "LUCRO LÍQUIDO (QUINZENA)"
+                        Period.MENSAL -> "LUCRO LÍQUIDO (MENSAL)"
+                        Period.PERSONALIZADO -> {
+                            val startStr = displayFormat.format(Date(customStart))
+                            val endStr = displayFormat.format(Date(customEnd))
+                            "LUCRO LÍQUIDO ($startStr - $endStr)"
+                        }
+                    }
                     Text(
-                        text = when (selectedPeriod) {
-                            Period.LAST_7_DAYS -> "LUCRO LÍQUIDO (7D)"
-                            Period.LAST_30_DAYS -> "LUCRO LÍQUIDO (30D)"
-                            Period.ALL_TIME -> "LUCRO LÍQUIDO TOTAL"
-                        },
+                        text = labelPeriod,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF34D399), // Soft vibrant emerald
@@ -765,6 +888,157 @@ fun DashboardScreen(
 }
 
 @Composable
+fun CustomPeriodDialog(
+    initialStart: Long,
+    initialEnd: Long,
+    onDismiss: () -> Unit,
+    onConfirm: (Long, Long) -> Unit
+) {
+    val context = LocalContext.current
+    var startTimestamp by remember { mutableStateOf(initialStart) }
+    var endTimestamp by remember { mutableStateOf(initialEnd) }
+
+    val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Período Personalizado",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+
+                // Start Date selector
+                Button(
+                    onClick = {
+                        val calendar = Calendar.getInstance().apply { timeInMillis = startTimestamp }
+                        android.app.DatePickerDialog(
+                            context,
+                            { _, year, month, dayOfMonth ->
+                                val newCal = Calendar.getInstance().apply {
+                                    set(Calendar.YEAR, year)
+                                    set(Calendar.MONTH, month)
+                                    set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                                    set(Calendar.HOUR_OF_DAY, 0)
+                                    set(Calendar.MINUTE, 0)
+                                    set(Calendar.SECOND, 0)
+                                    set(Calendar.MILLISECOND, 0)
+                                }
+                                startTimestamp = newCal.timeInMillis
+                            },
+                            calendar.get(Calendar.YEAR),
+                            calendar.get(Calendar.MONTH),
+                            calendar.get(Calendar.DAY_OF_MONTH)
+                        ).show()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("De:", color = MaterialTheme.colorScheme.onSecondaryContainer, fontSize = 14.sp)
+                        Text(
+                            text = dateFormat.format(Date(startTimestamp)),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+
+                // End Date selector
+                Button(
+                    onClick = {
+                        val calendar = Calendar.getInstance().apply { timeInMillis = endTimestamp }
+                        android.app.DatePickerDialog(
+                            context,
+                            { _, year, month, dayOfMonth ->
+                                val newCal = Calendar.getInstance().apply {
+                                    set(Calendar.YEAR, year)
+                                    set(Calendar.MONTH, month)
+                                    set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                                    set(Calendar.HOUR_OF_DAY, 23)
+                                    set(Calendar.MINUTE, 59)
+                                    set(Calendar.SECOND, 59)
+                                    set(Calendar.MILLISECOND, 999)
+                                }
+                                endTimestamp = newCal.timeInMillis
+                            },
+                            calendar.get(Calendar.YEAR),
+                            calendar.get(Calendar.MONTH),
+                            calendar.get(Calendar.DAY_OF_MONTH)
+                        ).show()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Até:", color = MaterialTheme.colorScheme.onSecondaryContainer, fontSize = 14.sp)
+                        Text(
+                            text = dateFormat.format(Date(endTimestamp)),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Button(
+                        onClick = {
+                            if (startTimestamp <= endTimestamp) {
+                                onConfirm(startTimestamp, endTimestamp)
+                            } else {
+                                android.widget.Toast.makeText(context, "A data inicial deve ser anterior à data final!", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Aplicar", color = MaterialTheme.colorScheme.onPrimary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun GoalCard(
     title: String,
     grossAct: Double, grossGoal: Double,
@@ -988,6 +1262,7 @@ fun LaunchScreen(
     val deliveries by viewModel.deliveriesCount.collectAsStateWithLifecycle()
     val fuelPr by viewModel.fuelPrice.collectAsStateWithLifecycle()
     val foodExp by viewModel.foodExpense.collectAsStateWithLifecycle()
+    val platformVal by viewModel.platform.collectAsStateWithLifecycle()
 
     val estimate by viewModel.realTimeEstimation.collectAsStateWithLifecycle(initialValue = EstimationDetail())
 
@@ -1053,6 +1328,89 @@ fun LaunchScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                val launchDate by viewModel.launchDateTimestamp.collectAsStateWithLifecycle()
+                val dateDisplayFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
+                val dateStr = remember(launchDate) { dateDisplayFormat.format(Date(launchDate)) }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable {
+                            val calendar = Calendar.getInstance().apply { timeInMillis = launchDate }
+                            android.app.DatePickerDialog(
+                                context,
+                                { _, year, month, dayOfMonth ->
+                                    val newCal = Calendar.getInstance().apply {
+                                        set(Calendar.YEAR, year)
+                                        set(Calendar.MONTH, month)
+                                        set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                                    }
+                                    viewModel.setLaunchDate(newCal.timeInMillis)
+                                },
+                                calendar.get(Calendar.YEAR),
+                                calendar.get(Calendar.MONTH),
+                                calendar.get(Calendar.DAY_OF_MONTH)
+                            ).show()
+                        }
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                        .testTag("launch_date_picker_btn"),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.DateRange,
+                            contentDescription = "Selecionar Data",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Column {
+                            Text(
+                                text = "Data do Lançamento",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = dateStr,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = "Editar Data",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+
+                TextField(
+                    value = platformVal,
+                    onValueChange = { viewModel.platform.value = it },
+                    label = { Text("Plataforma (ex: iFood, Uber, Rappi)") },
+                    modifier = Modifier.fillMaxWidth().testTag("input_platform"),
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Storefront,
+                            contentDescription = "Plataforma",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
+                    singleLine = true
+                )
+
+                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     TextField(
                         value = startOdo,
@@ -2332,6 +2690,762 @@ fun EditPartDialog(
                             val r = runKm.toDoubleOrNull() ?: 0.0
                             if (name.isNotBlank() && p > 0.0) {
                                 onSave(name, p, l, r)
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Salvar", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ------------------- TELA 5: HISTÓRICO DE LANÇAMENTOS -------------------
+enum class HistorySortOption(val label: String) {
+    DATA_DECRESCENTE("Data decrescente"),
+    DATA_CRESCENTE("Data crescente"),
+    LUCRO_MAIOR("Lucro do Maior"),
+    LUCRO_MENOR("Lucro do Menor"),
+    KM_MAIOR("Por Maior KM"),
+    KM_MENOR("Por Menor KM"),
+    ENTREGAS("Quantidade Entregas")
+}
+
+@Composable
+fun HistoryScreen(
+    viewModel: GiroCustoViewModel,
+    vehicle: com.example.data.Vehicle?,
+    records: List<DailyRecord>
+) {
+    val context = LocalContext.current
+    val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
+
+    var showEditDialog by remember { mutableStateOf(false) }
+    var recordToEdit by remember { mutableStateOf<DailyRecord?>(null) }
+
+    // Estados dos novos filtros
+    var historyPeriod by remember { mutableStateOf(Period.SEMANA) }
+    var historyCustomStart by remember { mutableStateOf(System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000) }
+    var historyCustomEnd by remember { mutableStateOf(System.currentTimeMillis()) }
+    var showHistoryCustomPeriodDialog by remember { mutableStateOf(false) }
+
+    val platformsList = remember(records) {
+        listOf("Todas") + records.map { it.platform }.distinct().filter { it.isNotBlank() }
+    }
+    var selectedPlatformFilter by remember { mutableStateOf("Todas") }
+
+    LaunchedEffect(platformsList) {
+        if (selectedPlatformFilter !in platformsList) {
+            selectedPlatformFilter = "Todas"
+        }
+    }
+
+    var selectedSortOption by remember { mutableStateOf(HistorySortOption.DATA_DECRESCENTE) }
+
+    var periodExpanded by remember { mutableStateOf(false) }
+    var platformExpanded by remember { mutableStateOf(false) }
+    var sortExpanded by remember { mutableStateOf(false) }
+
+    // Filtragem e Ordenação
+    val filteredAndSortedRecords = remember(records, historyPeriod, historyCustomStart, historyCustomEnd, selectedPlatformFilter, selectedSortOption) {
+        val now = System.currentTimeMillis()
+        
+        // 1. Filtrar por Período
+        val dateFiltered = if (historyPeriod == Period.PERSONALIZADO) {
+            val calStart = Calendar.getInstance().apply {
+                timeInMillis = historyCustomStart
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val calEnd = Calendar.getInstance().apply {
+                timeInMillis = historyCustomEnd
+                set(Calendar.HOUR_OF_DAY, 23)
+                set(Calendar.MINUTE, 59)
+                set(Calendar.SECOND, 59)
+                set(Calendar.MILLISECOND, 999)
+            }
+            records.filter { it.dateTimestamp in calStart.timeInMillis..calEnd.timeInMillis }
+        } else {
+            val limit = when (historyPeriod) {
+                Period.SEMANA -> now - 7L * 24 * 60 * 60 * 1000
+                Period.QUINZENA -> now - 15L * 24 * 60 * 60 * 1000
+                Period.MENSAL -> now - 30L * 24 * 60 * 60 * 1000
+                else -> 0L
+            }
+            records.filter { it.dateTimestamp >= limit }
+        }
+
+        // 2. Filtrar por Plataforma
+        val platformFiltered = if (selectedPlatformFilter == "Todas") {
+            dateFiltered
+        } else {
+            dateFiltered.filter { it.platform.equals(selectedPlatformFilter, ignoreCase = true) }
+        }
+
+        // 3. Ordenar
+        when (selectedSortOption) {
+            HistorySortOption.DATA_DECRESCENTE -> platformFiltered.sortedByDescending { it.dateTimestamp }
+            HistorySortOption.DATA_CRESCENTE -> platformFiltered.sortedBy { it.dateTimestamp }
+            HistorySortOption.LUCRO_MAIOR -> platformFiltered.sortedByDescending { it.netProfit }
+            HistorySortOption.LUCRO_MENOR -> platformFiltered.sortedBy { it.netProfit }
+            HistorySortOption.KM_MAIOR -> platformFiltered.sortedByDescending { it.kmRodados }
+            HistorySortOption.KM_MENOR -> platformFiltered.sortedBy { it.kmRodados }
+            HistorySortOption.ENTREGAS -> platformFiltered.sortedByDescending { it.deliveriesCount }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Histórico",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+
+            IconButton(
+                onClick = { viewModel.toggleTheme() },
+                modifier = Modifier.size(36.dp).testTag("theme_toggle_btn_history")
+            ) {
+                Icon(
+                    imageVector = if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
+                    contentDescription = "Alternar Tema",
+                    tint = if (isDark) Color(0xFFF59E0B) else Color(0xFF64748B),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        // Dropdowns de Filtros
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Dropdown 1: Período
+            Box(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(10.dp))
+                        .clickable { periodExpanded = true }
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    val label = when (historyPeriod) {
+                        Period.SEMANA -> "Semana"
+                        Period.QUINZENA -> "Quinzena"
+                        Period.MENSAL -> "Mensal"
+                        Period.PERSONALIZADO -> "Personaliz."
+                    }
+                    Text(
+                        text = label,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                    Icon(
+                        imageVector = Icons.Filled.ArrowDropDown,
+                        contentDescription = "Selecionar Período",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                DropdownMenu(
+                    expanded = periodExpanded,
+                    onDismissRequest = { periodExpanded = false },
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Semana", fontSize = 13.sp) },
+                        onClick = {
+                            historyPeriod = Period.SEMANA
+                            periodExpanded = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Quinzena", fontSize = 13.sp) },
+                        onClick = {
+                            historyPeriod = Period.QUINZENA
+                            periodExpanded = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Mensal", fontSize = 13.sp) },
+                        onClick = {
+                            historyPeriod = Period.MENSAL
+                            periodExpanded = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Personalizado", fontSize = 13.sp) },
+                        onClick = {
+                            historyPeriod = Period.PERSONALIZADO
+                            periodExpanded = false
+                            showHistoryCustomPeriodDialog = true
+                        }
+                    )
+                }
+            }
+
+            // Dropdown 2: Plataforma
+            Box(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(10.dp))
+                        .clickable { platformExpanded = true }
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = selectedPlatformFilter,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                    Icon(
+                        imageVector = Icons.Filled.ArrowDropDown,
+                        contentDescription = "Filtrar Plataforma",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                DropdownMenu(
+                    expanded = platformExpanded,
+                    onDismissRequest = { platformExpanded = false },
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                ) {
+                    platformsList.forEach { p ->
+                        DropdownMenuItem(
+                            text = { Text(p, fontSize = 13.sp) },
+                            onClick = {
+                                selectedPlatformFilter = p
+                                platformExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Dropdown 3: Ordenação
+            Box(modifier = Modifier.weight(1.2f)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(10.dp))
+                        .clickable { sortExpanded = true }
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    val sortShortLabel = when (selectedSortOption) {
+                        HistorySortOption.DATA_DECRESCENTE -> "Data Recente"
+                        HistorySortOption.DATA_CRESCENTE -> "Data Antiga"
+                        HistorySortOption.LUCRO_MAIOR -> "Maior Lucro"
+                        HistorySortOption.LUCRO_MENOR -> "Menor Lucro"
+                        HistorySortOption.KM_MAIOR -> "Maior KM"
+                        HistorySortOption.KM_MENOR -> "Menor KM"
+                        HistorySortOption.ENTREGAS -> "Entregas"
+                    }
+                    Text(
+                        text = sortShortLabel,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                    Icon(
+                        imageVector = Icons.Filled.ArrowDropDown,
+                        contentDescription = "Ordenar por",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                DropdownMenu(
+                    expanded = sortExpanded,
+                    onDismissRequest = { sortExpanded = false },
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                ) {
+                    HistorySortOption.values().forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option.label, fontSize = 13.sp) },
+                            onClick = {
+                                selectedSortOption = option
+                                sortExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        if (historyPeriod == Period.PERSONALIZADO) {
+            val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
+                    .clickable { showHistoryCustomPeriodDialog = true }
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.DateRange,
+                        contentDescription = "Calendário",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "Filtro: ${dateFormat.format(Date(historyCustomStart))} até ${dateFormat.format(Date(historyCustomEnd))}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Filled.Edit,
+                    contentDescription = "Alterar Período",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+
+        if (filteredAndSortedRecords.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (records.isEmpty()) "Nenhum turno lançado ainda." else "Nenhum lançamento corresponde aos filtros.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 14.sp
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(filteredAndSortedRecords) { record ->
+                    HistoryRecordCard(
+                        record = record,
+                        onEditClick = {
+                            recordToEdit = record
+                            showEditDialog = true
+                        },
+                        onDeleteClick = {
+                            viewModel.deleteDailyRecord(record)
+                            android.widget.Toast.makeText(context, "Lançamento excluído com sucesso!", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    if (showHistoryCustomPeriodDialog) {
+        CustomPeriodDialog(
+            initialStart = historyCustomStart,
+            initialEnd = historyCustomEnd,
+            onDismiss = { showHistoryCustomPeriodDialog = false },
+            onConfirm = { start, end ->
+                historyCustomStart = start
+                historyCustomEnd = end
+                showHistoryCustomPeriodDialog = false
+            }
+        )
+    }
+
+    if (showEditDialog && recordToEdit != null) {
+        EditRecordDialog(
+            record = recordToEdit!!,
+            onDismiss = {
+                showEditDialog = false
+                recordToEdit = null
+            },
+            onSave = { platform, startOdo, endOdo, gross, deliveries, fuelPrice, foodExpense ->
+                viewModel.updateDailyRecord(
+                    recordId = recordToEdit!!.id,
+                    dateString = recordToEdit!!.dateString,
+                    dateTimestamp = recordToEdit!!.dateTimestamp,
+                    platform = platform,
+                    grossEarnings = gross,
+                    deliveriesCount = deliveries,
+                    startOdometer = startOdo,
+                    endOdometer = endOdo,
+                    fuelPrice = fuelPrice,
+                    foodExpense = foodExpense,
+                    onSuccess = {
+                        showEditDialog = false
+                        recordToEdit = null
+                    },
+                    onError = { error ->
+                        android.widget.Toast.makeText(context, error, android.widget.Toast.LENGTH_LONG).show()
+                    }
+                )
+            }
+        )
+    }
+}
+
+@Composable
+fun HistoryRecordCard(
+    record: DailyRecord,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().testTag("history_item_${record.id}"),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Header Row: Date & Actions
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Storefront,
+                        contentDescription = "Plataforma",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = record.platform,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 14.sp
+                    )
+
+                    Text(
+                        text = "•",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        fontSize = 14.sp
+                    )
+
+                    Icon(
+                        imageVector = Icons.Filled.DateRange,
+                        contentDescription = "Data",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    val formattedDate = remember(record.dateTimestamp) {
+                        try {
+                            SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(record.dateTimestamp))
+                        } catch (e: Exception) {
+                            record.dateString
+                        }
+                    }
+                    Text(
+                        text = formattedDate,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+                }
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    IconButton(
+                        onClick = onEditClick,
+                        modifier = Modifier.size(28.dp).testTag("edit_record_btn_${record.id}")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Edit,
+                            contentDescription = "Editar Lançamento",
+                            tint = Color(0xFF38BDF8),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = onDeleteClick,
+                        modifier = Modifier.size(28.dp).testTag("delete_record_btn_${record.id}")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Delete,
+                            contentDescription = "Excluir Lançamento",
+                            tint = Color(0xFFF43F5E),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+
+            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+
+            // Body Metrics
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("Ganhos Brutos", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = String.format(Locale.GERMAN, "R$ %.2f", record.grossEarnings),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Column {
+                    Text("Km Rodados", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = String.format(Locale.GERMAN, "%.1f km", record.kmRodados),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Column {
+                    Text("Entregas", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = "${record.deliveriesCount} ent.",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("Custo Combustível", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = String.format(Locale.GERMAN, "R$ %.2f", record.fuelCost),
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Column {
+                    Text("Desgaste/Peças", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = String.format(Locale.GERMAN, "R$ %.2f", record.wearCost),
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Column {
+                    Text("Alimentação", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = String.format(Locale.GERMAN, "R$ %.2f", record.foodExpense),
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "LUCRO LÍQUIDO",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = String.format(Locale.GERMAN, "R$ %.2f", record.netProfit),
+                    fontWeight = FontWeight.Black,
+                    fontSize = 16.sp,
+                    color = if (record.netProfit >= 0) Color(0xFF10B981) else Color(0xFFF43F5E)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun EditRecordDialog(
+    record: DailyRecord,
+    onDismiss: () -> Unit,
+    onSave: (String, Double, Double, Double, Int, Double, Double) -> Unit
+) {
+    var platformState by remember { mutableStateOf(record.platform) }
+    var startOdo by remember { mutableStateOf(record.startOdometer.toString()) }
+    var endOdo by remember { mutableStateOf(record.endOdometer.toString()) }
+    var gross by remember { mutableStateOf(record.grossEarnings.toString()) }
+    var deliveries by remember { mutableStateOf(record.deliveriesCount.toString()) }
+    var fuelPrice by remember { mutableStateOf(record.fuelPrice.toString()) }
+    var foodExpense by remember { mutableStateOf(record.foodExpense.toString()) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    "Editar Lançamento",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Divider(color = MaterialTheme.colorScheme.outline)
+
+                TextField(
+                    value = platformState,
+                    onValueChange = { platformState = it },
+                    label = { Text("Plataforma") },
+                    modifier = Modifier.fillMaxWidth().testTag("edit_platform"),
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Storefront,
+                            contentDescription = "Plataforma",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
+                    singleLine = true
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextField(
+                        value = startOdo,
+                        onValueChange = { startOdo = it },
+                        label = { Text("Hodôm. Inicial") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f).testTag("edit_start_odo")
+                    )
+                    TextField(
+                        value = endOdo,
+                        onValueChange = { endOdo = it },
+                        label = { Text("Hodôm. Final") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f).testTag("edit_end_odo")
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextField(
+                        value = gross,
+                        onValueChange = { gross = it },
+                        label = { Text("Ganhos (R$)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f).testTag("edit_gross")
+                    )
+                    TextField(
+                        value = deliveries,
+                        onValueChange = { deliveries = it },
+                        label = { Text("Entregas") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f).testTag("edit_deliveries")
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextField(
+                        value = fuelPrice,
+                        onValueChange = { fuelPrice = it },
+                        label = { Text("Preço Comb. (R$)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f).testTag("edit_fuel_price")
+                    )
+                    TextField(
+                        value = foodExpense,
+                        onValueChange = { foodExpense = it },
+                        label = { Text("Alimentação (R$)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f).testTag("edit_food_expense")
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            val startOdoVal = startOdo.toDoubleOrNull() ?: 0.0
+                            val endOdoVal = endOdo.toDoubleOrNull() ?: 0.0
+                            val grossVal = gross.toDoubleOrNull() ?: 0.0
+                            val deliveriesVal = deliveries.toIntOrNull() ?: 0
+                            val fuelPriceVal = fuelPrice.toDoubleOrNull() ?: 0.0
+                            val foodExpenseVal = foodExpense.toDoubleOrNull() ?: 0.0
+
+                            if (grossVal > 0.0 && fuelPriceVal > 0.0 && platformState.isNotBlank()) {
+                                onSave(platformState, startOdoVal, endOdoVal, grossVal, deliveriesVal, fuelPriceVal, foodExpenseVal)
                             }
                         },
                         colors = ButtonDefaults.buttonColors(

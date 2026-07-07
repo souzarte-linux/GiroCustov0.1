@@ -30,6 +30,7 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
     suspend fun insertDailyRecord(
         dateString: String,
         dateTimestamp: Long,
+        platform: String,
         grossEarnings: Double,
         deliveriesCount: Int,
         startOdometer: Double,
@@ -62,6 +63,7 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
             val record = DailyRecord(
                 dateString = dateString,
                 dateTimestamp = dateTimestamp,
+                platform = platform,
                 grossEarnings = grossEarnings,
                 deliveriesCount = deliveriesCount,
                 startOdometer = startOdometer,
@@ -83,6 +85,63 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
 
             // 5. Adicionar quilometragem rodada para todas as peças de desgaste
             partDao.addKmToAllParts(kmRodados)
+        }
+    }
+
+    // Atualiza um registro diário existente recalculando os custos operacionais
+    suspend fun updateDailyRecord(
+        recordId: Long,
+        dateString: String,
+        dateTimestamp: Long,
+        platform: String,
+        grossEarnings: Double,
+        deliveriesCount: Int,
+        startOdometer: Double,
+        endOdometer: Double,
+        fuelPrice: Double,
+        foodExpense: Double
+    ) {
+        db.withTransaction {
+            val vehicle = vehicleDao.getVehicle() ?: Vehicle()
+            val kmRodados = (endOdometer - startOdometer).coerceAtLeast(0.0)
+
+            // 1. Obter peças para calcular o custo de desgaste acumulado
+            val parts = partDao.getAllParts()
+            val totalWearCostPerKm = parts.sumOf { it.wearCostPerKm }
+            val wearCost = kmRodados * totalWearCostPerKm
+
+            // 2. Calcular custos restantes
+            val fuelCost = if (vehicle.averageConsumption > 0) {
+                (kmRodados / vehicle.averageConsumption) * fuelPrice
+            } else {
+                0.0
+            }
+            val proportionalFixedCost = if (vehicle.plannedWorkDays > 0) {
+                vehicle.monthlyFixedCosts / vehicle.plannedWorkDays
+            } else {
+                0.0
+            }
+            val netProfit = grossEarnings - fuelCost - wearCost - proportionalFixedCost - foodExpense
+
+            val record = DailyRecord(
+                id = recordId,
+                dateString = dateString,
+                dateTimestamp = dateTimestamp,
+                platform = platform,
+                grossEarnings = grossEarnings,
+                deliveriesCount = deliveriesCount,
+                startOdometer = startOdometer,
+                endOdometer = endOdometer,
+                fuelPrice = fuelPrice,
+                foodExpense = foodExpense,
+                fuelCost = fuelCost,
+                wearCost = wearCost,
+                proportionalFixedCost = proportionalFixedCost,
+                netProfit = netProfit
+            )
+
+            // Salvar registro atualizado substituindo o anterior
+            recordDao.insertRecord(record)
         }
     }
 
@@ -143,6 +202,8 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
             val totalWearCostPerKm = initialParts.sumOf { it.price / it.lifespanKm } // Custo fixado para os históricos
             val fixedCostPerDay = 180.0 / 22.0
 
+            val platforms = listOf("iFood", "Uber Flash", "Rappi", "iFood", "Uber Flash", "Loggi", "iFood")
+            var idx = 0
             for (day in history) {
                 val cal = Calendar.getInstance()
                 cal.add(Calendar.DAY_OF_YEAR, day.offset)
@@ -153,10 +214,13 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
                 val fuelCost = (km / 40.0) * day.fuelPrice
                 val wearCost = km * totalWearCostPerKm
                 val net = day.gross - fuelCost - wearCost - fixedCostPerDay - day.food
+                val selectedPlatform = platforms.getOrElse(idx % platforms.size) { "iFood" }
+                idx++
 
                 val record = DailyRecord(
                     dateString = dateStr,
                     dateTimestamp = timestamp,
+                    platform = selectedPlatform,
                     grossEarnings = day.gross,
                     deliveriesCount = day.deliveries,
                     startOdometer = day.startOdo,

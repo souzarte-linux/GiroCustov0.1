@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [Vehicle::class, VehiclePart::class, DailyRecord::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class GiroCustoDatabase : RoomDatabase() {
