@@ -1,0 +1,6 @@
+{
+  "name": "GiroCusto",
+  "description": "Calculadora de custo diário, faturamento e lucro para entregadores de iFood, Uber e Rappi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

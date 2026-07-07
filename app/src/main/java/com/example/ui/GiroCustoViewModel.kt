@@ -1,0 +1,321 @@
+package com.example.ui
+
+import android.app.Application
+import android.content.Context
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.data.*
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
+
+enum class Period {
+    LAST_7_DAYS,
+    LAST_30_DAYS,
+    ALL_TIME
+}
+
+class GiroCustoViewModel(application: Application) : AndroidViewModel(application) {
+    private val db = GiroCustoDatabase.getDatabase(application)
+    private val repository = GiroCustoRepository(db)
+
+    // Flows do Banco de Dados
+    val vehicle: StateFlow<Vehicle?> = repository.vehicleFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val parts: StateFlow<List<VehiclePart>> = repository.allPartsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val records: StateFlow<List<DailyRecord>> = repository.allRecordsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Estado de Período Selecionado no Dashboard
+    private val _selectedPeriod = MutableStateFlow(Period.LAST_7_DAYS)
+    val selectedPeriod: StateFlow<Period> = _selectedPeriod.asStateFlow()
+
+    // Estado do Formulário de Lançamento (Lançar Novo Dia)
+    var startOdometer = MutableStateFlow("")
+    var endOdometer = MutableStateFlow("")
+    var grossEarnings = MutableStateFlow("")
+    var deliveriesCount = MutableStateFlow("")
+    var fuelPrice = MutableStateFlow("")
+    var foodExpense = MutableStateFlow("")
+
+    // Preferências de Metas
+    private val prefs = application.getSharedPreferences("giro_custo_goals", Context.MODE_PRIVATE)
+
+    // Metas Editáveis (Valores de Destino)
+    val dailyGoalGross = MutableStateFlow(prefs.getFloat("daily_goal_gross", 200.0f).toDouble())
+    val dailyGoalNet = MutableStateFlow(prefs.getFloat("daily_goal_net", 130.0f).toDouble())
+    val dailyGoalKm = MutableStateFlow(prefs.getFloat("daily_goal_km", 100.0f).toDouble())
+    val dailyGoalDeliveries = MutableStateFlow(prefs.getInt("daily_goal_deliveries", 15))
+
+    val weeklyGoalGross = MutableStateFlow(prefs.getFloat("weekly_goal_gross", 1200.0f).toDouble())
+    val weeklyGoalNet = MutableStateFlow(prefs.getFloat("weekly_goal_net", 800.0f).toDouble())
+    val weeklyGoalKm = MutableStateFlow(prefs.getFloat("weekly_goal_km", 600.0f).toDouble())
+    val weeklyGoalDeliveries = MutableStateFlow(prefs.getInt("weekly_goal_deliveries", 90))
+
+    val monthlyGoalGross = MutableStateFlow(prefs.getFloat("monthly_goal_gross", 5000.0f).toDouble())
+    val monthlyGoalNet = MutableStateFlow(prefs.getFloat("monthly_goal_net", 3200.0f).toDouble())
+    val monthlyGoalKm = MutableStateFlow(prefs.getFloat("monthly_goal_km", 2500.0f).toDouble())
+    val monthlyGoalDeliveries = MutableStateFlow(prefs.getInt("monthly_goal_deliveries", 400))
+
+    // Tema Claro / Dark
+    val isDarkTheme = MutableStateFlow(prefs.getBoolean("is_dark_theme", true))
+
+    fun toggleTheme() {
+        val newVal = !isDarkTheme.value
+        isDarkTheme.value = newVal
+        prefs.edit().putBoolean("is_dark_theme", newVal).apply()
+    }
+
+    init {
+        viewModelScope.launch {
+            // Inicializar/Semear Banco de Dados se necessário
+            repository.checkAndSeedData()
+            
+            // Auto-preencher odômetro inicial e combustível
+            prefillLaunchFields()
+        }
+    }
+
+    fun setPeriod(period: Period) {
+        _selectedPeriod.value = period
+    }
+
+    // Auto-preencher com base no histórico anterior
+    suspend fun prefillLaunchFields() {
+        val lastRecord = repository.allRecordsFlow.firstOrNull()?.firstOrNull()
+        val currentVehicle = repository.getVehicle()
+        
+        // Odômetro inicial = último odômetro final ou hodômetro do veículo
+        val defaultStartOdo = lastRecord?.endOdometer ?: currentVehicle?.currentOdometer ?: 15350.0
+        startOdometer.value = String.format(Locale.US, "%.1f", defaultStartOdo)
+        
+        // Último preço de combustível
+        val defaultFuelPrice = lastRecord?.fuelPrice ?: 5.80
+        fuelPrice.value = String.format(Locale.US, "%.2f", defaultFuelPrice)
+        
+        // Zerar outros
+        endOdometer.value = ""
+        grossEarnings.value = ""
+        deliveriesCount.value = ""
+        foodExpense.value = ""
+    }
+
+    // Salvar Metas nas SharedPreferences
+    fun updateGoals(
+        dailyG: Double, dailyN: Double, dailyK: Double, dailyD: Int,
+        weeklyG: Double, weeklyN: Double, weeklyK: Double, weeklyD: Int,
+        monthlyG: Double, monthlyN: Double, monthlyK: Double, monthlyD: Int
+    ) {
+        viewModelScope.launch {
+            prefs.edit().apply {
+                putFloat("daily_goal_gross", dailyG.toFloat())
+                putFloat("daily_goal_net", dailyN.toFloat())
+                putFloat("daily_goal_km", dailyK.toFloat())
+                putInt("daily_goal_deliveries", dailyD)
+
+                putFloat("weekly_goal_gross", weeklyG.toFloat())
+                putFloat("weekly_goal_net", weeklyN.toFloat())
+                putFloat("weekly_goal_km", weeklyK.toFloat())
+                putInt("weekly_goal_deliveries", weeklyD)
+
+                putFloat("monthly_goal_gross", monthlyG.toFloat())
+                putFloat("monthly_goal_net", monthlyN.toFloat())
+                putFloat("monthly_goal_km", monthlyK.toFloat())
+                putInt("monthly_goal_deliveries", monthlyD)
+            }.apply()
+
+            dailyGoalGross.value = dailyG
+            dailyGoalNet.value = dailyN
+            dailyGoalKm.value = dailyK
+            dailyGoalDeliveries.value = dailyD
+
+            weeklyGoalGross.value = weeklyG
+            weeklyGoalNet.value = weeklyN
+            weeklyGoalKm.value = weeklyK
+            weeklyGoalDeliveries.value = weeklyD
+
+            monthlyGoalGross.value = monthlyG
+            monthlyGoalNet.value = monthlyN
+            monthlyGoalKm.value = monthlyK
+            monthlyGoalDeliveries.value = monthlyD
+        }
+    }
+
+    // Ações do Veículo
+    fun updateVehicle(
+        model: String,
+        consumption: Double,
+        fuelType: String,
+        fixedCosts: Double,
+        workDays: Int
+    ) {
+        viewModelScope.launch {
+            val current = repository.getVehicle() ?: Vehicle()
+            val updated = current.copy(
+                model = model,
+                averageConsumption = consumption,
+                fuelType = fuelType,
+                monthlyFixedCosts = fixedCosts,
+                plannedWorkDays = workDays
+            )
+            repository.saveVehicle(updated)
+        }
+    }
+
+    // Ações de Peças de Desgaste
+    fun addPart(name: String, price: Double, lifespan: Double) {
+        viewModelScope.launch {
+            val part = VehiclePart(name = name, price = price, lifespanKm = lifespan, runKmSinceChange = 0.0)
+            repository.savePart(part)
+        }
+    }
+
+    fun updatePart(partId: Long, name: String, price: Double, lifespan: Double, runKmSinceChange: Double) {
+        viewModelScope.launch {
+            val part = VehiclePart(id = partId, name = name, price = price, lifespanKm = lifespan, runKmSinceChange = runKmSinceChange)
+            repository.updatePart(part)
+        }
+    }
+
+    fun deletePart(part: VehiclePart) {
+        viewModelScope.launch {
+            repository.deletePart(part)
+        }
+    }
+
+    fun resetPartWear(partId: Long) {
+        viewModelScope.launch {
+            repository.resetPartWear(partId)
+        }
+    }
+
+    // Ações de Lançamento Diário
+    fun saveDailyRecord(onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            val startOdoVal = startOdometer.value.toDoubleOrNull()
+            val endOdoVal = endOdometer.value.toDoubleOrNull()
+            val grossVal = grossEarnings.value.toDoubleOrNull()
+            val deliveriesVal = deliveriesCount.value.toIntOrNull()
+            val fuelPriceVal = fuelPrice.value.toDoubleOrNull()
+            val foodExpenseVal = foodExpense.value.toDoubleOrNull() ?: 0.0
+
+            if (startOdoVal == null || endOdoVal == null || grossVal == null || deliveriesVal == null || fuelPriceVal == null) {
+                onError("Por favor, preencha todos os campos obrigatórios corretamente.")
+                return@launch
+            }
+
+            if (endOdoVal < startOdoVal) {
+                onError("O hodômetro final não pode ser menor que o inicial.")
+                return@launch
+            }
+
+            try {
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                val todayStr = dateFormat.format(Date())
+                val todayTimestamp = System.currentTimeMillis()
+
+                repository.insertDailyRecord(
+                    dateString = todayStr,
+                    dateTimestamp = todayTimestamp,
+                    grossEarnings = grossVal,
+                    deliveriesCount = deliveriesVal,
+                    startOdometer = startOdoVal,
+                    endOdometer = endOdoVal,
+                    fuelPrice = fuelPriceVal,
+                    foodExpense = foodExpenseVal
+                )
+                
+                // Limpar campos para o próximo dia
+                prefillLaunchFields()
+                onSuccess()
+            } catch (e: Exception) {
+                onError("Erro ao salvar lançamento: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    fun deleteDailyRecord(record: DailyRecord) {
+        viewModelScope.launch {
+            repository.deleteRecord(record)
+        }
+    }
+
+    // Estimativas em Tempo Real para o Lançamento Diário
+    data class FormState(
+        val startOdo: String = "",
+        val endOdo: String = "",
+        val gross: String = "",
+        val food: String = "",
+        val fuelPrice: String = ""
+    )
+
+    private val formStateFlow: Flow<FormState> = combine(
+        startOdometer,
+        endOdometer,
+        grossEarnings,
+        foodExpense,
+        fuelPrice
+    ) { start, end, gross, food, fuel ->
+        FormState(start, end, gross, food, fuel)
+    }
+
+    val realTimeEstimation: Flow<EstimationDetail> = combine(
+        formStateFlow,
+        parts,
+        vehicle
+    ) { form, partsList, v ->
+        val startVal = form.startOdo.toDoubleOrNull() ?: 0.0
+        val endVal = form.endOdo.toDoubleOrNull() ?: 0.0
+        val grossVal = form.gross.toDoubleOrNull() ?: 0.0
+        val foodVal = form.food.toDoubleOrNull() ?: 0.0
+        val fPrice = form.fuelPrice.toDoubleOrNull() ?: 0.0
+        val activeVehicle = v ?: Vehicle()
+
+        val distance = (endVal - startVal).coerceAtLeast(0.0)
+
+        // Combustível
+        val fuelCost = if (activeVehicle.averageConsumption > 0) {
+            (distance / activeVehicle.averageConsumption) * fPrice
+        } else {
+            0.0
+        }
+
+        // Desgaste oculto
+        val wearCostPerKm = partsList.sumOf { it.wearCostPerKm }
+        val wearCost = distance * wearCostPerKm
+
+        // Custos fixos proporcionais
+        val proportionalFixed = if (activeVehicle.plannedWorkDays > 0) {
+            activeVehicle.monthlyFixedCosts / activeVehicle.plannedWorkDays
+        } else {
+            0.0
+        }
+
+        val totalExpenses = fuelCost + wearCost + proportionalFixed + foodVal
+        val netProfit = grossVal - totalExpenses
+
+        EstimationDetail(
+            distance = distance,
+            fuelCost = fuelCost,
+            wearCost = wearCost,
+            fixedCost = proportionalFixed,
+            foodCost = foodVal,
+            totalExpenses = totalExpenses,
+            netProfit = netProfit
+        )
+    }
+}
+
+data class EstimationDetail(
+    val distance: Double = 0.0,
+    val fuelCost: Double = 0.0,
+    val wearCost: Double = 0.0,
+    val fixedCost: Double = 0.0,
+    val foodCost: Double = 0.0,
+    val totalExpenses: Double = 0.0,
+    val netProfit: Double = 0.0
+)
