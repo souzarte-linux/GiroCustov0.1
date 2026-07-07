@@ -40,5 +40,9 @@ abstract class GiroCustoDatabase : RoomDatabase() {
                 instance
             }
         }
+
+        fun setTestDatabase(db: GiroCustoDatabase) {
+            INSTANCE = db
+        }
     }
 }

@@ -55,4 +55,7 @@ interface DailyRecordDao {
 
     @Query("SELECT * FROM daily_records WHERE id = :recordId LIMIT 1")
     suspend fun getRecordById(recordId: Long): DailyRecord?
+
+    @Query("SELECT * FROM daily_records ORDER BY dateTimestamp DESC LIMIT 1")
+    suspend fun getMostRecentRecord(): DailyRecord?
 }
