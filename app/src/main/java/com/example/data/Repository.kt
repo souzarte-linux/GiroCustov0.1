@@ -24,7 +24,26 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
     suspend fun deletePart(part: VehiclePart) = partDao.deletePart(part)
     suspend fun resetPartWear(partId: Long) = partDao.resetPartWear(partId)
 
-    suspend fun deleteRecord(record: DailyRecord) = recordDao.deleteRecordById(record.id)
+    suspend fun deleteRecord(record: DailyRecord) {
+        db.withTransaction {
+            val vehicle = vehicleDao.getVehicle() ?: Vehicle()
+            val oldKmRodados = (record.endOdometer - record.startOdometer).coerceAtLeast(0.0)
+
+            // Reverte hodômetro
+            val updatedVehicle = vehicle.copy(currentOdometer = (vehicle.currentOdometer - oldKmRodados).coerceAtLeast(0.0))
+            vehicleDao.insertOrUpdateVehicle(updatedVehicle)
+
+            // Reverte desgaste de peças
+            val parts = partDao.getAllParts()
+            for (part in parts) {
+                val newRunKm = (part.runKmSinceChange - oldKmRodados).coerceAtLeast(0.0)
+                partDao.updatePart(part.copy(runKmSinceChange = newRunKm))
+            }
+
+            // Exclui o registro
+            recordDao.deleteRecordById(record.id)
+        }
+    }
 
     // Insere registro diário e atualiza o hodômetro do veículo e o desgaste das peças em uma transação
     suspend fun insertDailyRecord(
@@ -88,7 +107,7 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
         }
     }
 
-    // Atualiza um registro diário existente recalculando os custos operacionais
+    // Atualiza um registro diário existente recalculando os custos operacionais e ajustando odômetro e peças de desgaste
     suspend fun updateDailyRecord(
         recordId: Long,
         dateString: String,
@@ -103,7 +122,10 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
     ) {
         db.withTransaction {
             val vehicle = vehicleDao.getVehicle() ?: Vehicle()
+            val oldRecord = recordDao.getRecordById(recordId)
+            val oldKmRodados = oldRecord?.let { (it.endOdometer - it.startOdometer).coerceAtLeast(0.0) } ?: 0.0
             val kmRodados = (endOdometer - startOdometer).coerceAtLeast(0.0)
+            val diffKm = kmRodados - oldKmRodados
 
             // 1. Obter peças para calcular o custo de desgaste acumulado
             val parts = partDao.getAllParts()
@@ -142,6 +164,16 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
 
             // Salvar registro atualizado substituindo o anterior
             recordDao.insertRecord(record)
+
+            // Atualizar hodômetro do veículo considerando a diferença
+            val updatedVehicle = vehicle.copy(currentOdometer = (vehicle.currentOdometer + diffKm).coerceAtLeast(0.0))
+            vehicleDao.insertOrUpdateVehicle(updatedVehicle)
+
+            // Atualizar quilometragem rodada para todas as peças de desgaste considerando a diferença
+            for (part in parts) {
+                val newRunKm = (part.runKmSinceChange + diffKm).coerceAtLeast(0.0)
+                partDao.updatePart(part.copy(runKmSinceChange = newRunKm))
+            }
         }
     }
 

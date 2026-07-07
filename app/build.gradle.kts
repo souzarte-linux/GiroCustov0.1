@@ -72,6 +72,10 @@ googleServices {
   missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN
 }
 
+ksp {
+  arg("room.schemaLocation", "${projectDir}/schemas")
+}
+
 
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.

@@ -52,4 +52,7 @@ interface DailyRecordDao {
 
     @Query("DELETE FROM daily_records WHERE id = :recordId")
     suspend fun deleteRecordById(recordId: Long)
+
+    @Query("SELECT * FROM daily_records WHERE id = :recordId LIMIT 1")
+    suspend fun getRecordById(recordId: Long): DailyRecord?
 }
