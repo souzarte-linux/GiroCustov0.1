@@ -28,6 +28,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.Vehicle
 import com.example.data.VehiclePart
@@ -225,6 +226,7 @@ fun LaunchScreen(
                         DropdownMenu(
                             expanded = dropdownExpanded,
                             onDismissRequest = { dropdownExpanded = false },
+                            properties = PopupProperties(focusable = false),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(Color(0xFF1E1E22))

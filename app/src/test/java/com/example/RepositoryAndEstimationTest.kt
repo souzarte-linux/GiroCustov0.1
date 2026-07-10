@@ -486,4 +486,26 @@ class RepositoryAndEstimationTest {
         val listAfterDelete = repository.allPlatformsFlow.first()
         assertTrue(listAfterDelete.isEmpty())
     }
+
+    @Test
+    fun testPlatformFilteringLogic() {
+        val list = listOf(
+            Platform(name = "iFood", segment = "delivery", paymentModel = "producao", cycle = "semanal", active = true),
+            Platform(name = "Uber Eats", segment = "delivery", paymentModel = "producao", cycle = "semanal", active = true),
+            Platform(name = "Rappi", segment = "delivery", paymentModel = "producao", cycle = "semanal", active = true)
+        )
+
+        // Filter by "ifo" (case insensitive)
+        val filteredIfood = list.filter { it.name.contains("ifo", ignoreCase = true) }
+        assertEquals(1, filteredIfood.size)
+        assertEquals("iFood", filteredIfood[0].name)
+
+        // Filter by "e"
+        val filteredE = list.filter { it.name.contains("e", ignoreCase = true) }
+        assertEquals(1, filteredE.size) // Only "Uber Eats" has 'e' (case-insensitive)
+
+        // Filter by empty string should return all
+        val filteredEmpty = list.filter { it.name.contains("", ignoreCase = true) }
+        assertEquals(3, filteredEmpty.size)
+    }
 }
