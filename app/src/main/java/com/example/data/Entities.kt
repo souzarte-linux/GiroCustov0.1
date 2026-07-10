@@ -62,3 +62,22 @@ data class UserProfile(
     val platforms: String = "" // plataformas que atua, ex: "iFood, Uber Flash"
 )
 
+@Entity(tableName = "platforms")
+data class Platform(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val segment: String = "logistica", // "logistica" | "delivery"
+    val paymentModel: String = "producao", // "producao" | "diaria"
+    val cycle: String = "semanal", // "semanal" | "quinzenal" | "mensal" | "misto"
+    val paymentDay: String = "QUA",
+    val fixedPayDelay: Int = 7,
+    val cycleEntriesJson: String = "1:7,16:7",
+    val bankName: String = "",
+    val bankAgency: String = "",
+    val bankAccount: String = "",
+    val pixKeyType: String = "CPF",
+    val pixKey: String = "",
+    val active: Boolean = true
+)
+
+

@@ -34,6 +34,7 @@ import com.example.ui.screens.LaunchScreen
 import com.example.ui.screens.ReportsScreen
 import com.example.ui.screens.VehicleScreen
 import com.example.ui.screens.ProfileScreen
+import com.example.ui.screens.PlatformsScreen
 import kotlinx.coroutines.launch
 
 enum class GiroTab(val title: String, val icon: ImageVector) {
@@ -127,6 +128,7 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
                                     text = when (currentScreen) {
                                         DrawerDestination.VEICULO -> "Veículo"
                                         DrawerDestination.PERFIL -> "Perfil"
+                                        DrawerDestination.PLATAFORMAS -> "Plataformas"
                                         GiroTab.PAINEL -> "Painel"
                                         GiroTab.LANCAR -> "Lançar"
                                         GiroTab.RELATORIOS -> "Relatórios"
@@ -219,6 +221,7 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
                             when (screen) {
                                 DrawerDestination.VEICULO -> VehicleScreen(viewModel, vehicle, parts)
                                 DrawerDestination.PERFIL -> ProfileScreen(viewModel)
+                                DrawerDestination.PLATAFORMAS -> PlatformsScreen(viewModel)
                                 GiroTab.PAINEL -> DashboardScreen(viewModel, vehicle, parts, records)
                                 GiroTab.LANCAR -> LaunchScreen(viewModel, vehicle, parts)
                                 GiroTab.RELATORIOS -> ReportsScreen(viewModel, vehicle, parts, records)

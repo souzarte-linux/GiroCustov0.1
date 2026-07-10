@@ -72,3 +72,19 @@ interface UserProfileDao {
     suspend fun insertOrUpdateUserProfile(userProfile: UserProfile)
 }
 
+@Dao
+interface PlatformDao {
+    @Query("SELECT * FROM platforms ORDER BY name ASC")
+    fun getAllPlatformsFlow(): Flow<List<Platform>>
+
+    @Query("SELECT * FROM platforms WHERE id = :platformId LIMIT 1")
+    suspend fun getPlatformById(platformId: Long): Platform?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdatePlatform(platform: Platform): Long
+
+    @Delete
+    suspend fun deletePlatform(platform: Platform)
+}
+
+

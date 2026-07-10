@@ -2,6 +2,7 @@ package com.example.ui.navigation
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.*
@@ -14,7 +15,8 @@ import androidx.compose.ui.unit.sp
 enum class DrawerDestination {
     NONE,
     VEICULO,
-    PERFIL
+    PERFIL,
+    PLATAFORMAS
 }
 
 @Composable
@@ -65,6 +67,21 @@ fun AppDrawer(
                     modifier = Modifier
                         .padding(NavigationDrawerItemDefaults.ItemPadding)
                         .testTag("drawer_item_profile"),
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Filled.Layers, contentDescription = "Plataformas") },
+                    label = { Text("Plataformas") },
+                    selected = selectedDestination == DrawerDestination.PLATAFORMAS,
+                    onClick = { onDestinationSelected(DrawerDestination.PLATAFORMAS) },
+                    modifier = Modifier
+                        .padding(NavigationDrawerItemDefaults.ItemPadding)
+                        .testTag("drawer_item_platforms"),
                     colors = NavigationDrawerItemDefaults.colors(
                         selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                         selectedIconColor = MaterialTheme.colorScheme.primary,

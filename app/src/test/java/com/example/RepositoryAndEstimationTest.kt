@@ -430,4 +430,60 @@ class RepositoryAndEstimationTest {
         assertEquals("11999998888", finalProfile.phone)
         assertEquals("Rappi, Loggi", finalProfile.platforms)
     }
+
+    @Test
+    fun testPlatformCRUD() = runTest(testDispatcher) {
+        val initialPlatforms = repository.allPlatformsFlow.first()
+        assertTrue(initialPlatforms.isEmpty())
+
+        val p = Platform(
+            name = "iFood",
+            segment = "delivery",
+            paymentModel = "producao",
+            cycle = "semanal",
+            paymentDay = "QUA",
+            fixedPayDelay = 7,
+            cycleEntriesJson = "1:7,16:7",
+            bankName = "Nubank",
+            bankAgency = "0001",
+            bankAccount = "123456-7",
+            pixKeyType = "CPF",
+            pixKey = "123.456.789-00",
+            active = true
+        )
+        val id = repository.savePlatform(p)
+        assertTrue(id > 0)
+
+        val listAfterSave = repository.allPlatformsFlow.first()
+        assertEquals(1, listAfterSave.size)
+        val savedP = listAfterSave[0]
+        assertEquals("iFood", savedP.name)
+        assertEquals("delivery", savedP.segment)
+        assertEquals("producao", savedP.paymentModel)
+        assertEquals("semanal", savedP.cycle)
+        assertEquals("QUA", savedP.paymentDay)
+        assertEquals(7, savedP.fixedPayDelay)
+        assertEquals("1:7,16:7", savedP.cycleEntriesJson)
+        assertEquals("Nubank", savedP.bankName)
+        assertEquals("0001", savedP.bankAgency)
+        assertEquals("123456-7", savedP.bankAccount)
+        assertEquals("CPF", savedP.pixKeyType)
+        assertEquals("123.456.789-00", savedP.pixKey)
+        assertTrue(savedP.active)
+
+        val updatedP = savedP.copy(
+            name = "Rappi",
+            cycle = "misto"
+        )
+        repository.savePlatform(updatedP)
+
+        val fetchedP = repository.getPlatformById(savedP.id)
+        assertNotNull(fetchedP)
+        assertEquals("Rappi", fetchedP!!.name)
+        assertEquals("misto", fetchedP.cycle)
+
+        repository.deletePlatform(fetchedP)
+        val listAfterDelete = repository.allPlatformsFlow.first()
+        assertTrue(listAfterDelete.isEmpty())
+    }
 }

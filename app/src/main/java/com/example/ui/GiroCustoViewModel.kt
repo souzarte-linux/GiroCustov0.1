@@ -28,6 +28,9 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     val userProfile: StateFlow<UserProfile?> = repository.userProfileFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    val allPlatforms: StateFlow<List<Platform>> = repository.allPlatformsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val parts: StateFlow<List<VehiclePart>> = repository.allPartsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -203,6 +206,19 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
                 platforms = platforms
             )
             repository.saveUserProfile(updated)
+        }
+    }
+
+    // Ações de Plataforma
+    fun savePlatform(platform: Platform) {
+        viewModelScope.launch {
+            repository.savePlatform(platform)
+        }
+    }
+
+    fun deletePlatform(platform: Platform) {
+        viewModelScope.launch {
+            repository.deletePlatform(platform)
         }
     }
 
