@@ -203,6 +203,7 @@ fun LaunchScreen(
                             label = { Text("Plataforma") },
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .height(64.dp)
                                 .testTag("input_platform"),
                             leadingIcon = {
                                 Icon(
@@ -220,7 +221,13 @@ fun LaunchScreen(
                                     )
                                 }
                             },
-                            singleLine = true
+                            singleLine = true,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = TextFieldDefaults.colors(
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent
+                            )
                         )
 
                         DropdownMenu(
@@ -277,8 +284,9 @@ fun LaunchScreen(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
+                        shape = RoundedCornerShape(8.dp),
                         modifier = Modifier
-                            .size(48.dp)
+                            .size(64.dp)
                             .testTag("add_new_platform_btn")
                     ) {
                         Icon(
@@ -296,17 +304,35 @@ fun LaunchScreen(
                         value = startOdo,
                         onValueChange = { viewModel.startOdometer.value = it },
                         label = { Text("Hodômetro Inicial") },
-                        modifier = Modifier.weight(1f).testTag("input_start_odometer"),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(64.dp)
+                            .testTag("input_start_odometer"),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent
+                        )
                     )
                     TextField(
                         value = endOdo,
                         onValueChange = { viewModel.endOdometer.value = it },
                         label = { Text("Hodômetro Final") },
-                        modifier = Modifier.weight(1f).testTag("input_end_odometer"),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(64.dp)
+                            .testTag("input_end_odometer"),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent
+                        )
                     )
                 }
 
@@ -315,17 +341,35 @@ fun LaunchScreen(
                         value = gross,
                         onValueChange = { viewModel.grossEarnings.value = it },
                         label = { Text("Ganhos Brutos (R$)") },
-                        modifier = Modifier.weight(1f).testTag("input_gross_earnings"),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(64.dp)
+                            .testTag("input_gross_earnings"),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent
+                        )
                     )
                     TextField(
                         value = deliveries,
                         onValueChange = { viewModel.deliveriesCount.value = it },
                         label = { Text("Nº Entregas") },
-                        modifier = Modifier.weight(1f).testTag("input_deliveries_count"),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(64.dp)
+                            .testTag("input_deliveries_count"),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent
+                        )
                     )
                 }
 
@@ -334,17 +378,33 @@ fun LaunchScreen(
                         value = fuelPr,
                         onValueChange = { viewModel.fuelPrice.value = it },
                         label = { Text("Preço do Litro (R$)") },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(64.dp),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent
+                        )
                     )
                     TextField(
                         value = foodExp,
                         onValueChange = { viewModel.foodExpense.value = it },
                         label = { Text("Alimentação / Outros") },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(64.dp),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent
+                        )
                     )
                 }
             }
