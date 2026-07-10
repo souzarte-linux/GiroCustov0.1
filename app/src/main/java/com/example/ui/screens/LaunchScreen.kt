@@ -200,7 +200,7 @@ fun LaunchScreen(
                                 viewModel.platform.value = it 
                                 dropdownExpanded = true
                             },
-                            label = { Text("Plataforma") },
+                            label = { Text("Plataforma", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(64.dp)
@@ -224,6 +224,8 @@ fun LaunchScreen(
                             singleLine = true,
                             shape = RoundedCornerShape(8.dp),
                             colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color(0xFF2A2A30),
+                                unfocusedContainerColor = Color(0xFF2A2A30),
                                 focusedIndicatorColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent,
                                 disabledIndicatorColor = Color.Transparent
@@ -303,7 +305,7 @@ fun LaunchScreen(
                     TextField(
                         value = startOdo,
                         onValueChange = { viewModel.startOdometer.value = it },
-                        label = { Text("Hodômetro Inicial") },
+                        label = { Text("Hodômetro Inicial", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .weight(1f)
                             .height(64.dp)
@@ -312,6 +314,8 @@ fun LaunchScreen(
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp),
                         colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF2A2A30),
+                            unfocusedContainerColor = Color(0xFF2A2A30),
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -320,7 +324,7 @@ fun LaunchScreen(
                     TextField(
                         value = endOdo,
                         onValueChange = { viewModel.endOdometer.value = it },
-                        label = { Text("Hodômetro Final") },
+                        label = { Text("Hodômetro Final", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .weight(1f)
                             .height(64.dp)
@@ -329,6 +333,8 @@ fun LaunchScreen(
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp),
                         colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF2A2A30),
+                            unfocusedContainerColor = Color(0xFF2A2A30),
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -340,7 +346,7 @@ fun LaunchScreen(
                     TextField(
                         value = gross,
                         onValueChange = { viewModel.grossEarnings.value = it },
-                        label = { Text("Ganhos Brutos (R$)") },
+                        label = { Text("Ganhos Brutos (R$)", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .weight(1f)
                             .height(64.dp)
@@ -349,6 +355,8 @@ fun LaunchScreen(
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp),
                         colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF2A2A30),
+                            unfocusedContainerColor = Color(0xFF2A2A30),
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -357,7 +365,7 @@ fun LaunchScreen(
                     TextField(
                         value = deliveries,
                         onValueChange = { viewModel.deliveriesCount.value = it },
-                        label = { Text("Nº Entregas") },
+                        label = { Text("Nº Entregas", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .weight(1f)
                             .height(64.dp)
@@ -366,6 +374,8 @@ fun LaunchScreen(
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp),
                         colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF2A2A30),
+                            unfocusedContainerColor = Color(0xFF2A2A30),
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -377,7 +387,7 @@ fun LaunchScreen(
                     TextField(
                         value = fuelPr,
                         onValueChange = { viewModel.fuelPrice.value = it },
-                        label = { Text("Preço do Litro (R$)") },
+                        label = { Text("Preço do Litro (R$)", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .weight(1f)
                             .height(64.dp),
@@ -385,6 +395,8 @@ fun LaunchScreen(
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp),
                         colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF2A2A30),
+                            unfocusedContainerColor = Color(0xFF2A2A30),
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -393,7 +405,7 @@ fun LaunchScreen(
                     TextField(
                         value = foodExp,
                         onValueChange = { viewModel.foodExpense.value = it },
-                        label = { Text("Alimentação / Outros") },
+                        label = { Text("Alimentação / Outros", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .weight(1f)
                             .height(64.dp),
@@ -401,6 +413,8 @@ fun LaunchScreen(
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp),
                         colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF2A2A30),
+                            unfocusedContainerColor = Color(0xFF2A2A30),
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -568,9 +582,20 @@ fun LaunchScreen(
                         TextField(
                             value = newPlatformName,
                             onValueChange = { newPlatformName = it },
-                            label = { Text("Nome da Plataforma") },
-                            modifier = Modifier.fillMaxWidth().testTag("new_platform_name_input"),
-                            singleLine = true
+                            label = { Text("Nome da Plataforma", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(64.dp)
+                                .testTag("new_platform_name_input"),
+                            singleLine = true,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color(0xFF2D2D34),
+                                unfocusedContainerColor = Color(0xFF2D2D34),
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent
+                            )
                         )
 
                         // SEGMENT SELECTOR
