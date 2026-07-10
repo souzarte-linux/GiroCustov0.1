@@ -30,28 +30,30 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.Platform
 import com.example.ui.GiroCustoViewModel
 
-data class LocalCycleEntry(val cut: Int, val payDelay: Int)
+data class LocalCycleEntry(val cut: String, val payDelay: String)
 
 fun parseCycleEntries(json: String): List<LocalCycleEntry> {
-    if (json.isBlank()) return listOf(LocalCycleEntry(1, 7), LocalCycleEntry(16, 7))
+    if (json.isBlank()) return listOf(LocalCycleEntry("1", "7"), LocalCycleEntry("16", "7"))
     return try {
         json.split(",").mapNotNull { entryStr ->
             val parts = entryStr.split(":")
             if (parts.size == 2) {
-                val cut = parts[0].toIntOrNull()
-                val payDelay = parts[1].toIntOrNull()
-                if (cut != null && payDelay != null) {
-                    LocalCycleEntry(cut, payDelay)
-                } else null
+                val cut = parts[0]
+                val payDelay = parts[1]
+                LocalCycleEntry(cut, payDelay)
             } else null
         }
     } catch (e: Exception) {
-        listOf(LocalCycleEntry(1, 7), LocalCycleEntry(16, 7))
+        listOf(LocalCycleEntry("1", "7"), LocalCycleEntry("16", "7"))
     }
 }
 
 fun formatCycleEntries(entries: List<LocalCycleEntry>): String {
-    return entries.joinToString(",") { "${it.cut}:${it.payDelay}" }
+    return entries.joinToString(",") { 
+        val cutVal = it.cut.toIntOrNull()?.coerceIn(1, 28) ?: 1
+        val delayVal = it.payDelay.toIntOrNull()?.coerceAtLeast(1) ?: 7
+        "$cutVal:$delayVal"
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -322,18 +324,19 @@ fun PlatformFormSection(
     var pixExpanded by remember { mutableStateOf(false) }
 
     val addEntry = {
-        cycleEntries = (cycleEntries + LocalCycleEntry(1, 7)).sortedBy { it.cut }
+        cycleEntries = (cycleEntries + LocalCycleEntry("1", "7")).sortedBy { it.cut.toIntOrNull() ?: 1 }
     }
     val removeEntry = { idx: Int ->
         cycleEntries = cycleEntries.filterIndexed { i, _ -> i != idx }
     }
-    val updateEntry = { idx: Int, field: String, value: Int ->
+    val updateEntry = { idx: Int, field: String, value: String ->
+        val cleanValue = value.filter { it.isDigit() }
         cycleEntries = cycleEntries.mapIndexed { i, e ->
             if (i == idx) {
-                if (field == "cut") e.copy(cut = value.coerceIn(1, 28))
-                else e.copy(payDelay = value.coerceAtLeast(1))
+                if (field == "cut") e.copy(cut = cleanValue)
+                else e.copy(payDelay = cleanValue)
             } else e
-        }.sortedBy { it.cut }
+        }
     }
 
     Column(
@@ -677,9 +680,9 @@ fun PlatformFormSection(
                                             ) {
                                                 Text("Dia", fontSize = 11.sp, color = Color(0xFF64748B))
                                                 TextField(
-                                                    value = entry.cut.toString(),
+                                                    value = entry.cut,
                                                     onValueChange = { s ->
-                                                        s.toIntOrNull()?.let { updateEntry(idx, "cut", it) }
+                                                        updateEntry(idx, "cut", s)
                                                     },
                                                     modifier = Modifier
                                                         .width(55.dp)
@@ -712,9 +715,9 @@ fun PlatformFormSection(
                                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
                                                 TextField(
-                                                    value = entry.payDelay.toString(),
+                                                    value = entry.payDelay,
                                                     onValueChange = { s ->
-                                                        s.toIntOrNull()?.let { updateEntry(idx, "payDelay", it) }
+                                                        updateEntry(idx, "payDelay", s)
                                                     },
                                                     modifier = Modifier
                                                         .width(55.dp)
@@ -732,10 +735,12 @@ fun PlatformFormSection(
                                     }
 
                                     // HELP TEXT FOR CYCLE
-                                    val payDayText = if (entry.cut + entry.payDelay > 28) {
-                                        "${entry.cut + entry.payDelay - 28} do mês seguinte"
+                                    val cutValInt = entry.cut.toIntOrNull() ?: 1
+                                    val delayValInt = entry.payDelay.toIntOrNull() ?: 0
+                                    val payDayText = if (cutValInt + delayValInt > 28) {
+                                        "${cutValInt + delayValInt - 28} do mês seguinte"
                                     } else {
-                                        "${entry.cut + entry.payDelay}"
+                                        "${cutValInt + delayValInt}"
                                     }
                                     Box(
                                         modifier = Modifier
