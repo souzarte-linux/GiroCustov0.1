@@ -80,12 +80,12 @@ fun LaunchScreen(
 
     val inputCardContainerColor = if (isDark) Color(0xFF1E1E22) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
     val inputCardBorderColor = if (isDark) Color(0xFF2D2D34) else MaterialTheme.colorScheme.outlineVariant
-    val inputFieldContainerColor = if (isDark) Color(0xFF2A2A30) else MaterialTheme.colorScheme.surface
-    val inputFieldTextColor = if (isDark) Color.White else MaterialTheme.colorScheme.onSurface
-    val inputFieldLabelColor = if (isDark) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurfaceVariant
-    val dropdownMenuBgColor = if (isDark) Color(0xFF1E1E22) else MaterialTheme.colorScheme.surface
+    val inputFieldContainerColor = if (isDark) Color(0xFF2A2A30) else Color(0xFFF1F5F9)
+    val inputFieldTextColor = if (isDark) Color.White else Color(0xFF0F172A)
+    val inputFieldLabelColor = if (isDark) Color(0xFF94A3B8) else Color(0xFF475569)
+    val dropdownMenuBgColor = if (isDark) Color(0xFF1E1E22) else Color(0xFFF1F5F9)
     val dropdownMenuBorderColor = if (isDark) Color(0xFF2D2D34) else MaterialTheme.colorScheme.outlineVariant
-    val dropdownMenuItemTextColor = if (isDark) Color.White else MaterialTheme.colorScheme.onSurface
+    val dropdownMenuItemTextColor = if (isDark) Color.White else Color(0xFF0F172A)
 
     Column(
         modifier = Modifier
@@ -238,7 +238,7 @@ fun LaunchScreen(
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(12.dp),
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = inputFieldContainerColor,
                                 unfocusedContainerColor = inputFieldContainerColor,
@@ -333,7 +333,7 @@ fun LaunchScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = inputFieldContainerColor,
                             unfocusedContainerColor = inputFieldContainerColor,
@@ -357,7 +357,7 @@ fun LaunchScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = inputFieldContainerColor,
                             unfocusedContainerColor = inputFieldContainerColor,
@@ -384,7 +384,7 @@ fun LaunchScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = inputFieldContainerColor,
                             unfocusedContainerColor = inputFieldContainerColor,
@@ -408,7 +408,7 @@ fun LaunchScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = inputFieldContainerColor,
                             unfocusedContainerColor = inputFieldContainerColor,
@@ -434,7 +434,7 @@ fun LaunchScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = inputFieldContainerColor,
                             unfocusedContainerColor = inputFieldContainerColor,
@@ -457,7 +457,7 @@ fun LaunchScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                         singleLine = true,
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = inputFieldContainerColor,
                             unfocusedContainerColor = inputFieldContainerColor,

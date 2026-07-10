@@ -25,6 +25,9 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     val vehicle: StateFlow<Vehicle?> = repository.vehicleFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    val allVehicles: StateFlow<List<Vehicle>> = repository.allVehiclesFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val userProfile: StateFlow<UserProfile?> = repository.userProfileFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
@@ -170,7 +173,13 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     // Ações do Veículo
-    fun updateVehicle(
+    fun updateVehicle(vehicle: Vehicle) {
+        viewModelScope.launch {
+            repository.saveVehicle(vehicle)
+        }
+    }
+
+    fun addVehicle(
         model: String,
         consumption: Double,
         fuelType: String,
@@ -178,15 +187,27 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
         workDays: Int
     ) {
         viewModelScope.launch {
-            val current = repository.getVehicle() ?: Vehicle()
-            val updated = current.copy(
+            val newVehicle = Vehicle(
                 model = model,
                 averageConsumption = consumption,
                 fuelType = fuelType,
                 monthlyFixedCosts = fixedCosts,
-                plannedWorkDays = workDays
+                plannedWorkDays = workDays,
+                active = false
             )
-            repository.saveVehicle(updated)
+            repository.saveVehicle(newVehicle)
+        }
+    }
+
+    fun setActiveVehicle(vehicleId: Long) {
+        viewModelScope.launch {
+            repository.setActiveVehicle(vehicleId)
+        }
+    }
+
+    fun deleteVehicle(vehicle: Vehicle) {
+        viewModelScope.launch {
+            repository.deleteVehicle(vehicle)
         }
     }
 
@@ -194,16 +215,14 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     fun updateUserProfile(
         name: String,
         phone: String,
-        city: String,
-        platforms: String
+        city: String
     ) {
         viewModelScope.launch {
             val current = repository.getUserProfile() ?: UserProfile()
             val updated = current.copy(
                 name = name,
                 phone = phone,
-                city = city,
-                platforms = platforms
+                city = city
             )
             repository.saveUserProfile(updated)
         }

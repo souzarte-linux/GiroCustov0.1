@@ -10,7 +10,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -663,6 +667,8 @@ fun EditRecordDialog(
     var fuelPrice by remember { mutableStateOf(record.fuelPrice.toString()) }
     var foodExpense by remember { mutableStateOf(record.foodExpense.toString()) }
 
+    val focusManager = LocalFocusManager.current
+
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
@@ -689,8 +695,8 @@ fun EditRecordDialog(
                 TextField(
                     value = platformState,
                     onValueChange = { platformState = it },
-                    label = { Text("Plataforma") },
-                    modifier = Modifier.fillMaxWidth().testTag("edit_platform"),
+                    label = { Text("Plataforma", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    modifier = Modifier.fillMaxWidth().height(56.dp).testTag("edit_platform"),
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Filled.Storefront,
@@ -699,23 +705,32 @@ fun EditRecordDialog(
                             modifier = Modifier.size(20.dp)
                         )
                     },
-                    singleLine = true
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) })
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextField(
                         value = startOdo,
                         onValueChange = { startOdo = it },
-                        label = { Text("Hodôm. Inicial") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f).testTag("edit_start_odo")
+                        label = { Text("Hodôm. Inicial", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f).height(56.dp).testTag("edit_start_odo")
                     )
                     TextField(
                         value = endOdo,
                         onValueChange = { endOdo = it },
-                        label = { Text("Hodôm. Final") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f).testTag("edit_end_odo")
+                        label = { Text("Hodôm. Final", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f).height(56.dp).testTag("edit_end_odo")
                     )
                 }
 
@@ -723,16 +738,22 @@ fun EditRecordDialog(
                     TextField(
                         value = gross,
                         onValueChange = { gross = it },
-                        label = { Text("Ganhos (R$)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f).testTag("edit_gross")
+                        label = { Text("Ganhos (R$)", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f).height(56.dp).testTag("edit_gross")
                     )
                     TextField(
                         value = deliveries,
                         onValueChange = { deliveries = it },
-                        label = { Text("Entregas") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f).testTag("edit_deliveries")
+                        label = { Text("Entregas", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f).height(56.dp).testTag("edit_deliveries")
                     )
                 }
 
@@ -740,16 +761,22 @@ fun EditRecordDialog(
                     TextField(
                         value = fuelPrice,
                         onValueChange = { fuelPrice = it },
-                        label = { Text("Preço Comb. (R$)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f).testTag("edit_fuel_price")
+                        label = { Text("Preço Comb. (R$)", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f).height(56.dp).testTag("edit_fuel_price")
                     )
                     TextField(
                         value = foodExpense,
                         onValueChange = { foodExpense = it },
-                        label = { Text("Alimentação (R$)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f).testTag("edit_food_expense")
+                        label = { Text("Alimentação (R$)", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f).height(56.dp).testTag("edit_food_expense")
                     )
                 }
 

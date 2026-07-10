@@ -14,14 +14,39 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
     private val userProfileDao = db.userProfileDao()
     private val platformDao = db.platformDao()
 
-    val vehicleFlow: Flow<Vehicle?> = vehicleDao.getVehicleFlow()
+    val vehicleFlow: Flow<Vehicle?> = vehicleDao.getActiveVehicleFlow()
+    val allVehiclesFlow: Flow<List<Vehicle>> = vehicleDao.getAllVehiclesFlow()
     val allPartsFlow: Flow<List<VehiclePart>> = partDao.getAllPartsFlow()
     val allRecordsFlow: Flow<List<DailyRecord>> = recordDao.getAllRecordsFlow()
     val userProfileFlow: Flow<UserProfile?> = userProfileDao.getUserProfileFlow()
     val allPlatformsFlow: Flow<List<Platform>> = platformDao.getAllPlatformsFlow()
 
-    suspend fun getVehicle(): Vehicle? = vehicleDao.getVehicle()
-    suspend fun saveVehicle(vehicle: Vehicle) = vehicleDao.insertOrUpdateVehicle(vehicle)
+    suspend fun getVehicle(): Vehicle? = vehicleDao.getActiveVehicle()
+    suspend fun saveVehicle(vehicle: Vehicle) {
+        if (vehicle.id == 0L) {
+            addVehicle(vehicle)
+        } else {
+            vehicleDao.updateVehicle(vehicle)
+        }
+    }
+
+    suspend fun addVehicle(vehicle: Vehicle): Long {
+        val activeVehicle = vehicleDao.getActiveVehicle()
+        val toInsert = if (activeVehicle == null) {
+            vehicle.copy(active = true)
+        } else {
+            vehicle
+        }
+        return vehicleDao.insertVehicle(toInsert)
+    }
+
+    suspend fun setActiveVehicle(vehicleId: Long) {
+        vehicleDao.setActiveVehicle(vehicleId)
+    }
+
+    suspend fun deleteVehicle(vehicle: Vehicle) {
+        vehicleDao.deleteVehicle(vehicle)
+    }
 
     suspend fun getUserProfile(): UserProfile? = userProfileDao.getUserProfile()
     suspend fun saveUserProfile(userProfile: UserProfile) = userProfileDao.insertOrUpdateUserProfile(userProfile)
@@ -36,11 +61,11 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
     suspend fun resetPartWear(partId: Long) = partDao.resetPartWear(partId)
 
     private suspend fun recalculateVehicleOdometer() {
-        val vehicle = vehicleDao.getVehicle() ?: Vehicle()
+        val vehicle = vehicleDao.getActiveVehicle() ?: Vehicle()
         val mostRecentRecord = recordDao.getMostRecentRecord()
         if (mostRecentRecord != null) {
             val updatedVehicle = vehicle.copy(currentOdometer = mostRecentRecord.endOdometer)
-            vehicleDao.insertOrUpdateVehicle(updatedVehicle)
+            vehicleDao.updateVehicle(updatedVehicle)
         }
     }
 
@@ -76,7 +101,7 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
         foodExpense: Double
     ) {
         db.withTransaction {
-            val vehicle = vehicleDao.getVehicle() ?: Vehicle()
+            val vehicle = vehicleDao.getActiveVehicle() ?: Vehicle()
             val kmRodados = (endOdometer - startOdometer).coerceAtLeast(0.0)
 
             // 1. Obter peças para calcular o custo de desgaste acumulado
@@ -149,7 +174,7 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
             val wearCost = kmRodados * totalWearCostPerKm
 
             // 2. Calcular custos restantes
-            val vehicle = vehicleDao.getVehicle() ?: Vehicle()
+            val vehicle = vehicleDao.getActiveVehicle() ?: Vehicle()
             val fuelCost = if (vehicle.averageConsumption > 0) {
                 (kmRodados / vehicle.averageConsumption) * fuelPrice
             } else {
@@ -195,21 +220,22 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
 
     // Método para sementes de dados ativas (Active Seed Data)
     suspend fun checkAndSeedData() {
-        val existingVehicle = vehicleDao.getVehicle()
+        val existingVehicle = vehicleDao.getActiveVehicle()
         if (existingVehicle == null) {
             Log.d("GiroCustoRepository", "Seeding initial data...")
             
             // 1. Inserir Veículo Padrão (Honda CG 160 Titan)
             val initialVehicle = Vehicle(
-                id = 1,
+                id = 1L,
                 model = "Honda CG 160 Titan",
                 averageConsumption = 40.0,
                 fuelType = "Gasolina",
                 monthlyFixedCosts = 180.0,
                 plannedWorkDays = 22,
-                currentOdometer = 15350.0 // O odômetro final do último dia de trabalho será 15.350
+                currentOdometer = 15350.0, // O odômetro final do último dia de trabalho será 15.350
+                active = true
             )
-            vehicleDao.insertOrUpdateVehicle(initialVehicle)
+            vehicleDao.insertVehicle(initialVehicle)
 
             // 2. Inserir 6 Peças de Desgaste Monitoradas com uso parcial pré-carregado
             val initialParts = listOf(

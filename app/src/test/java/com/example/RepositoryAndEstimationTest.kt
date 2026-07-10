@@ -10,7 +10,9 @@ import com.example.ui.EstimationDetail
 import com.example.ui.GiroCustoViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -44,6 +46,8 @@ class RepositoryAndEstimationTest {
         context = ApplicationProvider.getApplicationContext()
         db = Room.inMemoryDatabaseBuilder(context, GiroCustoDatabase::class.java)
             .allowMainThreadQueries()
+            .setQueryExecutor { it.run() }
+            .setTransactionExecutor { it.run() }
             .build()
         GiroCustoDatabase.setTestDatabase(db)
         repository = GiroCustoRepository(db)
@@ -393,9 +397,8 @@ class RepositoryAndEstimationTest {
         val estLimitParts = viewModel.realTimeEstimation.first { it.wearCost == 0.0 && it.fixedCost == 10.0 }
         assertEquals(0.0, estLimitParts.wearCost, 0.001)
 
-        // Clean up coroutines
-        viewModel.viewModelScope.cancel()
-        advanceTimeBy(6000)
+        // Clean up all active coroutines in the test scope to prevent UncompletedCoroutinesError
+        coroutineContext[Job]?.cancelChildren()
     }
 
     @Test
@@ -406,8 +409,7 @@ class RepositoryAndEstimationTest {
         val profile = UserProfile(
             name = "John Doe",
             phone = "11999998888",
-            city = "São Paulo",
-            platforms = "iFood, Uber"
+            city = "São Paulo"
         )
         repository.saveUserProfile(profile)
 
@@ -416,11 +418,9 @@ class RepositoryAndEstimationTest {
         assertEquals("John Doe", savedProfile!!.name)
         assertEquals("11999998888", savedProfile.phone)
         assertEquals("São Paulo", savedProfile.city)
-        assertEquals("iFood, Uber", savedProfile.platforms)
 
         val updatedProfile = savedProfile.copy(
-            name = "Jane Doe",
-            platforms = "Rappi, Loggi"
+            name = "Jane Doe"
         )
         repository.saveUserProfile(updatedProfile)
 
@@ -428,7 +428,6 @@ class RepositoryAndEstimationTest {
         assertNotNull(finalProfile)
         assertEquals("Jane Doe", finalProfile!!.name)
         assertEquals("11999998888", finalProfile.phone)
-        assertEquals("Rappi, Loggi", finalProfile.platforms)
     }
 
     @Test

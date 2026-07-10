@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Vehicle::class, VehiclePart::class, DailyRecord::class, UserProfile::class, Platform::class],
-    version = 4,
+    version = 6,
     exportSchema = true
 )
 abstract class GiroCustoDatabase : RoomDatabase() {
@@ -65,6 +65,28 @@ abstract class GiroCustoDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `user_profile_new` (" +
+                    "`id` INTEGER NOT NULL, " +
+                    "`name` TEXT NOT NULL, " +
+                    "`phone` TEXT NOT NULL, " +
+                    "`city` TEXT NOT NULL, " +
+                    "PRIMARY KEY(`id`))"
+                )
+                db.execSQL("INSERT INTO `user_profile_new` (`id`, `name`, `phone`, `city`) SELECT `id`, `name`, `phone`, `city` FROM `user_profile`")
+                db.execSQL("DROP TABLE `user_profile`")
+                db.execSQL("ALTER TABLE `user_profile_new` RENAME TO `user_profile`")
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE vehicle ADD COLUMN active INTEGER NOT NULL DEFAULT 1")
+            }
+        }
+
         fun getDatabase(context: Context): GiroCustoDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -72,7 +94,7 @@ abstract class GiroCustoDatabase : RoomDatabase() {
                     GiroCustoDatabase::class.java,
                     "giro_custo_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .build()
                 INSTANCE = instance
                 instance

@@ -220,7 +220,7 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
                         ) { screen ->
                             when (screen) {
                                 DrawerDestination.VEICULO -> VehicleScreen(viewModel, vehicle, parts)
-                                DrawerDestination.PERFIL -> ProfileScreen(viewModel)
+                                DrawerDestination.PERFIL -> ProfileScreen(viewModel, onNavigateToPlatforms = { drawerDestination = DrawerDestination.PLATAFORMAS })
                                 DrawerDestination.PLATAFORMAS -> PlatformsScreen(viewModel)
                                 GiroTab.PAINEL -> DashboardScreen(viewModel, vehicle, parts, records)
                                 GiroTab.LANCAR -> LaunchScreen(viewModel, vehicle, parts)

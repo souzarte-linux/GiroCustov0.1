@@ -27,12 +27,14 @@ import com.example.ui.GiroCustoViewModel
 
 @Composable
 fun ProfileScreen(
-    viewModel: GiroCustoViewModel
+    viewModel: GiroCustoViewModel,
+    onNavigateToPlatforms: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
     val userProfileState by viewModel.userProfile.collectAsStateWithLifecycle()
+    val allPlatforms by viewModel.allPlatforms.collectAsStateWithLifecycle()
 
     val profile = userProfileState ?: UserProfile()
 
@@ -40,7 +42,6 @@ fun ProfileScreen(
     var name by remember(profile) { mutableStateOf(profile.name) }
     var phone by remember(profile) { mutableStateOf(profile.phone) }
     var city by remember(profile) { mutableStateOf(profile.city) }
-    var platforms by remember(profile) { mutableStateOf(profile.platforms) }
 
     Column(
         modifier = Modifier
@@ -135,21 +136,86 @@ fun ProfileScreen(
                     }
                 )
 
-                TextField(
-                    value = platforms,
-                    onValueChange = { platforms = it },
-                    label = { Text("Plataformas Ativas (Separadas por vírgula)") },
-                    placeholder = { Text("ex: iFood, Uber Flash, Rappi") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("profile_platforms_input"),
-                    singleLine = true,
-                    leadingIcon = {
-                        Icon(Icons.Filled.Work, contentDescription = null, tint = Color(0xFF94A3B8))
-                    }
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Plataformas Ativas",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    fontSize = 15.sp
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                if (allPlatforms.isEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Nenhuma plataforma cadastrada.",
+                            color = Color(0xFF94A3B8),
+                            fontSize = 14.sp
+                        )
+                        Button(
+                            onClick = onNavigateToPlatforms,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.testTag("profile_go_to_platforms_btn")
+                        ) {
+                            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Cadastrar Plataformas", fontSize = 13.sp)
+                        }
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        allPlatforms.forEach { platform ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = platform.active,
+                                    onCheckedChange = { checked ->
+                                        viewModel.savePlatform(platform.copy(active = checked))
+                                    },
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = Color(0xFF10B981),
+                                        uncheckedColor = Color(0xFF64748B),
+                                        checkmarkColor = Color(0xFF064E3B)
+                                    ),
+                                    modifier = Modifier.testTag("profile_platform_checkbox_${platform.name.lowercase().replace(" ", "_")}")
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = platform.name,
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = "${platform.segment.replaceFirstChar { it.uppercase() }} • ${platform.cycle.replaceFirstChar { it.uppercase() }}",
+                                        color = Color(0xFF94A3B8),
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Save button
                 Button(
@@ -157,8 +223,7 @@ fun ProfileScreen(
                         viewModel.updateUserProfile(
                             name = name.trim(),
                             phone = phone.trim(),
-                            city = city.trim(),
-                            platforms = platforms.trim()
+                            city = city.trim()
                         )
                         Toast.makeText(context, "Perfil de usuário atualizado com sucesso!", Toast.LENGTH_SHORT).show()
                     },

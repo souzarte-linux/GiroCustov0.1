@@ -5,13 +5,14 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "vehicle")
 data class Vehicle(
-    @PrimaryKey val id: Int = 1,
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val model: String = "Honda CG 160 Titan",
     val averageConsumption: Double = 40.0, // km/L
     val fuelType: String = "Gasolina",
     val monthlyFixedCosts: Double = 180.0, // IPVA, Seguro, Celular, MEI
     val plannedWorkDays: Int = 22, // Rateio de custos fixos por dia (ex: 22 dias)
-    val currentOdometer: Double = 15350.0 // Último hodômetro conhecido
+    val currentOdometer: Double = 15350.0, // Último hodômetro conhecido
+    val active: Boolean = true
 )
 
 @Entity(tableName = "vehicle_parts")
@@ -58,8 +59,7 @@ data class UserProfile(
     @PrimaryKey val id: Int = 1,
     val name: String = "",
     val phone: String = "",
-    val city: String = "",
-    val platforms: String = "" // plataformas que atua, ex: "iFood, Uber Flash"
+    val city: String = ""
 )
 
 @Entity(tableName = "platforms")
