@@ -4,6 +4,7 @@ import android.app.DatePickerDialog
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.Vehicle
 import com.example.data.VehiclePart
+import com.example.data.Platform
 import com.example.ui.EstimationDetail
 import com.example.ui.GiroCustoViewModel
 import java.text.SimpleDateFormat
@@ -51,6 +53,10 @@ fun LaunchScreen(
     val fuelPr by viewModel.fuelPrice.collectAsStateWithLifecycle()
     val foodExp by viewModel.foodExpense.collectAsStateWithLifecycle()
     val platformVal by viewModel.platform.collectAsStateWithLifecycle()
+    val platformsList by viewModel.allPlatforms.collectAsStateWithLifecycle()
+
+    var dropdownExpanded by remember { mutableStateOf(false) }
+    var showAddPlatformDialog by remember { mutableStateOf(false) }
 
     val estimate by viewModel.realTimeEstimation.collectAsStateWithLifecycle(initialValue = EstimationDetail())
 
@@ -181,21 +187,105 @@ fun LaunchScreen(
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
 
-                TextField(
-                    value = platformVal,
-                    onValueChange = { viewModel.platform.value = it },
-                    label = { Text("Plataforma (ex: iFood, Uber, Rappi)") },
-                    modifier = Modifier.fillMaxWidth().testTag("input_platform"),
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Filled.Storefront,
-                            contentDescription = "Plataforma",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        TextField(
+                            value = platformVal,
+                            onValueChange = { 
+                                viewModel.platform.value = it 
+                                dropdownExpanded = true
+                            },
+                            label = { Text("Plataforma") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("input_platform"),
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Filled.Storefront,
+                                    contentDescription = "Plataforma",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { dropdownExpanded = !dropdownExpanded }) {
+                                    Icon(
+                                        imageVector = if (dropdownExpanded) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
+                                        contentDescription = "Expandir opções"
+                                    )
+                                }
+                            },
+                            singleLine = true
                         )
-                    },
-                    singleLine = true
-                )
+
+                        DropdownMenu(
+                            expanded = dropdownExpanded,
+                            onDismissRequest = { dropdownExpanded = false },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFF1E1E22))
+                                .border(1.dp, Color(0xFF2D2D34), RoundedCornerShape(8.dp))
+                        ) {
+                            val filteredPlatforms = if (platformVal.isBlank()) {
+                                platformsList
+                            } else {
+                                platformsList.filter { it.name.contains(platformVal, ignoreCase = true) }
+                            }
+
+                            if (filteredPlatforms.isNotEmpty()) {
+                                filteredPlatforms.forEach { plat ->
+                                    DropdownMenuItem(
+                                        text = { Text(plat.name, color = Color.White) },
+                                        onClick = {
+                                            viewModel.platform.value = plat.name
+                                            dropdownExpanded = false
+                                        },
+                                        modifier = Modifier.testTag("platform_option_${plat.name}")
+                                    )
+                                }
+                            }
+                            
+                            val exactMatch = filteredPlatforms.any { it.name.equals(platformVal, ignoreCase = true) }
+                            if (!exactMatch || platformVal.isNotBlank() || filteredPlatforms.isEmpty()) {
+                                DropdownMenuItem(
+                                    text = { 
+                                        Text(
+                                            text = "Cadastrar Nova Plataforma?", 
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        ) 
+                                    },
+                                    onClick = {
+                                        dropdownExpanded = false
+                                        showAddPlatformDialog = true
+                                    },
+                                    modifier = Modifier.testTag("platform_option_register_new")
+                                )
+                            }
+                        }
+                    }
+
+                    FilledIconButton(
+                        onClick = { showAddPlatformDialog = true },
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        modifier = Modifier
+                            .size(48.dp)
+                            .testTag("add_new_platform_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = "Cadastrar Nova Plataforma",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
 
@@ -386,6 +476,210 @@ fun LaunchScreen(
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF064E3B)
+            )
+        }
+
+        if (showAddPlatformDialog) {
+            var newPlatformName by remember { mutableStateOf(platformVal) }
+            var selectedSegment by remember { mutableStateOf("delivery") }
+            var selectedPaymentModel by remember { mutableStateOf("producao") }
+            var selectedCycle by remember { mutableStateOf("semanal") }
+            
+            var segmentExpanded by remember { mutableStateOf(false) }
+            var paymentExpanded by remember { mutableStateOf(false) }
+            var cycleExpanded by remember { mutableStateOf(false) }
+
+            AlertDialog(
+                onDismissRequest = { showAddPlatformDialog = false },
+                title = {
+                    Text(
+                        text = "Cadastrar Nova Plataforma",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                },
+                text = {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        TextField(
+                            value = newPlatformName,
+                            onValueChange = { newPlatformName = it },
+                            label = { Text("Nome da Plataforma") },
+                            modifier = Modifier.fillMaxWidth().testTag("new_platform_name_input"),
+                            singleLine = true
+                        )
+
+                        // SEGMENT SELECTOR
+                        Column {
+                            Text("Segmento", fontSize = 12.sp, color = Color(0xFF94A3B8))
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFF2D2D34), RoundedCornerShape(8.dp))
+                                        .clickable { segmentExpanded = true }
+                                        .padding(horizontal = 12.dp, vertical = 14.dp)
+                                        .testTag("new_platform_segment_selector"),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val segmentLabel = when (selectedSegment) {
+                                        "delivery" -> "Delivery (Entrega)"
+                                        "transporte" -> "Transporte (Passageiros)"
+                                        "misto" -> "Misto"
+                                        else -> "Outro"
+                                    }
+                                    Text(segmentLabel, color = Color.White, fontSize = 14.sp)
+                                    Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = Color.White)
+                                }
+                                DropdownMenu(
+                                    expanded = segmentExpanded,
+                                    onDismissRequest = { segmentExpanded = false }
+                                ) {
+                                    listOf(
+                                        "delivery" to "Delivery (Entrega)",
+                                        "transporte" to "Transporte (Passageiros)",
+                                        "misto" to "Misto",
+                                        "outro" to "Outro"
+                                    ).forEach { (id, label) ->
+                                        DropdownMenuItem(
+                                            text = { Text(label) },
+                                            onClick = {
+                                                selectedSegment = id
+                                                segmentExpanded = false
+                                            },
+                                            modifier = Modifier.testTag("segment_option_$id")
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // PAYMENT MODEL SELECTOR
+                        Column {
+                            Text("Modelo de Pagamento", fontSize = 12.sp, color = Color(0xFF94A3B8))
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFF2D2D34), RoundedCornerShape(8.dp))
+                                        .clickable { paymentExpanded = true }
+                                        .padding(horizontal = 12.dp, vertical = 14.dp)
+                                        .testTag("new_platform_payment_selector"),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val modelLabel = when (selectedPaymentModel) {
+                                        "producao" -> "Produção (Por Corrida)"
+                                        "fixo" -> "Fixo (Diária/Garantido)"
+                                        else -> "Misto"
+                                    }
+                                    Text(modelLabel, color = Color.White, fontSize = 14.sp)
+                                    Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = Color.White)
+                                }
+                                DropdownMenu(
+                                    expanded = paymentExpanded,
+                                    onDismissRequest = { paymentExpanded = false }
+                                ) {
+                                    listOf(
+                                        "producao" to "Produção (Por Corrida)",
+                                        "fixo" to "Fixo (Diária/Garantido)",
+                                        "misto" to "Misto"
+                                    ).forEach { (id, label) ->
+                                        DropdownMenuItem(
+                                            text = { Text(label) },
+                                            onClick = {
+                                                selectedPaymentModel = id
+                                                paymentExpanded = false
+                                            },
+                                            modifier = Modifier.testTag("payment_option_$id")
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // CYCLE SELECTOR
+                        Column {
+                            Text("Ciclo de Pagamento", fontSize = 12.sp, color = Color(0xFF94A3B8))
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFF2D2D34), RoundedCornerShape(8.dp))
+                                        .clickable { cycleExpanded = true }
+                                        .padding(horizontal = 12.dp, vertical = 14.dp)
+                                        .testTag("new_platform_cycle_selector"),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val cycleLabel = when (selectedCycle) {
+                                        "diario" -> "Diário"
+                                        "semanal" -> "Semanal"
+                                        "quinzenal" -> "Quinzenal"
+                                        "mensal" -> "Mensal"
+                                        else -> "Variável / Misto"
+                                    }
+                                    Text(cycleLabel, color = Color.White, fontSize = 14.sp)
+                                    Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = Color.White)
+                                }
+                                DropdownMenu(
+                                    expanded = cycleExpanded,
+                                    onDismissRequest = { cycleExpanded = false }
+                                ) {
+                                    listOf(
+                                        "diario" to "Diário",
+                                        "semanal" to "Semanal",
+                                        "quinzenal" to "Quinzenal",
+                                        "mensal" to "Mensal",
+                                        "misto" to "Variável / Misto"
+                                    ).forEach { (id, label) ->
+                                        DropdownMenuItem(
+                                            text = { Text(label) },
+                                            onClick = {
+                                                selectedCycle = id
+                                                cycleExpanded = false
+                                            },
+                                            modifier = Modifier.testTag("cycle_option_$id")
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            if (newPlatformName.isNotBlank()) {
+                                val newPlatform = com.example.data.Platform(
+                                    name = newPlatformName.trim(),
+                                    segment = selectedSegment,
+                                    paymentModel = selectedPaymentModel,
+                                    cycle = selectedCycle,
+                                    active = true
+                                )
+                                viewModel.savePlatform(newPlatform)
+                                viewModel.platform.value = newPlatformName.trim()
+                                showAddPlatformDialog = false
+                            }
+                        },
+                        modifier = Modifier.testTag("save_new_platform_btn")
+                    ) {
+                        Text("Salvar", color = MaterialTheme.colorScheme.primary)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showAddPlatformDialog = false },
+                        modifier = Modifier.testTag("cancel_new_platform_btn")
+                    ) {
+                        Text("Cancelar", color = Color(0xFF94A3B8))
+                    }
+                },
+                containerColor = Color(0xFF1E1E22)
             )
         }
     }
