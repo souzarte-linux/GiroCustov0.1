@@ -11,6 +11,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -46,6 +50,7 @@ fun LaunchScreen(
 ) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
 
     val startOdo by viewModel.startOdometer.collectAsStateWithLifecycle()
     val endOdo by viewModel.endOdometer.collectAsStateWithLifecycle()
@@ -72,6 +77,15 @@ fun LaunchScreen(
     }
 
     val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
+
+    val inputCardContainerColor = if (isDark) Color(0xFF1E1E22) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+    val inputCardBorderColor = if (isDark) Color(0xFF2D2D34) else MaterialTheme.colorScheme.outlineVariant
+    val inputFieldContainerColor = if (isDark) Color(0xFF2A2A30) else MaterialTheme.colorScheme.surface
+    val inputFieldTextColor = if (isDark) Color.White else MaterialTheme.colorScheme.onSurface
+    val inputFieldLabelColor = if (isDark) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurfaceVariant
+    val dropdownMenuBgColor = if (isDark) Color(0xFF1E1E22) else MaterialTheme.colorScheme.surface
+    val dropdownMenuBorderColor = if (isDark) Color(0xFF2D2D34) else MaterialTheme.colorScheme.outlineVariant
+    val dropdownMenuItemTextColor = if (isDark) Color.White else MaterialTheme.colorScheme.onSurface
 
     Column(
         modifier = Modifier
@@ -114,9 +128,9 @@ fun LaunchScreen(
         // Formulário de Entradas (Polished Charcoal Input Card)
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+            colors = CardDefaults.cardColors(containerColor = inputCardContainerColor),
             shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(1.dp, Color(0xFF2D2D34)), // Dark border
+            border = BorderStroke(1.dp, inputCardBorderColor),
             elevation = CardDefaults.cardElevation(0.dp)
         ) {
             Column(
@@ -222,10 +236,16 @@ fun LaunchScreen(
                                 }
                             },
                             singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                             shape = RoundedCornerShape(8.dp),
                             colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color(0xFF2A2A30),
-                                unfocusedContainerColor = Color(0xFF2A2A30),
+                                focusedContainerColor = inputFieldContainerColor,
+                                unfocusedContainerColor = inputFieldContainerColor,
+                                focusedTextColor = inputFieldTextColor,
+                                unfocusedTextColor = inputFieldTextColor,
+                                focusedLabelColor = inputFieldLabelColor,
+                                unfocusedLabelColor = inputFieldLabelColor,
                                 focusedIndicatorColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent,
                                 disabledIndicatorColor = Color.Transparent
@@ -238,8 +258,8 @@ fun LaunchScreen(
                             properties = PopupProperties(focusable = false),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color(0xFF1E1E22))
-                                .border(1.dp, Color(0xFF2D2D34), RoundedCornerShape(8.dp))
+                                .background(dropdownMenuBgColor)
+                                .border(1.dp, dropdownMenuBorderColor, RoundedCornerShape(8.dp))
                         ) {
                             val filteredPlatforms = if (platformVal.isBlank()) {
                                 platformsList
@@ -250,7 +270,7 @@ fun LaunchScreen(
                             if (filteredPlatforms.isNotEmpty()) {
                                 filteredPlatforms.forEach { plat ->
                                     DropdownMenuItem(
-                                        text = { Text(plat.name, color = Color.White) },
+                                        text = { Text(plat.name, color = dropdownMenuItemTextColor) },
                                         onClick = {
                                             viewModel.platform.value = plat.name
                                             dropdownExpanded = false
@@ -310,12 +330,17 @@ fun LaunchScreen(
                             .weight(1f)
                             .height(64.dp)
                             .testTag("input_start_odometer"),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color(0xFF2A2A30),
-                            unfocusedContainerColor = Color(0xFF2A2A30),
+                            focusedContainerColor = inputFieldContainerColor,
+                            unfocusedContainerColor = inputFieldContainerColor,
+                            focusedTextColor = inputFieldTextColor,
+                            unfocusedTextColor = inputFieldTextColor,
+                            focusedLabelColor = inputFieldLabelColor,
+                            unfocusedLabelColor = inputFieldLabelColor,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -329,12 +354,17 @@ fun LaunchScreen(
                             .weight(1f)
                             .height(64.dp)
                             .testTag("input_end_odometer"),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color(0xFF2A2A30),
-                            unfocusedContainerColor = Color(0xFF2A2A30),
+                            focusedContainerColor = inputFieldContainerColor,
+                            unfocusedContainerColor = inputFieldContainerColor,
+                            focusedTextColor = inputFieldTextColor,
+                            unfocusedTextColor = inputFieldTextColor,
+                            focusedLabelColor = inputFieldLabelColor,
+                            unfocusedLabelColor = inputFieldLabelColor,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -351,12 +381,17 @@ fun LaunchScreen(
                             .weight(1f)
                             .height(64.dp)
                             .testTag("input_gross_earnings"),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color(0xFF2A2A30),
-                            unfocusedContainerColor = Color(0xFF2A2A30),
+                            focusedContainerColor = inputFieldContainerColor,
+                            unfocusedContainerColor = inputFieldContainerColor,
+                            focusedTextColor = inputFieldTextColor,
+                            unfocusedTextColor = inputFieldTextColor,
+                            focusedLabelColor = inputFieldLabelColor,
+                            unfocusedLabelColor = inputFieldLabelColor,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -370,12 +405,17 @@ fun LaunchScreen(
                             .weight(1f)
                             .height(64.dp)
                             .testTag("input_deliveries_count"),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color(0xFF2A2A30),
-                            unfocusedContainerColor = Color(0xFF2A2A30),
+                            focusedContainerColor = inputFieldContainerColor,
+                            unfocusedContainerColor = inputFieldContainerColor,
+                            focusedTextColor = inputFieldTextColor,
+                            unfocusedTextColor = inputFieldTextColor,
+                            focusedLabelColor = inputFieldLabelColor,
+                            unfocusedLabelColor = inputFieldLabelColor,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -391,12 +431,17 @@ fun LaunchScreen(
                         modifier = Modifier
                             .weight(1f)
                             .height(64.dp),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color(0xFF2A2A30),
-                            unfocusedContainerColor = Color(0xFF2A2A30),
+                            focusedContainerColor = inputFieldContainerColor,
+                            unfocusedContainerColor = inputFieldContainerColor,
+                            focusedTextColor = inputFieldTextColor,
+                            unfocusedTextColor = inputFieldTextColor,
+                            focusedLabelColor = inputFieldLabelColor,
+                            unfocusedLabelColor = inputFieldLabelColor,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -409,12 +454,17 @@ fun LaunchScreen(
                         modifier = Modifier
                             .weight(1f)
                             .height(64.dp),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color(0xFF2A2A30),
-                            unfocusedContainerColor = Color(0xFF2A2A30),
+                            focusedContainerColor = inputFieldContainerColor,
+                            unfocusedContainerColor = inputFieldContainerColor,
+                            focusedTextColor = inputFieldTextColor,
+                            unfocusedTextColor = inputFieldTextColor,
+                            focusedLabelColor = inputFieldLabelColor,
+                            unfocusedLabelColor = inputFieldLabelColor,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
