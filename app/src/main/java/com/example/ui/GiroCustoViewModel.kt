@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.*
+import com.example.network.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -20,6 +21,47 @@ enum class Period {
 class GiroCustoViewModel(application: Application) : AndroidViewModel(application) {
     private val db = GiroCustoDatabase.getDatabase(application)
     private val repository = GiroCustoRepository(db)
+
+    // GPS Gas Station Search States
+    private val _nearbyGasStations = MutableStateFlow<List<GasStationResult>>(emptyList())
+    val nearbyGasStations: StateFlow<List<GasStationResult>> = _nearbyGasStations.asStateFlow()
+
+    private val _isSearchingStations = MutableStateFlow(false)
+    val isSearchingStations: StateFlow<Boolean> = _isSearchingStations.asStateFlow()
+
+    private val _stationSearchError = MutableStateFlow<String?>(null)
+    val stationSearchError: StateFlow<String?> = _stationSearchError.asStateFlow()
+
+    fun clearStationSearch() {
+        _nearbyGasStations.value = emptyList()
+        _stationSearchError.value = null
+    }
+
+    fun searchNearbyGasStations(context: Context) {
+        viewModelScope.launch {
+            _isSearchingStations.value = true
+            _stationSearchError.value = null
+            _nearbyGasStations.value = emptyList()
+
+            val location = LocationHelper.getCurrentLocation(context)
+            if (location != null) {
+                when (val result = GasStationRepository.findNearbyGasStations(location.latitude, location.longitude)) {
+                    is GasStationSearchResult.Success -> {
+                        _nearbyGasStations.value = result.stations
+                        if (result.stations.isEmpty()) {
+                            _stationSearchError.value = "Nenhum posto de combustível encontrado nas proximidades."
+                        }
+                    }
+                    is GasStationSearchResult.Error -> {
+                        _stationSearchError.value = result.message
+                    }
+                }
+            } else {
+                _stationSearchError.value = "Não foi possível obter a localização. Verifique se o GPS está ativo e a permissão concedida."
+            }
+            _isSearchingStations.value = false
+        }
+    }
 
     // Flows do Banco de Dados
     val vehicle: StateFlow<Vehicle?> = repository.vehicleFlow
@@ -96,6 +138,12 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     fun deleteFuelRefill(refill: FuelRefill) {
         viewModelScope.launch {
             repository.deleteFuelRefill(refill)
+        }
+    }
+
+    fun renameGasStation(oldName: String, newName: String) {
+        viewModelScope.launch {
+            repository.renameGasStation(oldName, newName)
         }
     }
 

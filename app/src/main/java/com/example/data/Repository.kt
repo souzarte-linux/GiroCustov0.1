@@ -412,6 +412,10 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
         maintenanceRecordDao.deleteRecord(record)
     }
 
+    suspend fun renameGasStation(oldName: String, newName: String) {
+        fuelRefillDao.renameGasStation(oldName, newName)
+    }
+
     private data class SeededDay(
         val offset: Int,
         val gross: Double,

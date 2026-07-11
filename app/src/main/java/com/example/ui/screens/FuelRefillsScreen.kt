@@ -35,6 +35,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.FuelRefill
 import com.example.ui.GiroCustoViewModel
+import com.example.network.GasStationResult
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -146,6 +151,7 @@ fun FuelRefillsScreen(viewModel: GiroCustoViewModel) {
                 refill = refillToEdit,
                 isEdit = isEdit,
                 existingGasStations = existingGasStations,
+                viewModel = viewModel,
                 onBack = { editingRefillId = null },
                 onSave = { updatedRefill ->
                     viewModel.saveFuelRefill(updatedRefill)
@@ -160,6 +166,9 @@ fun FuelRefillsScreen(viewModel: GiroCustoViewModel) {
                     viewModel.deleteFuelRefill(refillToEdit)
                     Toast.makeText(context, "Abastecimento excluído.", Toast.LENGTH_SHORT).show()
                     editingRefillId = null
+                },
+                onRenameGasStation = { oldName, newName ->
+                    viewModel.renameGasStation(oldName, newName)
                 }
             )
         }
@@ -349,9 +358,11 @@ fun RefillFormSection(
     refill: FuelRefill,
     isEdit: Boolean,
     existingGasStations: List<String>,
+    viewModel: GiroCustoViewModel,
     onBack: () -> Unit,
     onSave: (FuelRefill) -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onRenameGasStation: (String, String) -> Unit
 ) {
     var gasStation by remember { mutableStateOf(if (isEdit) refill.gasStation else "") }
     var selectedFuelType by remember { mutableStateOf(if (isEdit) refill.fuelType else "Gasolina Comum") }
@@ -371,8 +382,30 @@ fun RefillFormSection(
     val fuelTypes = listOf("Gasolina Comum", "Gasolina Aditivada", "Etanol Comum", "Etanol Aditivado", "Diesel", "GNV")
     val paymentMethods = listOf("PIX", "Cartão", "Dinheiro")
 
+    val nearbyStations by viewModel.nearbyGasStations.collectAsStateWithLifecycle()
+    val isSearchingStations by viewModel.isSearchingStations.collectAsStateWithLifecycle()
+    val stationSearchError by viewModel.stationSearchError.collectAsStateWithLifecycle()
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            viewModel.searchNearbyGasStations(context)
+        } else {
+            Toast.makeText(context, "Permissão de localização necessária para buscar postos próximos.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.clearStationSearch()
+        }
+    }
+
     var focusedField by remember { mutableStateOf<String?>(null) }
     var showAddStationDialog by remember { mutableStateOf(false) }
+    var showEditStationDialog by remember { mutableStateOf(false) }
+    var stationToEdit by remember { mutableStateOf("") }
     var dropdownExpanded by remember { mutableStateOf(false) }
     var newlyAddedStations by remember { mutableStateOf(listOf<String>()) }
     val stationsList = (existingGasStations + newlyAddedStations).distinct().filter { it.isNotBlank() }
@@ -526,6 +559,21 @@ fun RefillFormSection(
                                     gasStation = station
                                     dropdownExpanded = false
                                 },
+                                trailingIcon = {
+                                    IconButton(
+                                        onClick = {
+                                            stationToEdit = station
+                                            showEditStationDialog = true
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Edit,
+                                            contentDescription = "Editar Posto",
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                },
                                 modifier = Modifier.testTag("station_option_${station}")
                             )
                         }
@@ -567,6 +615,173 @@ fun RefillFormSection(
                     contentDescription = "Adicionar Novo Posto",
                     modifier = Modifier.size(24.dp)
                 )
+            }
+
+            FilledIconButton(
+                onClick = {
+                    val permission = android.Manifest.permission.ACCESS_FINE_LOCATION
+                    val hasPermission = ContextCompat.checkSelfPermission(
+                        context,
+                        permission
+                    ) == PackageManager.PERMISSION_GRANTED
+                    if (hasPermission) {
+                        viewModel.searchNearbyGasStations(context)
+                    } else {
+                        permissionLauncher.launch(permission)
+                    }
+                },
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .size(56.dp)
+                    .testTag("search_nearby_gas_stations_btn")
+            ) {
+                if (isSearchingStations) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.NearMe,
+                        contentDescription = "Buscar posto próximo",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+
+        // Nearby Gas Stations Search Results
+        AnimatedVisibility(
+            visible = nearbyStations.isNotEmpty() || stationSearchError != null || isSearchingStations,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Postos Próximos (GPS)",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        IconButton(
+                            onClick = { viewModel.clearStationSearch() },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Close,
+                                contentDescription = "Fechar busca por GPS",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    if (isSearchingStations) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            Text("Buscando postos próximos...", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+
+                    if (stationSearchError != null) {
+                        Text(
+                            text = stationSearchError ?: "",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
+
+                    if (nearbyStations.isNotEmpty()) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            nearbyStations.take(5).forEach { station ->
+                                val distanceText = if (station.distanceMeters >= 1000) {
+                                    String.format(Locale.getDefault(), "%.1f km", station.distanceMeters / 1000.0)
+                                } else {
+                                    "${station.distanceMeters.toInt()} m"
+                                }
+                                val displayName = if (!station.brand.isNullOrBlank()) {
+                                    "${station.name} (${station.brand})"
+                                } else {
+                                    station.name
+                                }
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            gasStation = displayName
+                                            viewModel.clearStationSearch()
+                                        }
+                                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.LocalGasStation,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Column {
+                                            Text(
+                                                text = station.name,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            if (!station.brand.isNullOrBlank()) {
+                                                Text(
+                                                    text = station.brand,
+                                                    fontSize = 12.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    }
+                                    Text(
+                                        text = distanceText,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -670,6 +885,69 @@ fun RefillFormSection(
                     TextButton(
                         onClick = { showAddStationDialog = false },
                         modifier = Modifier.testTag("cancel_new_station_btn")
+                    ) {
+                        Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            )
+        }
+
+        if (showEditStationDialog) {
+            var editedStationName by remember { mutableStateOf(stationToEdit) }
+
+            AlertDialog(
+                onDismissRequest = { showEditStationDialog = false },
+                title = {
+                    Text(
+                        text = "Editar Posto de Combustível",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                },
+                text = {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Renomear o posto mudará o nome em todos os abastecimentos passados.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextField(
+                            value = editedStationName,
+                            onValueChange = { editedStationName = it },
+                            label = { Text("Nome do Posto") },
+                            modifier = Modifier.fillMaxWidth().testTag("edit_station_name_input"),
+                            singleLine = true,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            if (editedStationName.isNotBlank() && editedStationName.trim() != stationToEdit) {
+                                val trimmedNew = editedStationName.trim()
+                                onRenameGasStation(stationToEdit, trimmedNew)
+                                if (gasStation == stationToEdit) {
+                                    gasStation = trimmedNew
+                                }
+                                newlyAddedStations = newlyAddedStations.map { if (it == stationToEdit) trimmedNew else it }
+                                Toast.makeText(context, "Posto renomeado com sucesso!", Toast.LENGTH_SHORT).show()
+                            }
+                            showEditStationDialog = false
+                        },
+                        modifier = Modifier.testTag("save_edit_station_btn")
+                    ) {
+                        Text("Salvar", color = MaterialTheme.colorScheme.primary)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showEditStationDialog = false },
+                        modifier = Modifier.testTag("cancel_edit_station_btn")
                     ) {
                         Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

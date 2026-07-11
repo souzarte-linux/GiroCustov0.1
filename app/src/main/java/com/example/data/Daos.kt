@@ -130,6 +130,9 @@ interface FuelRefillDao {
 
     @Delete
     suspend fun deleteRefill(refill: FuelRefill)
+
+    @Query("UPDATE fuel_refills SET gasStation = :newName WHERE gasStation = :oldName")
+    suspend fun renameGasStation(oldName: String, newName: String)
 }
 
 @Dao

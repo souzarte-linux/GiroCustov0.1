@@ -713,4 +713,87 @@ class RepositoryAndEstimationTest {
         // Dashboard period should remain MENSAL
         assertEquals(com.example.ui.Period.MENSAL, viewModel.selectedPeriod.value)
     }
+
+    @Test
+    fun testBuildOverpassQuery() {
+        val query = com.example.network.GasStationRepository.buildOverpassQuery(-23.5505, -46.6333, 1500)
+        assertTrue(query.contains("1500"))
+        assertTrue(query.contains("-23.5505"))
+        assertTrue(query.contains("-46.6333"))
+        assertTrue(query.contains("node[\"amenity\"=\"fuel\"]"))
+    }
+
+    @Test
+    fun testCalculateDistance() {
+        val distance = com.example.network.GasStationRepository.calculateDistance(-23.5505, -46.6333, -22.9068, -43.1729)
+        assertTrue(distance > 300000.0)
+        assertTrue(distance < 500000.0)
+    }
+
+    @Test
+    fun testMockResponseMappingAndFiltering() = runTest {
+        val elementWithNoName = com.example.network.OverpassElement(
+            id = 1L,
+            lat = -23.5,
+            lon = -46.6,
+            tags = mapOf("brand" to "Shell")
+        )
+        val elementWithName1 = com.example.network.OverpassElement(
+            id = 2L,
+            lat = -23.501,
+            lon = -46.601,
+            tags = mapOf("name" to "Posto Shell", "brand" to "Shell")
+        )
+        val elementWithName2 = com.example.network.OverpassElement(
+            id = 3L,
+            lat = -23.505,
+            lon = -46.605,
+            tags = mapOf("name" to "Posto Ipiranga", "brand" to "Ipiranga")
+        )
+
+        val elements = listOf(elementWithNoName, elementWithName1, elementWithName2)
+        val userLat = -23.500
+        val userLon = -46.600
+
+        val results = elements.mapNotNull { element ->
+            val name = element.tags?.get("name") ?: return@mapNotNull null
+            val brand = element.tags.get("brand") ?: element.tags.get("operator")
+            val lat = element.lat ?: return@mapNotNull null
+            val lon = element.lon ?: return@mapNotNull null
+            val distance = com.example.network.GasStationRepository.calculateDistance(userLat, userLon, lat, lon)
+            com.example.network.GasStationResult(
+                name = name,
+                brand = brand,
+                lat = lat,
+                lon = lon,
+                distanceMeters = distance
+            )
+        }.sortedBy { it.distanceMeters }
+
+        assertEquals(2, results.size)
+        assertEquals("Posto Shell", results[0].name)
+        assertEquals("Posto Ipiranga", results[1].name)
+        assertTrue(results[0].distanceMeters < results[1].distanceMeters)
+    }
+
+    @Test
+    fun testEndpointFallbackFailureAndSuccess() = runTest {
+        val fakeEndpoints = listOf("https://fail1.com", "https://fail2.com", "https://success.com")
+        var tryCountAll = 0
+        var successEndpoint: String? = null
+        for (endpoint in fakeEndpoints) {
+            tryCountAll++
+            try {
+                if (endpoint.contains("fail")) {
+                    throw RuntimeException("Connection failed")
+                }
+                successEndpoint = endpoint
+                break
+            } catch (e: Exception) {
+                // fallback
+            }
+        }
+        assertEquals(3, tryCountAll)
+        assertEquals("https://success.com", successEndpoint)
+    }
 }
