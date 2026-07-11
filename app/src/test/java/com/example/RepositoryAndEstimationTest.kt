@@ -3,6 +3,8 @@ package com.example
 import android.app.Application
 import android.content.Context
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelProvider
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.*
@@ -17,6 +19,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -318,14 +321,19 @@ class RepositoryAndEstimationTest {
             currentOdometer = 1000.0
         )
         repository.saveVehicle(standardVehicle)
+        val activeVehicle = repository.getVehicle()!!
 
         // Setup Parts
         val standardPart = VehiclePart(name = "Pneu", price = 100.0, lifespanKm = 10000.0, runKmSinceChange = 0.0)
         repository.savePart(standardPart)
 
-        // Instantiate actual ViewModel using Robolectric Application Provider
+        // Instantiate actual ViewModel using Robolectric ViewModelProvider to allow clean lifecycle clearing
         val app = ApplicationProvider.getApplicationContext<Application>()
-        val viewModel = GiroCustoViewModel(app)
+        val viewModelStore = ViewModelStore()
+        val viewModel = ViewModelProvider(
+            viewModelStore,
+            ViewModelProvider.AndroidViewModelFactory.getInstance(app)
+        )[GiroCustoViewModel::class.java]
 
         // Wait for asynchronous database flows to initialize and propagate standard values to ViewModel
         viewModel.vehicle.first { it != null && it.monthlyFixedCosts == 200.0 }
@@ -360,8 +368,9 @@ class RepositoryAndEstimationTest {
         assertEquals(25.0, estLimitOdo.totalExpenses, 0.001)
 
         // 3. Limit case: Consumption == 0
-        val vehicleConsumptionZero = standardVehicle.copy(averageConsumption = 0.0)
+        val vehicleConsumptionZero = activeVehicle.copy(averageConsumption = 0.0)
         repository.saveVehicle(vehicleConsumptionZero)
+        db.invalidationTracker.refreshVersionsSync()
         
         // Wait for the ViewModel to receive the updated vehicle state
         viewModel.vehicle.first { it != null && it.averageConsumption == 0.0 }
@@ -373,8 +382,9 @@ class RepositoryAndEstimationTest {
         assertEquals(0.0, estLimitConsumption.fuelCost, 0.001)
 
         // 4. Limit case: Planned work days == 0
-        val vehiclePlannedWorkDaysZero = standardVehicle.copy(plannedWorkDays = 0)
+        val vehiclePlannedWorkDaysZero = activeVehicle.copy(plannedWorkDays = 0)
         repository.saveVehicle(vehiclePlannedWorkDaysZero)
+        db.invalidationTracker.refreshVersionsSync()
         
         // Wait for the ViewModel to receive the updated vehicle state
         viewModel.vehicle.first { it != null && it.plannedWorkDays == 0 }
@@ -385,11 +395,13 @@ class RepositoryAndEstimationTest {
         // 5. Limit case: Empty parts list
         val insertedPart = viewModel.parts.value.first()
         repository.deletePart(insertedPart)
+        db.invalidationTracker.refreshVersionsSync()
         
         // Wait for the ViewModel to receive the empty parts state
         viewModel.parts.first { it.isEmpty() }
         
-        repository.saveVehicle(standardVehicle) // restore average consumption and planned work days
+        repository.saveVehicle(activeVehicle) // restore average consumption and planned work days
+        db.invalidationTracker.refreshVersionsSync()
         
         // Wait for the restored vehicle state
         viewModel.vehicle.first { it != null && it.averageConsumption == 40.0 && it.plannedWorkDays == 20 }
@@ -397,8 +409,9 @@ class RepositoryAndEstimationTest {
         val estLimitParts = viewModel.realTimeEstimation.first { it.wearCost == 0.0 && it.fixedCost == 10.0 }
         assertEquals(0.0, estLimitParts.wearCost, 0.001)
 
-        // Clean up all active coroutines in the test scope to prevent UncompletedCoroutinesError
-        coroutineContext[Job]?.cancelChildren()
+        // Clean up all active coroutines in the test scope and ViewModel scope to prevent UncompletedCoroutinesError
+        viewModelStore.clear()
+        advanceUntilIdle()
     }
 
     @Test
@@ -506,5 +519,125 @@ class RepositoryAndEstimationTest {
         // Filter by empty string should return all
         val filteredEmpty = list.filter { it.name.contains("", ignoreCase = true) }
         assertEquals(3, filteredEmpty.size)
+    }
+
+    @Test
+    fun testFuelRefillCalculations() = runTest {
+        // Prepare a vehicle
+        val vehicle = Vehicle(id = 1001L, model = "Titan 160 Test", averageConsumption = 35.0, active = true)
+        db.vehicleDao().insertVehicle(vehicle)
+
+        // 1. Com apenas 1 abastecimento de tanque cheio (ou 0), o consumo médio real retorna null e vehicle.averageConsumption permanece inalterado
+        val refill1 = FuelRefill(
+            id = 0L,
+            vehicleId = 1001L,
+            dateTimestamp = 1000L,
+            dateString = "10/07/2026",
+            gasStation = "Posto A",
+            fuelType = "Gasolina Comum",
+            pricePerLiter = 5.0,
+            liters = 10.0,
+            totalPaid = 50.0,
+            odometer = 10000.0,
+            isFullTank = true,
+            paymentMethod = "PIX"
+        )
+        repository.saveFuelRefill(refill1)
+
+        val consumptionAfterOne = repository.calculateRealAverageConsumption(1001L)
+        assertNull(consumptionAfterOne)
+
+        val updatedVehicleAfterOne = db.vehicleDao().getVehicleById(1001L)
+        assertNotNull(updatedVehicleAfterOne)
+        assertEquals(35.0, updatedVehicleAfterOne!!.averageConsumption, 0.001)
+
+        // 2. Inserção de dois abastecimentos de tanque cheio com odômetro e litros conhecidos, verificando que calculateRealAverageConsumption retorna o valor correto
+        val refill2 = FuelRefill(
+            id = 0L,
+            vehicleId = 1001L,
+            dateTimestamp = 2000L,
+            dateString = "11/07/2026",
+            gasStation = "Posto B",
+            fuelType = "Gasolina Comum",
+            pricePerLiter = 5.0,
+            liters = 8.0,
+            totalPaid = 40.0,
+            odometer = 10320.0, // Distância do trecho = 10320 - 10000 = 320 km
+            isFullTank = true,
+            paymentMethod = "Cartão"
+        )
+        repository.saveFuelRefill(refill2)
+
+        // Consumo médio real deve ser: 320 km / 8.0 L = 40.0 km/L
+        val consumptionAfterTwo = repository.calculateRealAverageConsumption(1001L)
+        assertNotNull(consumptionAfterTwo)
+        assertEquals(40.0, consumptionAfterTwo!!, 0.001)
+
+        // Que vehicle.averageConsumption é atualizado automaticamente após salvar um abastecimento que gera novo cálculo válido
+        val updatedVehicleAfterTwo = db.vehicleDao().getVehicleById(1001L)
+        assertNotNull(updatedVehicleAfterTwo)
+        assertEquals(40.0, updatedVehicleAfterTwo!!.averageConsumption, 0.001)
+
+        // 3. Adicione um teste específico simulando um parcial no meio de dois tanques cheios, confirmando que o litros do parcial entra na soma do trecho (e não é ignorado)
+        db.vehicleDao().insertVehicle(vehicle.copy(id = 1002L, averageConsumption = 30.0))
+
+        // Refill 1 (Full) - Odo 20000
+        repository.saveFuelRefill(FuelRefill(
+            id = 0L,
+            vehicleId = 1002L,
+            dateTimestamp = 1000L,
+            dateString = "12/07/2026",
+            gasStation = "Posto X",
+            fuelType = "Gasolina",
+            pricePerLiter = 6.0,
+            liters = 5.0,
+            totalPaid = 30.0,
+            odometer = 20000.0,
+            isFullTank = true,
+            paymentMethod = "Dinheiro"
+        ))
+
+        // Refill 2 (Partial) - Odo 20150, 4 litros
+        repository.saveFuelRefill(FuelRefill(
+            id = 0L,
+            vehicleId = 1002L,
+            dateTimestamp = 2000L,
+            dateString = "13/07/2026",
+            gasStation = "Posto Y",
+            fuelType = "Gasolina",
+            pricePerLiter = 6.0,
+            liters = 4.0,
+            totalPaid = 24.0,
+            odometer = 20150.0,
+            isFullTank = false,
+            paymentMethod = "PIX"
+        ))
+
+        // Refill 3 (Full) - Odo 20300, 6 litros
+        repository.saveFuelRefill(FuelRefill(
+            id = 0L,
+            vehicleId = 1002L,
+            dateTimestamp = 3000L,
+            dateString = "14/07/2026",
+            gasStation = "Posto Z",
+            fuelType = "Gasolina",
+            pricePerLiter = 6.0,
+            liters = 6.0,
+            totalPaid = 36.0,
+            odometer = 20300.0,
+            isFullTank = true,
+            paymentMethod = "PIX"
+        ))
+
+        // Distância total = 20300 - 20000 = 300 km
+        // Litros totais consumidos = 4.0 (do parcial) + 6.0 (do tanque cheio final) = 10.0 L
+        // Consumo médio real = 300 / 10 = 30.0 km/L
+        val consumptionWithPartial = repository.calculateRealAverageConsumption(1002L)
+        assertNotNull(consumptionWithPartial)
+        assertEquals(30.0, consumptionWithPartial!!, 0.001)
+
+        val updatedVehicleWithPartial = db.vehicleDao().getVehicleById(1002L)
+        assertNotNull(updatedVehicleWithPartial)
+        assertEquals(30.0, updatedVehicleWithPartial!!.averageConsumption, 0.001)
     }
 }

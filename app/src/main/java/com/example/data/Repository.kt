@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -13,6 +15,7 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
     private val recordDao = db.dailyRecordDao()
     private val userProfileDao = db.userProfileDao()
     private val platformDao = db.platformDao()
+    private val fuelRefillDao = db.fuelRefillDao()
 
     val vehicleFlow: Flow<Vehicle?> = vehicleDao.getActiveVehicleFlow()
     val allVehiclesFlow: Flow<List<Vehicle>> = vehicleDao.getAllVehiclesFlow()
@@ -20,6 +23,15 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
     val allRecordsFlow: Flow<List<DailyRecord>> = recordDao.getAllRecordsFlow()
     val userProfileFlow: Flow<UserProfile?> = userProfileDao.getUserProfileFlow()
     val allPlatformsFlow: Flow<List<Platform>> = platformDao.getAllPlatformsFlow()
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val refillsForActiveVehicleFlow: Flow<List<FuelRefill>> = vehicleFlow.flatMapLatest { vehicle ->
+        if (vehicle != null) {
+            fuelRefillDao.getRefillsForVehicleFlow(vehicle.id)
+        } else {
+            flowOf(emptyList())
+        }
+    }
 
     suspend fun getVehicle(): Vehicle? = vehicleDao.getActiveVehicle()
     suspend fun saveVehicle(vehicle: Vehicle) {
@@ -309,6 +321,79 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
                 recordDao.insertRecord(record)
             }
         }
+    }
+
+    suspend fun calculateRealAverageConsumption(vehicleId: Long): Double? {
+        val allRefills = fuelRefillDao.getAllRefillsOrderedByOdometer(vehicleId)
+        val fullTankIndices = allRefills.indices.filter { allRefills[it].isFullTank }
+        if (fullTankIndices.size < 2) return null
+
+        val segmentConsumptions = mutableListOf<Double>()
+        for (i in 0 until fullTankIndices.size - 1) {
+            val prevFullIdx = fullTankIndices[i]
+            val currFullIdx = fullTankIndices[i + 1]
+
+            val prevFullRefill = allRefills[prevFullIdx]
+            val currFullRefill = allRefills[currFullIdx]
+
+            val distance = currFullRefill.odometer - prevFullRefill.odometer
+            if (distance <= 0) continue
+
+            // Soma de litros de todos os abastecimentos (parciais inclusive) ocorridos após o prevFullRefill até o currFullRefill
+            var litersSum = 0.0
+            for (j in (prevFullIdx + 1)..currFullIdx) {
+                litersSum += allRefills[j].liters
+            }
+
+            if (litersSum > 0) {
+                val segmentConsumption = distance / litersSum
+                segmentConsumptions.add(segmentConsumption)
+            }
+        }
+
+        return if (segmentConsumptions.isEmpty()) null else segmentConsumptions.average()
+    }
+
+    suspend fun saveFuelRefill(refill: FuelRefill) {
+        db.withTransaction {
+            if (refill.id == 0L) {
+                fuelRefillDao.insertRefill(refill)
+            } else {
+                fuelRefillDao.updateRefill(refill)
+            }
+            val realConsumption = calculateRealAverageConsumption(refill.vehicleId)
+            if (realConsumption != null) {
+                val vehicle = vehicleDao.getVehicleById(refill.vehicleId)
+                if (vehicle != null) {
+                    vehicleDao.updateVehicle(vehicle.copy(averageConsumption = realConsumption))
+                }
+            }
+        }
+    }
+
+    suspend fun deleteFuelRefill(refill: FuelRefill) {
+        db.withTransaction {
+            fuelRefillDao.deleteRefill(refill)
+            val realConsumption = calculateRealAverageConsumption(refill.vehicleId)
+            if (realConsumption != null) {
+                val vehicle = vehicleDao.getVehicleById(refill.vehicleId)
+                if (vehicle != null) {
+                    vehicleDao.updateVehicle(vehicle.copy(averageConsumption = realConsumption))
+                }
+            }
+        }
+    }
+
+    suspend fun averageFuelPrice(vehicleId: Long): Double {
+        val refills = fuelRefillDao.getAllRefillsOrderedByOdometer(vehicleId)
+        if (refills.isEmpty()) return 0.0
+        return refills.map { it.pricePerLiter }.average()
+    }
+
+    suspend fun averageLitersPerRefill(vehicleId: Long): Double {
+        val refills = fuelRefillDao.getAllRefillsOrderedByOdometer(vehicleId)
+        if (refills.isEmpty()) return 0.0
+        return refills.map { it.liters }.average()
     }
 
     private data class SeededDay(

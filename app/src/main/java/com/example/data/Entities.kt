@@ -80,4 +80,23 @@ data class Platform(
     val active: Boolean = true
 )
 
+@Entity(tableName = "fuel_refills")
+data class FuelRefill(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val vehicleId: Long,
+    val dateTimestamp: Long,
+    val dateString: String,
+    val gasStation: String,
+    val fuelType: String,
+    val pricePerLiter: Double,
+    val liters: Double,
+    val discount: Double = 0.0,
+    val totalPaid: Double,
+    val odometer: Double,
+    val isFullTank: Boolean,
+    val paymentMethod: String,
+    val isInstallment: Boolean = false,
+    val installmentsCount: Int = 1
+)
+
 

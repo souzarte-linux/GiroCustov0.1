@@ -11,6 +11,9 @@ interface VehicleDao {
     @Query("SELECT * FROM vehicle WHERE active = 1 LIMIT 1")
     suspend fun getActiveVehicle(): Vehicle?
 
+    @Query("SELECT * FROM vehicle WHERE id = :vehicleId LIMIT 1")
+    suspend fun getVehicleById(vehicleId: Long): Vehicle?
+
     @Query("SELECT * FROM vehicle ORDER BY id ASC")
     fun getAllVehiclesFlow(): Flow<List<Vehicle>>
 
@@ -106,6 +109,27 @@ interface PlatformDao {
 
     @Delete
     suspend fun deletePlatform(platform: Platform)
+}
+
+@Dao
+interface FuelRefillDao {
+    @Query("SELECT * FROM fuel_refills WHERE vehicleId = :vehicleId ORDER BY dateTimestamp DESC")
+    fun getRefillsForVehicleFlow(vehicleId: Long): Flow<List<FuelRefill>>
+
+    @Query("SELECT * FROM fuel_refills WHERE vehicleId = :vehicleId AND isFullTank = 1 ORDER BY odometer ASC")
+    suspend fun getFullTankRefillsOrderedByOdometer(vehicleId: Long): List<FuelRefill>
+
+    @Query("SELECT * FROM fuel_refills WHERE vehicleId = :vehicleId ORDER BY odometer ASC")
+    suspend fun getAllRefillsOrderedByOdometer(vehicleId: Long): List<FuelRefill>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRefill(refill: FuelRefill): Long
+
+    @Update
+    suspend fun updateRefill(refill: FuelRefill)
+
+    @Delete
+    suspend fun deleteRefill(refill: FuelRefill)
 }
 
 

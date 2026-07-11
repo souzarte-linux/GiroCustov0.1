@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.TwoWheeler
+import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -16,7 +17,8 @@ enum class DrawerDestination {
     NONE,
     VEICULO,
     PERFIL,
-    PLATAFORMAS
+    PLATAFORMAS,
+    ABASTECIMENTOS
 }
 
 @Composable
@@ -82,6 +84,21 @@ fun AppDrawer(
                     modifier = Modifier
                         .padding(NavigationDrawerItemDefaults.ItemPadding)
                         .testTag("drawer_item_platforms"),
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Filled.LocalGasStation, contentDescription = "Abastecimentos") },
+                    label = { Text("Abastecimentos") },
+                    selected = selectedDestination == DrawerDestination.ABASTECIMENTOS,
+                    onClick = { onDestinationSelected(DrawerDestination.ABASTECIMENTOS) },
+                    modifier = Modifier
+                        .padding(NavigationDrawerItemDefaults.ItemPadding)
+                        .testTag("drawer_item_refills"),
                     colors = NavigationDrawerItemDefaults.colors(
                         selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                         selectedIconColor = MaterialTheme.colorScheme.primary,

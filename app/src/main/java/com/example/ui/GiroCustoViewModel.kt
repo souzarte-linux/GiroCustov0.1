@@ -40,6 +40,54 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     val records: StateFlow<List<DailyRecord>> = repository.allRecordsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val fuelRefills: StateFlow<List<FuelRefill>> = repository.refillsForActiveVehicleFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val realAverageConsumption: StateFlow<Double?> = fuelRefills
+        .map { _ ->
+            val activeVehicleId = vehicle.value?.id ?: 0L
+            if (activeVehicleId != 0L) {
+                repository.calculateRealAverageConsumption(activeVehicleId)
+            } else {
+                null
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val averageFuelPrice: StateFlow<Double> = fuelRefills
+        .map { _ ->
+            val activeVehicleId = vehicle.value?.id ?: 0L
+            if (activeVehicleId != 0L) {
+                repository.averageFuelPrice(activeVehicleId)
+            } else {
+                0.0
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val averageLitersPerRefill: StateFlow<Double> = fuelRefills
+        .map { _ ->
+            val activeVehicleId = vehicle.value?.id ?: 0L
+            if (activeVehicleId != 0L) {
+                repository.averageLitersPerRefill(activeVehicleId)
+            } else {
+                0.0
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    fun saveFuelRefill(refill: FuelRefill) {
+        viewModelScope.launch {
+            repository.saveFuelRefill(refill)
+        }
+    }
+
+    fun deleteFuelRefill(refill: FuelRefill) {
+        viewModelScope.launch {
+            repository.deleteFuelRefill(refill)
+        }
+    }
+
     // Estado de Período Selecionado no Dashboard
     private val _selectedPeriod = MutableStateFlow(Period.SEMANA)
     val selectedPeriod: StateFlow<Period> = _selectedPeriod.asStateFlow()
@@ -111,7 +159,7 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
 
     // Auto-preencher com base no histórico anterior
     suspend fun prefillLaunchFields() {
-        val lastRecord = repository.allRecordsFlow.firstOrNull()?.firstOrNull()
+        val lastRecord = repository.allRecordsFlow.first().firstOrNull()
         val currentVehicle = repository.getVehicle()
         
         // Odômetro inicial = último odômetro final ou hodômetro do veículo

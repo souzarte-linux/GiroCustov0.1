@@ -8,8 +8,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Vehicle::class, VehiclePart::class, DailyRecord::class, UserProfile::class, Platform::class],
-    version = 6,
+    entities = [Vehicle::class, VehiclePart::class, DailyRecord::class, UserProfile::class, Platform::class, FuelRefill::class],
+    version = 7,
     exportSchema = true
 )
 abstract class GiroCustoDatabase : RoomDatabase() {
@@ -18,6 +18,7 @@ abstract class GiroCustoDatabase : RoomDatabase() {
     abstract fun dailyRecordDao(): DailyRecordDao
     abstract fun userProfileDao(): UserProfileDao
     abstract fun platformDao(): PlatformDao
+    abstract fun fuelRefillDao(): FuelRefillDao
 
     companion object {
         @Volatile
@@ -87,6 +88,29 @@ abstract class GiroCustoDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `fuel_refills` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`vehicleId` INTEGER NOT NULL, " +
+                    "`dateTimestamp` INTEGER NOT NULL, " +
+                    "`dateString` TEXT NOT NULL, " +
+                    "`gasStation` TEXT NOT NULL, " +
+                    "`fuelType` TEXT NOT NULL, " +
+                    "`pricePerLiter` REAL NOT NULL, " +
+                    "`liters` REAL NOT NULL, " +
+                    "`discount` REAL NOT NULL, " +
+                    "`totalPaid` REAL NOT NULL, " +
+                    "`odometer` REAL NOT NULL, " +
+                    "`isFullTank` INTEGER NOT NULL, " +
+                    "`paymentMethod` TEXT NOT NULL, " +
+                    "`isInstallment` INTEGER NOT NULL, " +
+                    "`installmentsCount` INTEGER NOT NULL)"
+                )
+            }
+        }
+
         fun getDatabase(context: Context): GiroCustoDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -94,7 +118,7 @@ abstract class GiroCustoDatabase : RoomDatabase() {
                     GiroCustoDatabase::class.java,
                     "giro_custo_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                 .build()
                 INSTANCE = instance
                 instance
