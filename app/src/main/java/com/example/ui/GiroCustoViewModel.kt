@@ -203,7 +203,7 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     var fuelPrice = MutableStateFlow("")
     var foodExpense = MutableStateFlow("")
     val launchDateTimestamp = MutableStateFlow(System.currentTimeMillis())
-    val platform = MutableStateFlow("iFood")
+    val platform = MutableStateFlow("")
 
     fun setLaunchDate(timestamp: Long) {
         launchDateTimestamp.value = timestamp
@@ -270,7 +270,7 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
         deliveriesCount.value = ""
         foodExpense.value = ""
         launchDateTimestamp.value = System.currentTimeMillis()
-        platform.value = "iFood"
+        platform.value = ""
     }
 
     // Salvar Metas nas SharedPreferences

@@ -214,7 +214,8 @@ fun LaunchScreen(
                                 viewModel.platform.value = it 
                                 dropdownExpanded = true
                             },
-                            label = { Text("Plataforma", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            label = { Text(if (platformVal.isBlank()) "Selecione a Plataforma" else "Plataforma", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            placeholder = { Text("Selecione a Plataforma") },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(64.dp)
