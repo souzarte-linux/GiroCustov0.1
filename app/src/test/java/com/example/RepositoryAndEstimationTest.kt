@@ -796,4 +796,53 @@ class RepositoryAndEstimationTest {
         assertEquals(3, tryCountAll)
         assertEquals("https://success.com", successEndpoint)
     }
+
+    @Test
+    fun testExtractAddress() {
+        // 1. Endereço completo (rua + número)
+        val tagsComplete = mapOf(
+            "addr:street" to "Av. Paulista",
+            "addr:housenumber" to "1000",
+            "addr:suburb" to "Bela Vista",
+            "addr:city" to "São Paulo"
+        )
+        val addressComplete = com.example.network.GasStationRepository.extractAddress(tagsComplete)
+        assertEquals("Av. Paulista 1000", addressComplete)
+
+        // 2. Apenas rua
+        val tagsStreetOnly = mapOf(
+            "addr:street" to "Av. Paulista",
+            "addr:suburb" to "Bela Vista",
+            "addr:city" to "São Paulo"
+        )
+        val addressStreetOnly = com.example.network.GasStationRepository.extractAddress(tagsStreetOnly)
+        assertEquals("Av. Paulista", addressStreetOnly)
+
+        // 3. Apenas bairro/cidade (bairro prioritário)
+        val tagsSuburbOnly = mapOf(
+            "addr:suburb" to "Bela Vista",
+            "addr:city" to "São Paulo"
+        )
+        val addressSuburbOnly = com.example.network.GasStationRepository.extractAddress(tagsSuburbOnly)
+        assertEquals("Bela Vista", addressSuburbOnly)
+
+        val tagsCityOnly = mapOf(
+            "addr:city" to "São Paulo"
+        )
+        val addressCityOnly = com.example.network.GasStationRepository.extractAddress(tagsCityOnly)
+        assertEquals("São Paulo", addressCityOnly)
+
+        // 4. Nulo / Sem tags de endereço relevantes
+        val tagsNull: Map<String, String>? = null
+        val addressNull = com.example.network.GasStationRepository.extractAddress(tagsNull)
+        assertNull(addressNull)
+
+        val tagsEmpty = emptyMap<String, String>()
+        val addressEmpty = com.example.network.GasStationRepository.extractAddress(tagsEmpty)
+        assertNull(addressEmpty)
+
+        val tagsUnrelated = mapOf("brand" to "Shell")
+        val addressUnrelated = com.example.network.GasStationRepository.extractAddress(tagsUnrelated)
+        assertNull(addressUnrelated)
+    }
 }

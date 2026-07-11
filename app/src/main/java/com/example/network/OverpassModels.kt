@@ -20,7 +20,8 @@ data class GasStationResult(
     val brand: String?,
     val lat: Double,
     val lon: Double,
-    val distanceMeters: Double
+    val distanceMeters: Double,
+    val address: String? = null
 )
 
 sealed class GasStationSearchResult {

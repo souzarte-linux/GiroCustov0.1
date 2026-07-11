@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.FuelRefill
 import com.example.ui.GiroCustoViewModel
 import com.example.network.GasStationResult
+import com.example.ui.components.NearbyStationsMapView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.content.pm.PackageManager
@@ -385,6 +386,7 @@ fun RefillFormSection(
     val nearbyStations by viewModel.nearbyGasStations.collectAsStateWithLifecycle()
     val isSearchingStations by viewModel.isSearchingStations.collectAsStateWithLifecycle()
     val stationSearchError by viewModel.stationSearchError.collectAsStateWithLifecycle()
+    val lastSearchLocation by viewModel.lastSearchLocation.collectAsStateWithLifecycle()
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -401,6 +403,9 @@ fun RefillFormSection(
             viewModel.clearStationSearch()
         }
     }
+
+    var showMapView by remember { mutableStateOf(false) }
+    var selectedStation by remember { mutableStateOf<GasStationResult?>(null) }
 
     var focusedField by remember { mutableStateOf<String?>(null) }
     var showAddStationDialog by remember { mutableStateOf(false) }
@@ -684,7 +689,10 @@ fun RefillFormSection(
                             color = MaterialTheme.colorScheme.primary
                         )
                         IconButton(
-                            onClick = { viewModel.clearStationSearch() },
+                            onClick = { 
+                                viewModel.clearStationSearch() 
+                                selectedStation = null
+                            },
                             modifier = Modifier.size(24.dp)
                         ) {
                             Icon(
@@ -717,67 +725,127 @@ fun RefillFormSection(
                     }
 
                     if (nearbyStations.isNotEmpty()) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        // Toggle Control for List vs Map
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            nearbyStations.take(5).forEach { station ->
-                                val distanceText = if (station.distanceMeters >= 1000) {
-                                    String.format(Locale.getDefault(), "%.1f km", station.distanceMeters / 1000.0)
-                                } else {
-                                    "${station.distanceMeters.toInt()} m"
-                                }
-                                val displayName = if (!station.brand.isNullOrBlank()) {
-                                    "${station.name} (${station.brand})"
-                                } else {
-                                    station.name
-                                }
+                            ElevatedButton(
+                                onClick = { showMapView = false },
+                                colors = ButtonDefaults.elevatedButtonColors(
+                                    containerColor = if (!showMapView) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                    contentColor = if (!showMapView) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(vertical = 4.dp)
+                            ) {
+                                Icon(Icons.Filled.List, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Lista", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
 
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            gasStation = displayName
-                                            viewModel.clearStationSearch()
-                                        }
-                                        .padding(vertical = 8.dp, horizontal = 4.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                            ElevatedButton(
+                                onClick = { showMapView = true },
+                                colors = ButtonDefaults.elevatedButtonColors(
+                                    containerColor = if (showMapView) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                    contentColor = if (showMapView) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(vertical = 4.dp)
+                            ) {
+                                Icon(Icons.Filled.Map, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Mapa", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        if (showMapView && lastSearchLocation != null) {
+                            NearbyStationsMapView(
+                                userLat = lastSearchLocation?.first ?: 0.0,
+                                userLon = lastSearchLocation?.second ?: 0.0,
+                                stations = nearbyStations,
+                                selectedStation = selectedStation,
+                                onStationSelected = { station ->
+                                    selectedStation = station
+                                    val displayName = if (!station.brand.isNullOrBlank()) {
+                                        "${station.name} (${station.brand})"
+                                    } else {
+                                        station.name
+                                    }
+                                    gasStation = displayName
+                                },
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        } else {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                nearbyStations.take(5).forEach { station ->
+                                    val distanceText = if (station.distanceMeters >= 1000) {
+                                        String.format(Locale.getDefault(), "%.1f km", station.distanceMeters / 1000.0)
+                                    } else {
+                                        "${station.distanceMeters.toInt()} m"
+                                    }
+                                    val displayName = if (!station.brand.isNullOrBlank()) {
+                                        "${station.name} (${station.brand})"
+                                    } else {
+                                        station.name
+                                    }
+
                                     Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                selectedStation = station
+                                                gasStation = displayName
+                                            }
+                                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.LocalGasStation,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Column {
-                                            Text(
-                                                text = station.name,
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                color = MaterialTheme.colorScheme.onSurface
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.LocalGasStation,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(20.dp)
                                             )
-                                            if (!station.brand.isNullOrBlank()) {
+                                            Column {
                                                 Text(
-                                                    text = station.brand,
-                                                    fontSize = 12.sp,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    text = station.name,
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                if (!station.brand.isNullOrBlank()) {
+                                                    Text(
+                                                        text = station.brand,
+                                                        fontSize = 12.sp,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                                Text(
+                                                    text = station.address ?: "Endereço não informado",
+                                                    fontSize = 11.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                                 )
                                             }
                                         }
+                                        Text(
+                                            text = distanceText,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
                                     }
-                                    Text(
-                                        text = distanceText,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
                                 }
-                                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
                             }
                         }
                     }

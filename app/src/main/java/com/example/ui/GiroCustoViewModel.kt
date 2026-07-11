@@ -32,9 +32,13 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     private val _stationSearchError = MutableStateFlow<String?>(null)
     val stationSearchError: StateFlow<String?> = _stationSearchError.asStateFlow()
 
+    private val _lastSearchLocation = MutableStateFlow<Pair<Double, Double>?>(null)
+    val lastSearchLocation: StateFlow<Pair<Double, Double>?> = _lastSearchLocation.asStateFlow()
+
     fun clearStationSearch() {
         _nearbyGasStations.value = emptyList()
         _stationSearchError.value = null
+        _lastSearchLocation.value = null
     }
 
     fun searchNearbyGasStations(context: Context) {
@@ -42,9 +46,11 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
             _isSearchingStations.value = true
             _stationSearchError.value = null
             _nearbyGasStations.value = emptyList()
+            _lastSearchLocation.value = null
 
             val location = LocationHelper.getCurrentLocation(context)
             if (location != null) {
+                _lastSearchLocation.value = Pair(location.latitude, location.longitude)
                 when (val result = GasStationRepository.findNearbyGasStations(location.latitude, location.longitude)) {
                     is GasStationSearchResult.Success -> {
                         _nearbyGasStations.value = result.stations

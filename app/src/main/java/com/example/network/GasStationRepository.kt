@@ -24,6 +24,22 @@ object GasStationRepository {
         return earthRadius * c
     }
 
+    fun extractAddress(tags: Map<String, String>?): String? {
+        if (tags == null) return null
+        val street = tags["addr:street"]
+        val number = tags["addr:housenumber"]
+        val suburb = tags["addr:suburb"]
+        val city = tags["addr:city"]
+
+        return when {
+            !street.isNullOrBlank() && !number.isNullOrBlank() -> "$street $number"
+            !street.isNullOrBlank() -> street
+            !suburb.isNullOrBlank() -> suburb
+            !city.isNullOrBlank() -> city
+            else -> null
+        }
+    }
+
     suspend fun findNearbyGasStations(
         lat: Double,
         lon: Double,
@@ -42,12 +58,14 @@ object GasStationRepository {
                     val elementLat = element.lat ?: return@mapNotNull null
                     val elementLon = element.lon ?: return@mapNotNull null
                     val distance = calculateDistance(lat, lon, elementLat, elementLon)
+                    val address = extractAddress(element.tags)
                     GasStationResult(
                         name = name,
                         brand = brand,
                         lat = elementLat,
                         lon = elementLon,
-                        distanceMeters = distance
+                        distanceMeters = distance,
+                        address = address
                     )
                 }.sortedBy { it.distanceMeters }
 
