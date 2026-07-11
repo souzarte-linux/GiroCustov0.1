@@ -640,4 +640,77 @@ class RepositoryAndEstimationTest {
         assertNotNull(updatedVehicleWithPartial)
         assertEquals(30.0, updatedVehicleWithPartial!!.averageConsumption, 0.001)
     }
+
+    @Test
+    fun testMaintenanceRecordCrudAndFilteringAndStateIsolation() = runTest(testDispatcher) {
+        // 1. Test CRUD of MaintenanceRecord via DAO and Repository
+        val maintenance = MaintenanceRecord(
+            id = 0L,
+            vehicleId = 1L,
+            dateTimestamp = 1000L,
+            dateString = "10/07/2026",
+            description = "Troca de óleo",
+            location = "Oficina Central",
+            value = 150.0,
+            odometer = 10500.0
+        )
+        repository.saveMaintenanceRecord(maintenance)
+
+        var allMaintenance = repository.maintenanceRecordsForVehicleFlow(1L).first()
+        assertEquals(1, allMaintenance.size)
+        assertEquals(150.0, allMaintenance[0].value, 0.001)
+
+        // Update
+        val updatedMaintenance = allMaintenance[0].copy(value = 180.0, description = "Troca de óleo e filtro")
+        repository.saveMaintenanceRecord(updatedMaintenance)
+        allMaintenance = repository.maintenanceRecordsForVehicleFlow(1L).first()
+        assertEquals(1, allMaintenance.size)
+        assertEquals(180.0, allMaintenance[0].value, 0.001)
+        assertEquals("Troca de óleo e filtro", allMaintenance[0].description)
+
+        // Delete
+        repository.deleteMaintenanceRecord(allMaintenance[0])
+        allMaintenance = repository.maintenanceRecordsForVehicleFlow(1L).first()
+        assertTrue(allMaintenance.isEmpty())
+
+        // 2. Test summation logic of corrective maintenance in a given period (filtering)
+        val day1 = 1783641600000L // 10/07/2026
+        val day2 = day1 + 24 * 60 * 60 * 1000L // 11/07/2026
+        val day3 = day2 + 24 * 60 * 60 * 1000L // 12/07/2026
+
+        val maintenance1 = MaintenanceRecord(id = 0L, vehicleId = 1L, dateTimestamp = day1, dateString = "10/07/2026", description = "M1", location = "", value = 100.0, odometer = 10.0)
+        val maintenance2 = MaintenanceRecord(id = 0L, vehicleId = 1L, dateTimestamp = day2, dateString = "11/07/2026", description = "M2", location = "", value = 200.0, odometer = 20.0)
+        val maintenance3 = MaintenanceRecord(id = 0L, vehicleId = 1L, dateTimestamp = day3, dateString = "12/07/2026", description = "M3", location = "", value = 300.0, odometer = 30.0)
+        
+        repository.saveMaintenanceRecord(maintenance1)
+        repository.saveMaintenanceRecord(maintenance2)
+        repository.saveMaintenanceRecord(maintenance3)
+
+        val list = repository.maintenanceRecordsForVehicleFlow(1L).first()
+        assertEquals(3, list.size)
+
+        // Filter between day2 and day3: should include maintenance2 and maintenance3 (sum = 500.0)
+        val filtered = com.example.ui.util.filterByPeriod(list, com.example.ui.Period.PERSONALIZADO, day2, day3) { it.dateTimestamp }
+        assertEquals(2, filtered.size)
+        assertEquals(500.0, filtered.sumOf { it.value }, 0.001)
+
+        // 3. Test isolated behavior of the period filter in the ViewModel
+        val viewModel = GiroCustoViewModel(ApplicationProvider.getApplicationContext() as Application)
+        
+        // Initial defaults
+        assertEquals(com.example.ui.Period.SEMANA, viewModel.selectedPeriod.value)
+        assertEquals(com.example.ui.Period.SEMANA, viewModel.reportsSelectedPeriod.value)
+
+        // Change Dashboard (Painel) Period to MENSAL
+        viewModel.setPeriod(com.example.ui.Period.MENSAL)
+        assertEquals(com.example.ui.Period.MENSAL, viewModel.selectedPeriod.value)
+        // Reports period should remain SEMANA
+        assertEquals(com.example.ui.Period.SEMANA, viewModel.reportsSelectedPeriod.value)
+
+        // Change Reports Period to QUINZENA
+        viewModel.setReportsPeriod(com.example.ui.Period.QUINZENA)
+        assertEquals(com.example.ui.Period.QUINZENA, viewModel.reportsSelectedPeriod.value)
+        // Dashboard period should remain MENSAL
+        assertEquals(com.example.ui.Period.MENSAL, viewModel.selectedPeriod.value)
+    }
 }

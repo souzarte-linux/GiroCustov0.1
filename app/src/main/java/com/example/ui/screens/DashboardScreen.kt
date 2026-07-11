@@ -33,6 +33,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.DailyRecord
 import com.example.data.Vehicle
 import com.example.data.VehiclePart
+import com.example.data.MaintenanceRecord
+import com.example.ui.util.filterByPeriod
 import com.example.ui.GiroCustoViewModel
 import com.example.ui.Period
 import com.example.ui.components.CustomPeriodDialog
@@ -45,7 +47,8 @@ fun DashboardScreen(
     viewModel: GiroCustoViewModel,
     vehicle: Vehicle?,
     parts: List<VehiclePart>,
-    records: List<DailyRecord>
+    records: List<DailyRecord>,
+    maintenanceRecords: List<MaintenanceRecord>
 ) {
     val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
     val customStart by viewModel.customStartDate.collectAsStateWithLifecycle()
@@ -54,34 +57,14 @@ fun DashboardScreen(
     val scrollState = rememberScrollState()
     var showCustomPeriodDialog by remember { mutableStateOf(false) }
 
-    // Filtrar registros por período
+    // Filtrar registros por período usando o utilitário compartilhado
     val filteredRecords = remember(records, selectedPeriod, customStart, customEnd) {
-        val now = System.currentTimeMillis()
-        if (selectedPeriod == Period.PERSONALIZADO) {
-            val calStart = Calendar.getInstance().apply {
-                timeInMillis = customStart
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-            val calEnd = Calendar.getInstance().apply {
-                timeInMillis = customEnd
-                set(Calendar.HOUR_OF_DAY, 23)
-                set(Calendar.MINUTE, 59)
-                set(Calendar.SECOND, 59)
-                set(Calendar.MILLISECOND, 999)
-            }
-            records.filter { it.dateTimestamp in calStart.timeInMillis..calEnd.timeInMillis }
-        } else {
-            val limit = when (selectedPeriod) {
-                Period.SEMANA -> now - 7L * 24 * 60 * 60 * 1000
-                Period.QUINZENA -> now - 15L * 24 * 60 * 60 * 1000
-                Period.MENSAL -> now - 30L * 24 * 60 * 60 * 1000
-                else -> 0L
-            }
-            records.filter { it.dateTimestamp >= limit }
-        }
+        filterByPeriod(records, selectedPeriod, customStart, customEnd) { it.dateTimestamp }
+    }
+
+    // Filtrar manutenções corretivas pelo mesmo período
+    val filteredMaintenanceRecords = remember(maintenanceRecords, selectedPeriod, customStart, customEnd) {
+        filterByPeriod(maintenanceRecords, selectedPeriod, customStart, customEnd) { it.dateTimestamp }
     }
 
     // Cálculos de Métricas
@@ -92,10 +75,15 @@ fun DashboardScreen(
     val totalFood = filteredRecords.sumOf { it.foodExpense }
     val totalExpenses = totalFuel + totalWear + totalFixed + totalFood
     val netProfit = totalGross - totalExpenses
+
+    // Total gasto em manutenção corretiva no período
+    val totalMaintenance = filteredMaintenanceRecords.sumOf { it.value }
+    // Lucro líquido real do período (lucro operacional deduzido do gasto pontual de manutenção)
+    val realNetProfit = netProfit - totalMaintenance
     
     val totalKm = filteredRecords.sumOf { it.kmRodados }
-    val costPerKm = if (totalKm > 0) totalExpenses / totalKm else 0.0
-    val netProfitPerKm = if (totalKm > 0) netProfit / totalKm else 0.0
+    val costPerKm = if (totalKm > 0) (totalExpenses + totalMaintenance) / totalKm else 0.0
+    val netProfitPerKm = if (totalKm > 0) realNetProfit / totalKm else 0.0
 
     Column(
         modifier = Modifier
@@ -335,13 +323,20 @@ fun DashboardScreen(
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
                     Text(
-                        text = String.format(Locale.GERMAN, "%,.2f", netProfit),
+                        text = String.format(Locale.GERMAN, "%,.2f", realNetProfit),
                         fontSize = 32.sp,
                         fontWeight = FontWeight.ExtraBold,
                         fontFamily = FontFamily.Monospace,
                         color = Color.White // High contrast White
                     )
                 }
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Inclui R$ ${String.format(Locale.GERMAN, "%,.2f", totalMaintenance)} de manutenção corretiva no período",
+                    fontSize = 11.sp,
+                    color = Color(0xFF34D399),
+                    fontWeight = FontWeight.Medium
+                )
 
                 Spacer(modifier = Modifier.height(14.dp))
                 HorizontalDivider(color = Color(0xFF10B981).copy(alpha = 0.2f))
@@ -382,6 +377,42 @@ fun DashboardScreen(
                             fontFamily = FontFamily.Monospace,
                             color = Color(0xFFF43F5E) // Bright light rose/red for cost in dark mode
                         )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = Color(0xFF10B981).copy(alpha = 0.1f))
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = "RESUMO DE DESPESAS DO PERÍODO",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF94A3B8),
+                    letterSpacing = 1.sp
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Combustível", fontSize = 12.sp, color = Color(0xFFCBD5E1))
+                        Text(String.format(Locale.GERMAN, "R$ %,.2f", totalFuel), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Alimentação", fontSize = 12.sp, color = Color(0xFFCBD5E1))
+                        Text(String.format(Locale.GERMAN, "R$ %,.2f", totalFood), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Desgaste de Peças (Oculto)", fontSize = 12.sp, color = Color(0xFFCBD5E1))
+                        Text(String.format(Locale.GERMAN, "R$ %,.2f", totalWear), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Custos Fixos Proporcionais", fontSize = 12.sp, color = Color(0xFFCBD5E1))
+                        Text(String.format(Locale.GERMAN, "R$ %,.2f", totalFixed), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Manutenção Corretiva (Gasto Real)", fontSize = 12.sp, color = Color(0xFFFBBF24), fontWeight = FontWeight.SemiBold)
+                        Text(String.format(Locale.GERMAN, "R$ %,.2f", totalMaintenance), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFBBF24))
                     }
                 }
             }

@@ -24,6 +24,8 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.foundation.border
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -136,9 +138,14 @@ fun FuelRefillsScreen(viewModel: GiroCustoViewModel) {
                 )
             }
 
+            val existingGasStations = remember(refills) {
+                refills.map { it.gasStation }.distinct().filter { it.isNotBlank() }
+            }
+
             RefillFormSection(
                 refill = refillToEdit,
                 isEdit = isEdit,
+                existingGasStations = existingGasStations,
                 onBack = { editingRefillId = null },
                 onSave = { updatedRefill ->
                     viewModel.saveFuelRefill(updatedRefill)
@@ -341,6 +348,7 @@ fun RefillsListSection(
 fun RefillFormSection(
     refill: FuelRefill,
     isEdit: Boolean,
+    existingGasStations: List<String>,
     onBack: () -> Unit,
     onSave: (FuelRefill) -> Unit,
     onDelete: () -> Unit
@@ -363,13 +371,83 @@ fun RefillFormSection(
     val fuelTypes = listOf("Gasolina Comum", "Gasolina Aditivada", "Etanol Comum", "Etanol Aditivado", "Diesel", "GNV")
     val paymentMethods = listOf("PIX", "Cartão", "Dinheiro")
 
-    // Automatic recalculation of totalPaidStr on inputs changes
-    LaunchedEffect(pricePerLiterStr, litersStr, discountStr) {
+    var focusedField by remember { mutableStateOf<String?>(null) }
+    var showAddStationDialog by remember { mutableStateOf(false) }
+    var dropdownExpanded by remember { mutableStateOf(false) }
+    var newlyAddedStations by remember { mutableStateOf(listOf<String>()) }
+    val stationsList = (existingGasStations + newlyAddedStations).distinct().filter { it.isNotBlank() }
+
+    // Smart multi-directional calculation
+    LaunchedEffect(pricePerLiterStr, litersStr, discountStr, totalPaidStr, focusedField) {
         val price = pricePerLiterStr.replace(",", ".").toDoubleOrNull() ?: 0.0
         val lts = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
         val disc = discountStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val autoCalc = (price * lts - disc).coerceAtLeast(0.0)
-        totalPaidStr = String.format(Locale.US, "%.2f", autoCalc)
+        val total = totalPaidStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+
+        when (focusedField) {
+            "price" -> {
+                if (price > 0.0 && lts > 0.0) {
+                    val autoTotal = (price * lts - disc).coerceAtLeast(0.0)
+                    val autoTotalStr = String.format(Locale.US, "%.2f", autoTotal).replace(",", ".")
+                    if (totalPaidStr != autoTotalStr) {
+                        totalPaidStr = autoTotalStr
+                    }
+                } else if (price > 0.0 && total > 0.0) {
+                    val autoLts = ((total + disc) / price).coerceAtLeast(0.0)
+                    if (autoLts.isFinite() && autoLts > 0.0) {
+                        val autoLtsStr = String.format(Locale.US, "%.2f", autoLts).replace(",", ".")
+                        if (litersStr != autoLtsStr) {
+                            litersStr = autoLtsStr
+                        }
+                    }
+                }
+            }
+            "liters" -> {
+                if (lts > 0.0 && price > 0.0) {
+                    val autoTotal = (price * lts - disc).coerceAtLeast(0.0)
+                    val autoTotalStr = String.format(Locale.US, "%.2f", autoTotal).replace(",", ".")
+                    if (totalPaidStr != autoTotalStr) {
+                        totalPaidStr = autoTotalStr
+                    }
+                } else if (lts > 0.0 && total > 0.0) {
+                    val autoPrice = ((total + disc) / lts).coerceAtLeast(0.0)
+                    if (autoPrice.isFinite() && autoPrice > 0.0) {
+                        val autoPriceStr = String.format(Locale.US, "%.2f", autoPrice).replace(",", ".")
+                        if (pricePerLiterStr != autoPriceStr) {
+                            pricePerLiterStr = autoPriceStr
+                        }
+                    }
+                }
+            }
+            "total" -> {
+                if (total > 0.0 && lts > 0.0) {
+                    val autoPrice = ((total + disc) / lts).coerceAtLeast(0.0)
+                    if (autoPrice.isFinite() && autoPrice > 0.0) {
+                        val autoPriceStr = String.format(Locale.US, "%.2f", autoPrice).replace(",", ".")
+                        if (pricePerLiterStr != autoPriceStr) {
+                            pricePerLiterStr = autoPriceStr
+                        }
+                    }
+                } else if (total > 0.0 && price > 0.0) {
+                    val autoLts = ((total + disc) / price).coerceAtLeast(0.0)
+                    if (autoLts.isFinite() && autoLts > 0.0) {
+                        val autoLtsStr = String.format(Locale.US, "%.2f", autoLts).replace(",", ".")
+                        if (litersStr != autoLtsStr) {
+                            litersStr = autoLtsStr
+                        }
+                    }
+                }
+            }
+            "discount" -> {
+                if (price > 0.0 && lts > 0.0) {
+                    val autoTotal = (price * lts - disc).coerceAtLeast(0.0)
+                    val autoTotalStr = String.format(Locale.US, "%.2f", autoTotal).replace(",", ".")
+                    if (totalPaidStr != autoTotalStr) {
+                        totalPaidStr = autoTotalStr
+                    }
+                }
+            }
+        }
     }
 
     Column(
@@ -396,17 +474,208 @@ fun RefillFormSection(
         }
 
         // Posto
-        TextField(
-            value = gasStation,
-            onValueChange = { gasStation = it },
-            label = { Text("Posto de Combustível") },
-            modifier = Modifier.fillMaxWidth().testTag("refill_gas_station"),
-            singleLine = true,
-            leadingIcon = { Icon(Icons.Filled.Storefront, contentDescription = null) },
-            shape = RoundedCornerShape(12.dp),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                TextField(
+                    value = gasStation,
+                    onValueChange = { 
+                        gasStation = it 
+                        dropdownExpanded = true
+                    },
+                    label = { Text("Posto de Combustível") },
+                    modifier = Modifier.fillMaxWidth().testTag("refill_gas_station"),
+                    singleLine = true,
+                    leadingIcon = { Icon(Icons.Filled.Storefront, contentDescription = null) },
+                    trailingIcon = {
+                        IconButton(onClick = { dropdownExpanded = !dropdownExpanded }) {
+                            Icon(
+                                imageVector = if (dropdownExpanded) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
+                                contentDescription = "Expandir opções"
+                            )
+                        }
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
+                )
+
+                DropdownMenu(
+                    expanded = dropdownExpanded,
+                    onDismissRequest = { dropdownExpanded = false },
+                    properties = androidx.compose.ui.window.PopupProperties(focusable = false),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                ) {
+                    val filteredStations = if (gasStation.isBlank()) {
+                        stationsList
+                    } else {
+                        stationsList.filter { it.contains(gasStation, ignoreCase = true) }
+                    }
+
+                    if (filteredStations.isNotEmpty()) {
+                        filteredStations.forEach { station ->
+                            DropdownMenuItem(
+                                text = { Text(station) },
+                                onClick = {
+                                    gasStation = station
+                                    dropdownExpanded = false
+                                },
+                                modifier = Modifier.testTag("station_option_${station}")
+                            )
+                        }
+                    }
+
+                    val exactMatch = filteredStations.any { it.equals(gasStation, ignoreCase = true) }
+                    if (!exactMatch || gasStation.isNotBlank() || filteredStations.isEmpty()) {
+                        DropdownMenuItem(
+                            text = { 
+                                Text(
+                                    text = "Cadastrar Novo Posto?", 
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                ) 
+                            },
+                            onClick = {
+                                dropdownExpanded = false
+                                showAddStationDialog = true
+                            },
+                            modifier = Modifier.testTag("station_option_register_new")
+                        )
+                    }
+                }
+            }
+
+            FilledIconButton(
+                onClick = { showAddStationDialog = true },
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .size(56.dp)
+                    .testTag("add_new_station_btn")
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Adicionar Novo Posto",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+
+        if (showAddStationDialog) {
+            var newStationName by remember { mutableStateOf(gasStation) }
+            var selectedBrand by remember { mutableStateOf("Petrobras") }
+            var brandExpanded by remember { mutableStateOf(false) }
+            var locationStr by remember { mutableStateOf("") }
+            val brands = listOf("Petrobras", "Ipiranga", "Shell", "ALE", "Outra")
+
+            AlertDialog(
+                onDismissRequest = { showAddStationDialog = false },
+                title = {
+                    Text(
+                        text = "Novo Posto de Combustível",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                },
+                text = {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        TextField(
+                            value = newStationName,
+                            onValueChange = { newStationName = it },
+                            label = { Text("Nome do Posto") },
+                            modifier = Modifier.fillMaxWidth().testTag("new_station_name_input"),
+                            singleLine = true,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+
+                        Column {
+                            Text("Bandeira", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                                        .clickable { brandExpanded = true }
+                                        .padding(horizontal = 12.dp, vertical = 14.dp)
+                                        .testTag("new_station_brand_selector"),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(selectedBrand, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                                    Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+
+                                DropdownMenu(
+                                    expanded = brandExpanded,
+                                    onDismissRequest = { brandExpanded = false },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    brands.forEach { brand ->
+                                        DropdownMenuItem(
+                                            text = { Text(brand) },
+                                            onClick = {
+                                                selectedBrand = brand
+                                                brandExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        TextField(
+                            value = locationStr,
+                            onValueChange = { locationStr = it },
+                            label = { Text("Localização / Cidade (Opcional)") },
+                            modifier = Modifier.fillMaxWidth().testTag("new_station_location_input"),
+                            singleLine = true,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            if (newStationName.isNotBlank()) {
+                                val nameWithBrand = if (selectedBrand != "Outra") {
+                                    "${newStationName.trim()} ($selectedBrand)"
+                                } else {
+                                    newStationName.trim()
+                                }
+                                gasStation = nameWithBrand
+                                newlyAddedStations = newlyAddedStations + nameWithBrand
+                                showAddStationDialog = false
+                            }
+                        },
+                        modifier = Modifier.testTag("save_new_station_btn")
+                    ) {
+                        Text("Salvar", color = MaterialTheme.colorScheme.primary)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showAddStationDialog = false },
+                        modifier = Modifier.testTag("cancel_new_station_btn")
+                    ) {
+                        Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            )
+        }
 
         // Tipo de Combustivel Dropdown
         Box(modifier = Modifier.fillMaxWidth()) {
@@ -451,7 +720,10 @@ fun RefillFormSection(
                 value = pricePerLiterStr,
                 onValueChange = { pricePerLiterStr = it },
                 label = { Text("Preço / Litro") },
-                modifier = Modifier.weight(1f).testTag("refill_price_per_liter"),
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("refill_price_per_liter")
+                    .onFocusChanged { if (it.isFocused) focusedField = "price" },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Right) }),
@@ -463,7 +735,10 @@ fun RefillFormSection(
                 value = litersStr,
                 onValueChange = { litersStr = it },
                 label = { Text("Quantidade (L)") },
-                modifier = Modifier.weight(1f).testTag("refill_liters"),
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("refill_liters")
+                    .onFocusChanged { if (it.isFocused) focusedField = "liters" },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
@@ -477,7 +752,10 @@ fun RefillFormSection(
                 value = discountStr,
                 onValueChange = { discountStr = it },
                 label = { Text("Desconto (R$)") },
-                modifier = Modifier.weight(1f).testTag("refill_discount"),
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("refill_discount")
+                    .onFocusChanged { if (it.isFocused) focusedField = "discount" },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Right) }),
@@ -489,7 +767,10 @@ fun RefillFormSection(
                 value = totalPaidStr,
                 onValueChange = { totalPaidStr = it },
                 label = { Text("Total Pago (R$)") },
-                modifier = Modifier.weight(1f).testTag("refill_total_paid"),
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("refill_total_paid")
+                    .onFocusChanged { if (it.isFocused) focusedField = "total" },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),

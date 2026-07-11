@@ -36,6 +36,7 @@ import com.example.ui.screens.VehicleScreen
 import com.example.ui.screens.ProfileScreen
 import com.example.ui.screens.PlatformsScreen
 import com.example.ui.screens.FuelRefillsScreen
+import com.example.ui.screens.MaintenanceScreen
 import kotlinx.coroutines.launch
 
 enum class GiroTab(val title: String, val icon: ImageVector) {
@@ -57,6 +58,7 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
     val vehicle by viewModel.vehicle.collectAsStateWithLifecycle()
     val parts by viewModel.parts.collectAsStateWithLifecycle()
     val records by viewModel.records.collectAsStateWithLifecycle()
+    val maintenanceRecords by viewModel.maintenanceRecords.collectAsStateWithLifecycle()
     val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
 
     // Configuração de Paleta de Cores do GiroCusto (Professional Dark charcoal and Emerald green theme, or soft slate light theme)
@@ -131,6 +133,7 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
                                         DrawerDestination.PERFIL -> "Perfil"
                                         DrawerDestination.PLATAFORMAS -> "Plataformas"
                                         DrawerDestination.ABASTECIMENTOS -> "Abastecimentos"
+                                        DrawerDestination.MANUTENCAO -> "Manutenção"
                                         GiroTab.PAINEL -> "Painel"
                                         GiroTab.LANCAR -> "Lançar"
                                         GiroTab.RELATORIOS -> "Relatórios"
@@ -225,9 +228,10 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
                                 DrawerDestination.PERFIL -> ProfileScreen(viewModel, onNavigateToPlatforms = { drawerDestination = DrawerDestination.PLATAFORMAS })
                                 DrawerDestination.PLATAFORMAS -> PlatformsScreen(viewModel)
                                 DrawerDestination.ABASTECIMENTOS -> FuelRefillsScreen(viewModel)
-                                GiroTab.PAINEL -> DashboardScreen(viewModel, vehicle, parts, records)
+                                DrawerDestination.MANUTENCAO -> MaintenanceScreen(viewModel)
+                                GiroTab.PAINEL -> DashboardScreen(viewModel, vehicle, parts, records, maintenanceRecords)
                                 GiroTab.LANCAR -> LaunchScreen(viewModel, vehicle, parts)
-                                GiroTab.RELATORIOS -> ReportsScreen(viewModel, vehicle, parts, records)
+                                GiroTab.RELATORIOS -> ReportsScreen(viewModel, vehicle, parts, records, maintenanceRecords)
                                 GiroTab.HISTORICO -> HistoryScreen(viewModel, vehicle, records)
                             }
                         }

@@ -8,8 +8,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Vehicle::class, VehiclePart::class, DailyRecord::class, UserProfile::class, Platform::class, FuelRefill::class],
-    version = 7,
+    entities = [Vehicle::class, VehiclePart::class, DailyRecord::class, UserProfile::class, Platform::class, FuelRefill::class, MaintenanceRecord::class],
+    version = 8,
     exportSchema = true
 )
 abstract class GiroCustoDatabase : RoomDatabase() {
@@ -19,6 +19,7 @@ abstract class GiroCustoDatabase : RoomDatabase() {
     abstract fun userProfileDao(): UserProfileDao
     abstract fun platformDao(): PlatformDao
     abstract fun fuelRefillDao(): FuelRefillDao
+    abstract fun maintenanceRecordDao(): MaintenanceRecordDao
 
     companion object {
         @Volatile
@@ -111,6 +112,22 @@ abstract class GiroCustoDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `maintenance_records` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`vehicleId` INTEGER NOT NULL, " +
+                    "`dateTimestamp` INTEGER NOT NULL, " +
+                    "`dateString` TEXT NOT NULL, " +
+                    "`description` TEXT NOT NULL, " +
+                    "`location` TEXT NOT NULL, " +
+                    "`value` REAL NOT NULL, " +
+                    "`odometer` REAL NOT NULL)"
+                )
+            }
+        }
+
         fun getDatabase(context: Context): GiroCustoDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -118,7 +135,7 @@ abstract class GiroCustoDatabase : RoomDatabase() {
                     GiroCustoDatabase::class.java,
                     "giro_custo_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                 .build()
                 INSTANCE = instance
                 instance

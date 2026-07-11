@@ -16,6 +16,7 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
     private val userProfileDao = db.userProfileDao()
     private val platformDao = db.platformDao()
     private val fuelRefillDao = db.fuelRefillDao()
+    private val maintenanceRecordDao = db.maintenanceRecordDao()
 
     val vehicleFlow: Flow<Vehicle?> = vehicleDao.getActiveVehicleFlow()
     val allVehiclesFlow: Flow<List<Vehicle>> = vehicleDao.getAllVehiclesFlow()
@@ -394,6 +395,21 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
         val refills = fuelRefillDao.getAllRefillsOrderedByOdometer(vehicleId)
         if (refills.isEmpty()) return 0.0
         return refills.map { it.liters }.average()
+    }
+
+    fun maintenanceRecordsForVehicleFlow(vehicleId: Long): Flow<List<MaintenanceRecord>> =
+        maintenanceRecordDao.getRecordsForVehicleFlow(vehicleId)
+
+    suspend fun saveMaintenanceRecord(record: MaintenanceRecord) {
+        if (record.id == 0L) {
+            maintenanceRecordDao.insertRecord(record)
+        } else {
+            maintenanceRecordDao.updateRecord(record)
+        }
+    }
+
+    suspend fun deleteMaintenanceRecord(record: MaintenanceRecord) {
+        maintenanceRecordDao.deleteRecord(record)
     }
 
     private data class SeededDay(

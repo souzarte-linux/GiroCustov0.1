@@ -43,6 +43,17 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     val fuelRefills: StateFlow<List<FuelRefill>> = repository.refillsForActiveVehicleFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val maintenanceRecords: StateFlow<List<MaintenanceRecord>> = vehicle
+        .flatMapLatest { v ->
+            if (v != null) {
+                repository.maintenanceRecordsForVehicleFlow(v.id)
+            } else {
+                flowOf(emptyList())
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val realAverageConsumption: StateFlow<Double?> = fuelRefills
         .map { _ ->
             val activeVehicleId = vehicle.value?.id ?: 0L
@@ -88,6 +99,18 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun saveMaintenanceRecord(record: MaintenanceRecord) {
+        viewModelScope.launch {
+            repository.saveMaintenanceRecord(record)
+        }
+    }
+
+    fun deleteMaintenanceRecord(record: MaintenanceRecord) {
+        viewModelScope.launch {
+            repository.deleteMaintenanceRecord(record)
+        }
+    }
+
     // Estado de Período Selecionado no Dashboard
     private val _selectedPeriod = MutableStateFlow(Period.SEMANA)
     val selectedPeriod: StateFlow<Period> = _selectedPeriod.asStateFlow()
@@ -99,6 +122,23 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     fun setCustomPeriod(start: Long, end: Long) {
         customStartDate.value = start
         customEndDate.value = end
+    }
+
+    // Estado de Período Selecionado nos Relatórios (Reports)
+    private val _reportsSelectedPeriod = MutableStateFlow(Period.SEMANA)
+    val reportsSelectedPeriod: StateFlow<Period> = _reportsSelectedPeriod.asStateFlow()
+
+    // Estados para Período Personalizado nos Relatórios (Reports)
+    val reportsCustomStartDate = MutableStateFlow(System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000)
+    val reportsCustomEndDate = MutableStateFlow(System.currentTimeMillis())
+
+    fun setReportsPeriod(period: Period) {
+        _reportsSelectedPeriod.value = period
+    }
+
+    fun setReportsCustomPeriod(start: Long, end: Long) {
+        reportsCustomStartDate.value = start
+        reportsCustomEndDate.value = end
     }
 
     // Estado do Formulário de Lançamento (Lançar Novo Dia)

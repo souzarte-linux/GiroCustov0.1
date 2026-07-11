@@ -99,4 +99,16 @@ data class FuelRefill(
     val installmentsCount: Int = 1
 )
 
+@Entity(tableName = "maintenance_records")
+data class MaintenanceRecord(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val vehicleId: Long,
+    val dateTimestamp: Long,
+    val dateString: String,
+    val description: String,
+    val location: String,
+    val value: Double,
+    val odometer: Double
+)
+
 

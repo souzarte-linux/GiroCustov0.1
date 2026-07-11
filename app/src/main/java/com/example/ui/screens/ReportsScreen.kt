@@ -3,6 +3,8 @@ package com.example.ui.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -32,6 +34,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.DailyRecord
 import com.example.data.Vehicle
 import com.example.data.VehiclePart
+import com.example.data.MaintenanceRecord
+import com.example.ui.Period
+import com.example.ui.components.CustomPeriodDialog
+import com.example.ui.util.filterByPeriod
 import com.example.ui.GiroCustoViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -41,35 +47,58 @@ fun ReportsScreen(
     viewModel: GiroCustoViewModel,
     vehicle: Vehicle?,
     parts: List<VehiclePart>,
-    records: List<DailyRecord>
+    records: List<DailyRecord>,
+    maintenanceRecords: List<MaintenanceRecord>
 ) {
+    val selectedPeriod by viewModel.reportsSelectedPeriod.collectAsStateWithLifecycle()
+    val customStart by viewModel.reportsCustomStartDate.collectAsStateWithLifecycle()
+    val customEnd by viewModel.reportsCustomEndDate.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
+    var showCustomPeriodDialog by remember { mutableStateOf(false) }
 
-    // 1. Gráfico de Evolução de Lucro Líquido
-    // Ordenar registros de forma cronológica (do mais antigo para o mais novo) para desenhar o gráfico da esquerda para a direita
-    val chronologicalRecords = remember(records) {
-        records.take(7).sortedBy { it.dateTimestamp }
+    // Filtrar registros por período usando o utilitário compartilhado para o Reports
+    val filteredRecords = remember(records, selectedPeriod, customStart, customEnd) {
+        filterByPeriod(records, selectedPeriod, customStart, customEnd) { it.dateTimestamp }
+    }
+
+    // Filtrar manutenções corretivas pelo mesmo período para o Reports
+    val filteredMaintenanceRecords = remember(maintenanceRecords, selectedPeriod, customStart, customEnd) {
+        filterByPeriod(maintenanceRecords, selectedPeriod, customStart, customEnd) { it.dateTimestamp }
+    }
+
+    // 1. Gráfico de Evolução de Lucro Líquido (Baseado nos registros filtrados)
+    val chronologicalRecords = remember(filteredRecords) {
+        filteredRecords.take(7).sortedBy { it.dateTimestamp }
     }
 
     // Cálculos Gerais do Período
-    val totalEarnings = records.sumOf { it.grossEarnings }
-    val totalExpenses = records.sumOf { it.fuelCost + it.wearCost + it.proportionalFixedCost + it.foodExpense }
+    val totalEarnings = filteredRecords.sumOf { it.grossEarnings }
+    val totalFuel = filteredRecords.sumOf { it.fuelCost }
+    val totalWear = filteredRecords.sumOf { it.wearCost }
+    val totalFixed = filteredRecords.sumOf { it.proportionalFixedCost }
+    val totalFood = filteredRecords.sumOf { it.foodExpense }
+    val totalExpenses = totalFuel + totalWear + totalFixed + totalFood
+
+    // Total gasto em manutenção corretiva no período
+    val totalMaintenance = filteredMaintenanceRecords.sumOf { it.value }
+    val realExpenses = totalExpenses + totalMaintenance
     val netProfit = totalEarnings - totalExpenses
-    val totalDeliveries = records.sumOf { it.deliveriesCount }
+    val realNetProfit = netProfit - totalMaintenance
+
+    val totalDeliveries = filteredRecords.sumOf { it.deliveriesCount }
 
     // Destaques de Recordes
-    val bestDay = remember(records) {
-        records.maxByOrNull { it.netProfit }
+    val bestDay = remember(filteredRecords) {
+        filteredRecords.maxByOrNull { it.netProfit }
     }
-    val worstDay = remember(records) {
-        // Dia com menor margem ou menor lucro
-        records.minByOrNull { it.netProfit }
+    val worstDay = remember(filteredRecords) {
+        filteredRecords.minByOrNull { it.netProfit }
     }
 
-    // Projeções futuras (Próximos 30 dias se trabalhar no mesmo ritmo médio)
-    val avgEarningsPerDay = if (records.isNotEmpty()) totalEarnings / records.size else 0.0
-    val avgProfitPerDay = if (records.isNotEmpty()) netProfit / records.size else 0.0
-    val avgKmPerDay = if (records.isNotEmpty()) records.sumOf { it.kmRodados } / records.size else 0.0
+    // Projeções futuras baseadas nos registros filtrados
+    val avgEarningsPerDay = if (filteredRecords.isNotEmpty()) totalEarnings / filteredRecords.size else 0.0
+    val avgProfitPerDay = if (filteredRecords.isNotEmpty()) realNetProfit / filteredRecords.size else 0.0
+    val avgKmPerDay = if (filteredRecords.isNotEmpty()) filteredRecords.sumOf { it.kmRodados } / filteredRecords.size else 0.0
 
     // Meta Mensal configurada para ver se alcança nas projeções
     val monthlyNGoal by viewModel.monthlyGoalNet.collectAsStateWithLifecycle()
@@ -91,24 +120,126 @@ fun ReportsScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Relatórios de Desempenho",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground // Dynamic color
-            )
-
-            IconButton(
-                onClick = { viewModel.toggleTheme() },
-                modifier = Modifier.size(36.dp).testTag("theme_toggle_btn_reports")
-            ) {
-                Icon(
-                    imageVector = if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
-                    contentDescription = "Alternar Tema",
-                    tint = if (isDark) Color(0xFFF59E0B) else Color(0xFF64748B),
-                    modifier = Modifier.size(20.dp)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Relatórios de Desempenho",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                val displayFormat = remember { SimpleDateFormat("dd/MM", Locale.getDefault()) }
+                val periodLabel = when (selectedPeriod) {
+                    Period.SEMANA -> "Período: Semana"
+                    Period.QUINZENA -> "Período: Quinzena"
+                    Period.MENSAL -> "Período: Mensal"
+                    Period.PERSONALIZADO -> "Filtro: ${displayFormat.format(Date(customStart))} até ${displayFormat.format(Date(customEnd))}"
+                }
+                Text(
+                    text = periodLabel,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF10B981)
                 )
             }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                var dropdownExpanded by remember { mutableStateOf(false) }
+
+                Box {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(10.dp))
+                            .clickable { dropdownExpanded = true }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val selectedLabel = when (selectedPeriod) {
+                            Period.SEMANA -> "Semana"
+                            Period.QUINZENA -> "Quinzena"
+                            Period.MENSAL -> "Mensal"
+                            Period.PERSONALIZADO -> "Personalizado"
+                        }
+                        Text(
+                            text = selectedLabel,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Icon(
+                            imageVector = Icons.Filled.ArrowDropDown,
+                            contentDescription = "Selecionar Período",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = dropdownExpanded,
+                        onDismissRequest = { dropdownExpanded = false },
+                        modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Semana", fontSize = 14.sp) },
+                            onClick = {
+                                viewModel.setReportsPeriod(Period.SEMANA)
+                                dropdownExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Quinzena", fontSize = 14.sp) },
+                            onClick = {
+                                viewModel.setReportsPeriod(Period.QUINZENA)
+                                dropdownExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Mensal", fontSize = 14.sp) },
+                            onClick = {
+                                viewModel.setReportsPeriod(Period.MENSAL)
+                                dropdownExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Personalizado", fontSize = 14.sp) },
+                            onClick = {
+                                viewModel.setReportsPeriod(Period.PERSONALIZADO)
+                                dropdownExpanded = false
+                                showCustomPeriodDialog = true
+                            }
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = { viewModel.toggleTheme() },
+                    modifier = Modifier.size(36.dp).testTag("theme_toggle_btn_reports")
+                ) {
+                    Icon(
+                        imageVector = if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
+                        contentDescription = "Alternar Tema",
+                        tint = if (isDark) Color(0xFFF59E0B) else Color(0xFF64748B),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+
+        if (showCustomPeriodDialog) {
+            CustomPeriodDialog(
+                initialStart = customStart,
+                initialEnd = customEnd,
+                onDismiss = { showCustomPeriodDialog = false },
+                onConfirm = { start, end ->
+                    viewModel.setReportsCustomPeriod(start, end)
+                    showCustomPeriodDialog = false
+                }
+            )
         }
 
         // 1. GRAFICO DE EVOLUÇÃO DO LUCRO LÍQUIDO (Bézier personalizado com Gradiente Verde Esmeralda)
@@ -199,17 +330,19 @@ fun ReportsScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Valores de Custo
-                val totalFuelCost = records.sumOf { it.fuelCost }
-                val totalWearCost = records.sumOf { it.wearCost }
-                val totalFixedCost = records.sumOf { it.proportionalFixedCost }
-                val totalFoodCost = records.sumOf { it.foodExpense }
-                val sumAllExpenses = totalFuelCost + totalWearCost + totalFixedCost + totalFoodCost
+                val totalFuelCost = filteredRecords.sumOf { it.fuelCost }
+                val totalWearCost = filteredRecords.sumOf { it.wearCost }
+                val totalFixedCost = filteredRecords.sumOf { it.proportionalFixedCost }
+                val totalFoodCost = filteredRecords.sumOf { it.foodExpense }
+                val totalMaintenanceCost = filteredMaintenanceRecords.sumOf { it.value }
+                val sumAllExpenses = totalFuelCost + totalWearCost + totalFixedCost + totalFoodCost + totalMaintenanceCost
 
                 if (sumAllExpenses > 0) {
                     val pctFuel = (totalFuelCost / sumAllExpenses).toFloat()
                     val pctWear = (totalWearCost / sumAllExpenses).toFloat()
                     val pctFixed = (totalFixedCost / sumAllExpenses).toFloat()
                     val pctFood = (totalFoodCost / sumAllExpenses).toFloat()
+                    val pctMaintenance = (totalMaintenanceCost / sumAllExpenses).toFloat()
 
                     // Barra Segmentada
                     Row(
@@ -222,6 +355,7 @@ fun ReportsScreen(
                         if (pctFood > 0) Box(modifier = Modifier.fillMaxHeight().weight(pctFood.coerceAtLeast(0.01f)).background(Color(0xFF00B0FF)))
                         if (pctWear > 0) Box(modifier = Modifier.fillMaxHeight().weight(pctWear.coerceAtLeast(0.01f)).background(Color(0xFFEF5350)))
                         if (pctFixed > 0) Box(modifier = Modifier.fillMaxHeight().weight(pctFixed.coerceAtLeast(0.01f)).background(Color(0xFFAB47BC)))
+                        if (pctMaintenance > 0) Box(modifier = Modifier.fillMaxHeight().weight(pctMaintenance.coerceAtLeast(0.01f)).background(Color(0xFFFBBF24)))
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -232,6 +366,7 @@ fun ReportsScreen(
                         ExpenseLegendItem(label = "Alimentação", color = Color(0xFF00B0FF), pct = pctFood, value = totalFoodCost)
                         ExpenseLegendItem(label = "Desgaste Oculto / Peças", color = Color(0xFFEF5350), pct = pctWear, value = totalWearCost)
                         ExpenseLegendItem(label = "Custos Fixos Proporcionais", color = Color(0xFFAB47BC), pct = pctFixed, value = totalFixedCost)
+                        ExpenseLegendItem(label = "Manutenção Corretiva (Gasto Real)", color = Color(0xFFFBBF24), pct = pctMaintenance, value = totalMaintenanceCost)
                     }
                 } else {
                     Text("Nenhuma despesa registrada para cálculo.", fontSize = 12.sp, color = Color(0xFF94A3B8), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())

@@ -132,4 +132,19 @@ interface FuelRefillDao {
     suspend fun deleteRefill(refill: FuelRefill)
 }
 
+@Dao
+interface MaintenanceRecordDao {
+    @Query("SELECT * FROM maintenance_records WHERE vehicleId = :vehicleId ORDER BY dateTimestamp DESC")
+    fun getRecordsForVehicleFlow(vehicleId: Long): Flow<List<MaintenanceRecord>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRecord(record: MaintenanceRecord): Long
+
+    @Update
+    suspend fun updateRecord(record: MaintenanceRecord)
+
+    @Delete
+    suspend fun deleteRecord(record: MaintenanceRecord)
+}
+
 
