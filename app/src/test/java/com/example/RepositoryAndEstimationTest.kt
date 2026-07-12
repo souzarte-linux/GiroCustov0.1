@@ -720,7 +720,42 @@ class RepositoryAndEstimationTest {
         assertTrue(query.contains("1500"))
         assertTrue(query.contains("-23.5505"))
         assertTrue(query.contains("-46.6333"))
-        assertTrue(query.contains("node[\"amenity\"=\"fuel\"]"))
+        assertTrue(query.contains("nwr[\"amenity\"=\"fuel\"]"))
+    }
+
+    @Test
+    fun testMockResponseWayElementMapping() = runTest {
+        val elementWay = com.example.network.OverpassElement(
+            id = 4L,
+            lat = null,
+            lon = null,
+            center = com.example.network.OverpassCenter(lat = -23.510, lon = -46.610),
+            tags = mapOf("name" to "Posto BR", "brand" to "BR")
+        )
+        val userLat = -23.500
+        val userLon = -46.600
+
+        val elementLat = elementWay.lat ?: elementWay.center?.lat
+        val elementLon = elementWay.lon ?: elementWay.center?.lon
+
+        assertNotNull(elementLat)
+        assertNotNull(elementLon)
+        assertEquals(-23.510, elementLat!!, 0.0001)
+        assertEquals(-46.610, elementLon!!, 0.0001)
+
+        val distance = com.example.network.GasStationRepository.calculateDistance(userLat, userLon, elementLat, elementLon)
+        val result = com.example.network.GasStationResult(
+            name = elementWay.tags?.get("name")!!,
+            brand = elementWay.tags.get("brand"),
+            lat = elementLat,
+            lon = elementLon,
+            distanceMeters = distance
+        )
+
+        assertEquals("Posto BR", result.name)
+        assertEquals("BR", result.brand)
+        assertEquals(-23.510, result.lat, 0.0001)
+        assertEquals(-46.610, result.lon, 0.0001)
     }
 
     @Test

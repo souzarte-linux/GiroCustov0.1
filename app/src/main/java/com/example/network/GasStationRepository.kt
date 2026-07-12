@@ -10,7 +10,7 @@ object GasStationRepository {
     )
 
     fun buildOverpassQuery(lat: Double, lon: Double, radiusMeters: Int): String {
-        return """[out:json][timeout:25];node["amenity"="fuel"](around:$radiusMeters,$lat,$lon);out body;"""
+        return """[out:json][timeout:25];nwr["amenity"="fuel"](around:$radiusMeters,$lat,$lon);out center;"""
     }
 
     fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
@@ -55,8 +55,8 @@ object GasStationRepository {
                 val results = elements.mapNotNull { element ->
                     val name = element.tags?.get("name") ?: return@mapNotNull null
                     val brand = element.tags.get("brand") ?: element.tags.get("operator")
-                    val elementLat = element.lat ?: return@mapNotNull null
-                    val elementLon = element.lon ?: return@mapNotNull null
+                    val elementLat = element.lat ?: element.center?.lat ?: return@mapNotNull null
+                    val elementLon = element.lon ?: element.center?.lon ?: return@mapNotNull null
                     val distance = calculateDistance(lat, lon, elementLat, elementLon)
                     val address = extractAddress(element.tags)
                     GasStationResult(

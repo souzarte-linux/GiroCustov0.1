@@ -8,10 +8,17 @@ data class OverpassResponse(
 )
 
 @JsonClass(generateAdapter = true)
+data class OverpassCenter(
+    val lat: Double,
+    val lon: Double
+)
+
+@JsonClass(generateAdapter = true)
 data class OverpassElement(
     val id: Long,
     val lat: Double?,
     val lon: Double?,
+    val center: OverpassCenter? = null,
     val tags: Map<String, String>?
 )
 
