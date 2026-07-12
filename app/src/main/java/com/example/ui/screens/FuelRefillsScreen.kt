@@ -422,66 +422,62 @@ fun RefillFormSection(
         val disc = discountStr.replace(",", ".").toDoubleOrNull() ?: 0.0
         val total = totalPaidStr.replace(",", ".").toDoubleOrNull() ?: 0.0
 
-        when (focusedField) {
-            "price" -> {
-                if (price > 0.0 && lts > 0.0) {
+        val priceEmpty = pricePerLiterStr.isBlank() || price <= 0.0
+        val ltsEmpty = litersStr.isBlank() || lts <= 0.0
+        val totalEmpty = totalPaidStr.isBlank() || total <= 0.0
+
+        // Count how many fields are filled (not empty)
+        val filledCount = listOf(!priceEmpty, !ltsEmpty, !totalEmpty).count { it }
+
+        if (filledCount == 2) {
+            // If exactly two fields are filled, we calculate the empty one
+            if (priceEmpty && !ltsEmpty && !totalEmpty && focusedField != "price") {
+                val autoPrice = ((total + disc) / lts).coerceAtLeast(0.0)
+                if (autoPrice.isFinite() && autoPrice > 0.0) {
+                    val autoPriceStr = String.format(Locale.US, "%.2f", autoPrice)
+                    val currentPrice = pricePerLiterStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+                    if (Math.abs(currentPrice - autoPrice) > 0.009) {
+                        pricePerLiterStr = autoPriceStr
+                    }
+                }
+            } else if (ltsEmpty && !priceEmpty && !totalEmpty && focusedField != "liters") {
+                val autoLts = ((total + disc) / price).coerceAtLeast(0.0)
+                if (autoLts.isFinite() && autoLts > 0.0) {
+                    val autoLtsStr = String.format(Locale.US, "%.2f", autoLts)
+                    val currentLts = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+                    if (Math.abs(currentLts - autoLts) > 0.009) {
+                        litersStr = autoLtsStr
+                    }
+                }
+            } else if (totalEmpty && !priceEmpty && !ltsEmpty && focusedField != "total") {
+                val autoTotal = (price * lts - disc).coerceAtLeast(0.0)
+                val autoTotalStr = String.format(Locale.US, "%.2f", autoTotal)
+                val currentTotal = totalPaidStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+                if (Math.abs(currentTotal - autoTotal) > 0.009) {
+                    totalPaidStr = autoTotalStr
+                }
+            }
+        } else if (filledCount == 3) {
+            // If all three fields are filled, we update one based on the focused field
+            when (focusedField) {
+                "price", "liters", "discount" -> {
+                    // Update total paid
                     val autoTotal = (price * lts - disc).coerceAtLeast(0.0)
-                    val autoTotalStr = String.format(Locale.US, "%.2f", autoTotal).replace(",", ".")
-                    if (totalPaidStr != autoTotalStr) {
+                    val autoTotalStr = String.format(Locale.US, "%.2f", autoTotal)
+                    val currentTotal = totalPaidStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+                    if (Math.abs(currentTotal - autoTotal) > 0.009) {
                         totalPaidStr = autoTotalStr
                     }
-                } else if (price > 0.0 && total > 0.0) {
+                }
+                "total" -> {
+                    // Update liters (quantity of liters purchased is recalculated)
                     val autoLts = ((total + disc) / price).coerceAtLeast(0.0)
                     if (autoLts.isFinite() && autoLts > 0.0) {
-                        val autoLtsStr = String.format(Locale.US, "%.2f", autoLts).replace(",", ".")
-                        if (litersStr != autoLtsStr) {
+                        val autoLtsStr = String.format(Locale.US, "%.2f", autoLts)
+                        val currentLts = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+                        if (Math.abs(currentLts - autoLts) > 0.009) {
                             litersStr = autoLtsStr
                         }
-                    }
-                }
-            }
-            "liters" -> {
-                if (lts > 0.0 && price > 0.0) {
-                    val autoTotal = (price * lts - disc).coerceAtLeast(0.0)
-                    val autoTotalStr = String.format(Locale.US, "%.2f", autoTotal).replace(",", ".")
-                    if (totalPaidStr != autoTotalStr) {
-                        totalPaidStr = autoTotalStr
-                    }
-                } else if (lts > 0.0 && total > 0.0) {
-                    val autoPrice = ((total + disc) / lts).coerceAtLeast(0.0)
-                    if (autoPrice.isFinite() && autoPrice > 0.0) {
-                        val autoPriceStr = String.format(Locale.US, "%.2f", autoPrice).replace(",", ".")
-                        if (pricePerLiterStr != autoPriceStr) {
-                            pricePerLiterStr = autoPriceStr
-                        }
-                    }
-                }
-            }
-            "total" -> {
-                if (total > 0.0 && lts > 0.0) {
-                    val autoPrice = ((total + disc) / lts).coerceAtLeast(0.0)
-                    if (autoPrice.isFinite() && autoPrice > 0.0) {
-                        val autoPriceStr = String.format(Locale.US, "%.2f", autoPrice).replace(",", ".")
-                        if (pricePerLiterStr != autoPriceStr) {
-                            pricePerLiterStr = autoPriceStr
-                        }
-                    }
-                } else if (total > 0.0 && price > 0.0) {
-                    val autoLts = ((total + disc) / price).coerceAtLeast(0.0)
-                    if (autoLts.isFinite() && autoLts > 0.0) {
-                        val autoLtsStr = String.format(Locale.US, "%.2f", autoLts).replace(",", ".")
-                        if (litersStr != autoLtsStr) {
-                            litersStr = autoLtsStr
-                        }
-                    }
-                }
-            }
-            "discount" -> {
-                if (price > 0.0 && lts > 0.0) {
-                    val autoTotal = (price * lts - disc).coerceAtLeast(0.0)
-                    val autoTotalStr = String.format(Locale.US, "%.2f", autoTotal).replace(",", ".")
-                    if (totalPaidStr != autoTotalStr) {
-                        totalPaidStr = autoTotalStr
                     }
                 }
             }
