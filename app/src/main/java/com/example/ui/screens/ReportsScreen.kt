@@ -364,9 +364,9 @@ fun ReportsScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         ExpenseLegendItem(label = "Combustível", color = Color(0xFFFF9100), pct = pctFuel, value = totalFuelCost)
                         ExpenseLegendItem(label = "Alimentação", color = Color(0xFF00B0FF), pct = pctFood, value = totalFoodCost)
-                        ExpenseLegendItem(label = "Desgaste Oculto / Peças", color = Color(0xFFEF5350), pct = pctWear, value = totalWearCost)
-                        ExpenseLegendItem(label = "Custos Fixos Proporcionais", color = Color(0xFFAB47BC), pct = pctFixed, value = totalFixedCost)
-                        ExpenseLegendItem(label = "Manutenção Corretiva (Gasto Real)", color = Color(0xFFFBBF24), pct = pctMaintenance, value = totalMaintenanceCost)
+                        ExpenseLegendItem(label = "Desgaste / Peças", color = Color(0xFFEF5350), pct = pctWear, value = totalWearCost)
+                        ExpenseLegendItem(label = "Custos Fixos", color = Color(0xFFAB47BC), pct = pctFixed, value = totalFixedCost)
+                        ExpenseLegendItem(label = "Manut. Corretiva", color = Color(0xFFFBBF24), pct = pctMaintenance, value = totalMaintenanceCost)
                     }
                 } else {
                     Text("Nenhuma despesa registrada para cálculo.", fontSize = 12.sp, color = Color(0xFF94A3B8), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
@@ -594,7 +594,10 @@ fun ExpenseLegendItem(label: String, color: Color, pct: Float, value: Double) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Box(
                 modifier = Modifier
                     .size(10.dp)
@@ -602,14 +605,23 @@ fun ExpenseLegendItem(label: String, color: Color, pct: Float, value: Double) {
                     .background(color)
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text(label, fontSize = 12.sp, color = Color(0xFF94A3B8)) // slate-400 for dark mode
+            Text(
+                text = label, 
+                fontSize = 12.sp, 
+                color = Color(0xFF94A3B8), // slate-400 for dark mode
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
         }
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = "${String.format(Locale.GERMAN, "R$ %.2f", value)} (${(pct * 100).toInt()}%)",
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.Monospace,
-            color = Color.White
+            color = Color.White,
+            maxLines = 1,
+            softWrap = false
         )
     }
 }
