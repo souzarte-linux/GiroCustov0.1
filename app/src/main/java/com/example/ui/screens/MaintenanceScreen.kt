@@ -173,8 +173,11 @@ fun MaintenanceListSection(
                     text = "Manutenção Corretiva",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.weight(1f)
                 )
+
+                Spacer(modifier = Modifier.width(8.dp))
 
                 Button(
                     onClick = onAddClick,
@@ -187,7 +190,12 @@ fun MaintenanceListSection(
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = "Adicionar", modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Lançar", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Lançar",
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
             }
 
