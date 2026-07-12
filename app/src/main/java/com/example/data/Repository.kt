@@ -322,6 +322,14 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
                 recordDao.insertRecord(record)
             }
         }
+
+        // Programmatically seed June 2026 data if not already present
+        val allRecords = recordDao.getAllRecords()
+        val hasJune2026 = allRecords.any { it.dateString.startsWith("2026-06") }
+        if (!hasJune2026) {
+            Log.d("GiroCustoRepository", "Seeding June 2026 data programmatically...")
+            seedJune2026Data()
+        }
     }
 
     suspend fun calculateRealAverageConsumption(vehicleId: Long): Double? {
@@ -414,6 +422,127 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
 
     suspend fun renameGasStation(oldName: String, newName: String) {
         fuelRefillDao.renameGasStation(oldName, newName)
+    }
+
+    suspend fun seedJune2026Data() {
+        db.withTransaction {
+            // 1. Delete existing June 2026 records to prevent duplication
+            recordDao.deleteJune2026Records()
+
+            // 2. Ensure an active vehicle exists
+            var vehicle = vehicleDao.getActiveVehicle()
+            if (vehicle == null) {
+                vehicle = Vehicle(
+                    id = 1L,
+                    model = "Honda CG 160 Titan",
+                    averageConsumption = 40.0,
+                    fuelType = "Gasolina",
+                    monthlyFixedCosts = 180.0,
+                    plannedWorkDays = 22,
+                    currentOdometer = 15350.0,
+                    active = true
+                )
+                vehicleDao.insertVehicle(vehicle)
+            }
+
+            // 3. Ensure parts exist to compute wear costs
+            var parts = partDao.getAllParts()
+            if (parts.isEmpty()) {
+                val initialParts = listOf(
+                    VehiclePart(name = "Óleo do Motor", price = 45.0, lifespanKm = 1500.0, runKmSinceChange = 1300.0),
+                    VehiclePart(name = "Kit Relação (Coroa/Pinhão/Corrente)", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 4500.0),
+                    VehiclePart(name = "Pneu Traseiro", price = 220.0, lifespanKm = 12000.0, runKmSinceChange = 11000.0),
+                    VehiclePart(name = "Pneu Dianteiro", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 3000.0),
+                    VehiclePart(name = "Pastilhas de Freio", price = 40.0, lifespanKm = 6000.0, runKmSinceChange = 1200.0),
+                    VehiclePart(name = "Lona de Freio Traseira", price = 35.0, lifespanKm = 10000.0, runKmSinceChange = 2500.0)
+                )
+                for (part in initialParts) {
+                    partDao.insertPart(part)
+                }
+                parts = partDao.getAllParts()
+            }
+
+            val totalWearCostPerKm = parts.sumOf { it.price / it.lifespanKm }.takeIf { it > 0 } ?: 0.075
+            val fixedCostPerDay = if (vehicle.plannedWorkDays > 0) vehicle.monthlyFixedCosts / vehicle.plannedWorkDays else (180.0 / 22.0)
+            val consumption = if (vehicle.averageConsumption > 0) vehicle.averageConsumption else 40.0
+
+            // 4. Generate the 25 working days list
+            val calendar = Calendar.getInstance()
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            val platforms = listOf("iFood", "Uber Flash", "Rappi", "Loggi")
+
+            val workDaysList = mutableListOf<Calendar>()
+            for (dayOfMonth in 1..30) {
+                if (workDaysList.size >= 25) break
+
+                val cal = Calendar.getInstance().apply {
+                    set(Calendar.YEAR, 2026)
+                    set(Calendar.MONTH, Calendar.JUNE)
+                    set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                    set(Calendar.HOUR_OF_DAY, 12)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+
+                if (cal.get(Calendar.DAY_OF_WEEK) != Calendar.SATURDAY) {
+                    workDaysList.add(cal)
+                }
+            }
+
+            // Let's pre-calculate total km so we end exactly at 14580.0 (the base end/start odometer for June 29)
+            // or close to it.
+            val kmPerDay = List(workDaysList.size) { index ->
+                70.0 + ((index + 1) * 7) % 45 // 70 to 110 km
+            }
+            val totalKm = kmPerDay.sum()
+            var startOdo = 14580.0 - totalKm
+
+            workDaysList.forEachIndexed { index, cal ->
+                val km = kmPerDay[index]
+                val endOdo = startOdo + km
+                val dateStr = dateFormat.format(cal.time)
+                val timestamp = cal.timeInMillis
+
+                val gross = 160.0 + ((index + 1) * 13) % 110 // R$ 160.0 to R$ 270.0
+                val deliveries = 10 + ((index + 1) * 3) % 12 // 10 to 22 deliveries
+                val food = 15.0 + ((index + 1) * 4) % 16 // R$ 15.0 to R$ 31.0
+                val fuelPriceVal = 5.75 + ((index + 1) * 2) % 5 * 0.05 // 5.75 to 5.95
+
+                val fuelCost = (km / consumption) * fuelPriceVal
+                val wearCost = km * totalWearCostPerKm
+                val net = gross - fuelCost - wearCost - fixedCostPerDay - food
+                val selectedPlatform = platforms[index % platforms.size]
+
+                val record = DailyRecord(
+                    dateString = dateStr,
+                    dateTimestamp = timestamp,
+                    platform = selectedPlatform,
+                    grossEarnings = gross,
+                    deliveriesCount = deliveries,
+                    startOdometer = startOdo,
+                    endOdometer = endOdo,
+                    fuelPrice = fuelPriceVal,
+                    foodExpense = food,
+                    fuelCost = fuelCost,
+                    wearCost = wearCost,
+                    proportionalFixedCost = fixedCostPerDay,
+                    netProfit = net
+                )
+                recordDao.insertRecord(record)
+
+                // Accumulate km on parts
+                for (part in parts) {
+                    val updatedPart = part.copy(runKmSinceChange = (part.runKmSinceChange + km).coerceAtMost(part.lifespanKm))
+                    partDao.updatePart(updatedPart)
+                }
+
+                // Setup next day's start odo
+                startOdo = endOdo
+            }
+
+            recalculateVehicleOdometer()
+        }
     }
 
     private data class SeededDay(

@@ -567,6 +567,18 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
             netProfit = netProfit
         )
     }
+
+    fun seedJune2026Data(onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                repository.seedJune2026Data()
+                prefillLaunchFields()
+                onSuccess()
+            } catch (e: Exception) {
+                onError(e.localizedMessage ?: "Erro desconhecido")
+            }
+        }
+    }
 }
 
 data class EstimationDetail(

@@ -242,5 +242,57 @@ fun ProfileScreen(
                 }
             }
         }
+
+        // SYSTEM ACTIONS CARD
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, Color(0xFF2D2D34)),
+            elevation = CardDefaults.cardElevation(0.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Ações do Sistema",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    fontSize = 15.sp
+                )
+                
+                Text(
+                    text = "Gere dados fictícios para o mês de Junho de 2026 contendo exatamente 25 dias de trabalho (excluindo os Sábados). Ideal para validar relatórios, médias e o agrupamento hierárquico no histórico.",
+                    color = Color(0xFF94A3B8),
+                    fontSize = 12.sp
+                )
+
+                Button(
+                    onClick = {
+                        viewModel.seedJune2026Data(
+                            onSuccess = {
+                                Toast.makeText(context, "Dados de Junho/2026 semeados com sucesso (25 dias sem Sábados)!", Toast.LENGTH_LONG).show()
+                            },
+                            onError = { err ->
+                                Toast.makeText(context, "Erro ao semear dados: $err", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("seed_june_data_btn"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Icon(Icons.Filled.Refresh, contentDescription = "Semear Junho 2026")
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Semear Dados de Junho/2026", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
 }
