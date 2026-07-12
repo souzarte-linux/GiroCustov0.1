@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.animation.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.DailyRecord
 import com.example.ui.GiroCustoViewModel
@@ -400,18 +401,72 @@ fun HistoryScreen(
                     .weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(filteredAndSortedRecords) { record ->
-                    HistoryRecordCard(
-                        record = record,
-                        onEditClick = {
-                            recordToEdit = record
-                            showEditDialog = true
-                        },
-                        onDeleteClick = {
-                            viewModel.deleteDailyRecord(record)
-                            android.widget.Toast.makeText(context, "Lançamento excluído com sucesso!", android.widget.Toast.LENGTH_SHORT).show()
+                // Se a ordenação for por data (crescente ou decrescente), usamos o agrupamento hierárquico.
+                // Caso contrário (por lucro, km, entregas, etc.), usamos uma lista plana para não quebrar a lógica de ordenação.
+                if (selectedSortOption == HistorySortOption.DATA_DECRESCENTE || selectedSortOption == HistorySortOption.DATA_CRESCENTE) {
+                    val isAsc = selectedSortOption == HistorySortOption.DATA_CRESCENTE
+                    val groupedList = groupRecordsHierarchically(filteredAndSortedRecords, isAsc)
+                    
+                    items(groupedList) { item ->
+                        when (item) {
+                            is HistoryListItem.YearHeader -> {
+                                YearHeaderCard(
+                                    year = item.year,
+                                    totalGross = item.totalGross,
+                                    totalNet = item.totalNet
+                                )
+                            }
+                            is HistoryListItem.MonthHeader -> {
+                                val monthLabel = "${ptMonths[item.month]} ${item.year}"
+                                MonthHeaderCard(
+                                    monthLabel = monthLabel,
+                                    totalGross = item.totalGross,
+                                    totalNet = item.totalNet
+                                )
+                            }
+                            is HistoryListItem.WeekHeader -> {
+                                val sdfWeek = SimpleDateFormat("dd/MM", Locale("pt", "BR"))
+                                val startStr = sdfWeek.format(Date(item.weekStartMillis))
+                                val endStr = sdfWeek.format(Date(item.weekEndMillis))
+                                val weekLabel = "Semana de $startStr a $endStr"
+                                WeekHeaderCard(
+                                    weekLabel = weekLabel,
+                                    totalGross = item.totalGross,
+                                    totalNet = item.totalNet
+                                )
+                            }
+                            is HistoryListItem.DayHeader -> {
+                                DayHeaderView(label = item.label)
+                            }
+                            is HistoryListItem.RecordRow -> {
+                                HistoryRecordCard(
+                                    record = item.record,
+                                    onEditClick = {
+                                        recordToEdit = item.record
+                                        showEditDialog = true
+                                    },
+                                    onDeleteClick = {
+                                        viewModel.deleteDailyRecord(item.record)
+                                        android.widget.Toast.makeText(context, "Lançamento excluído com sucesso!", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                )
+                            }
                         }
-                    )
+                    }
+                } else {
+                    items(filteredAndSortedRecords) { record ->
+                        HistoryRecordCard(
+                            record = record,
+                            onEditClick = {
+                                recordToEdit = record
+                                showEditDialog = true
+                            },
+                            onDeleteClick = {
+                                viewModel.deleteDailyRecord(record)
+                                android.widget.Toast.makeText(context, "Lançamento excluído com sucesso!", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -468,8 +523,13 @@ fun HistoryRecordCard(
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
     Card(
-        modifier = Modifier.fillMaxWidth().testTag("history_item_${record.id}"),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("history_item_${record.id}")
+            .clickable { expanded = !expanded },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
@@ -558,90 +618,111 @@ fun HistoryRecordCard(
                 }
             }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
-
-            // Body Metrics
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
             ) {
-                Column {
-                    Text("Ganhos Brutos", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        text = String.format(Locale.GERMAN, "R$ %.2f", record.grossEarnings),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
 
-                Column {
-                    Text("Km Rodados", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        text = String.format(Locale.GERMAN, "%.1f km", record.kmRodados),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+                    // Body Metrics
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text("Ganhos Brutos", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                text = String.format(Locale.GERMAN, "R$ %.2f", record.grossEarnings),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
 
-                Column {
-                    Text("Entregas", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        text = "${record.deliveriesCount} ent.",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                        Column {
+                            Text("Km Rodados", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                text = String.format(Locale.GERMAN, "%.1f km", record.kmRodados),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Column {
+                            Text("Entregas", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                text = "${record.deliveriesCount} ent.",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text("Custo Combustível", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                text = String.format(Locale.GERMAN, "R$ %.2f", record.fuelCost),
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Column {
+                            Text("Desgaste/Peças", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                text = String.format(Locale.GERMAN, "R$ %.2f", record.wearCost),
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Column {
+                            Text("Alimentação", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                text = String.format(Locale.GERMAN, "R$ %.2f", record.foodExpense),
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text("Custo Combustível", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        text = String.format(Locale.GERMAN, "R$ %.2f", record.fuelCost),
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Column {
-                    Text("Desgaste/Peças", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        text = String.format(Locale.GERMAN, "R$ %.2f", record.wearCost),
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Column {
-                    Text("Alimentação", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        text = String.format(Locale.GERMAN, "R$ %.2f", record.foodExpense),
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-
+            // Bottom row: Lucro Líquido (always visible, holds expand indicator icon)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "LUCRO LÍQUIDO",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        contentDescription = if (expanded) "Colapsar" else "Expandir",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "LUCRO LÍQUIDO",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
                 Text(
                     text = String.format(Locale.GERMAN, "R$ %.2f", record.netProfit),
                     fontWeight = FontWeight.Black,
@@ -651,6 +732,371 @@ fun HistoryRecordCard(
             }
         }
     }
+}
+
+// -----------------------------------------------------------------------------
+// HIERARCHICAL GROUPING & RENDERING FOR HISTORY LIST
+// -----------------------------------------------------------------------------
+
+val ptMonths = arrayOf(
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+)
+
+sealed class HistoryListItem {
+    data class YearHeader(val year: Int, val totalGross: Double, val totalNet: Double) : HistoryListItem()
+    data class MonthHeader(val year: Int, val month: Int, val totalGross: Double, val totalNet: Double) : HistoryListItem()
+    data class WeekHeader(val weekStartMillis: Long, val weekEndMillis: Long, val totalGross: Double, val totalNet: Double) : HistoryListItem()
+    data class DayHeader(val dateTimestamp: Long, val label: String) : HistoryListItem()
+    data class RecordRow(val record: DailyRecord) : HistoryListItem()
+}
+
+/**
+ * Calculates start and end of a week subdivision truncated by month.
+ */
+fun getWeekSubdivisionBoundaries(recordTimestamp: Long, year: Int, month: Int): Pair<Long, Long> {
+    val cal = Calendar.getInstance().apply {
+        timeInMillis = recordTimestamp
+        firstDayOfWeek = Calendar.MONDAY
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+
+    val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
+    val daysToMonday = when (dayOfWeek) {
+        Calendar.MONDAY -> 0
+        Calendar.TUESDAY -> -1
+        Calendar.WEDNESDAY -> -2
+        Calendar.THURSDAY -> -3
+        Calendar.FRIDAY -> -4
+        Calendar.SATURDAY -> -5
+        Calendar.SUNDAY -> -6
+        else -> 0
+    }
+
+    val mondayCal = Calendar.getInstance().apply {
+        timeInMillis = cal.timeInMillis
+        add(Calendar.DAY_OF_YEAR, daysToMonday)
+    }
+
+    val sundayCal = Calendar.getInstance().apply {
+        timeInMillis = mondayCal.timeInMillis
+        add(Calendar.DAY_OF_YEAR, 6)
+        set(Calendar.HOUR_OF_DAY, 23)
+        set(Calendar.MINUTE, 59)
+        set(Calendar.SECOND, 59)
+        set(Calendar.MILLISECOND, 999)
+    }
+
+    val startOfMonth = Calendar.getInstance().apply {
+        set(Calendar.YEAR, year)
+        set(Calendar.MONTH, month)
+        set(Calendar.DAY_OF_MONTH, 1)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+
+    val endOfMonth = Calendar.getInstance().apply {
+        set(Calendar.YEAR, year)
+        set(Calendar.MONTH, month)
+        set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
+        set(Calendar.HOUR_OF_DAY, 23)
+        set(Calendar.MINUTE, 59)
+        set(Calendar.SECOND, 59)
+        set(Calendar.MILLISECOND, 999)
+    }
+
+    val finalStart = maxOf(mondayCal.timeInMillis, startOfMonth.timeInMillis)
+    val finalEnd = minOf(sundayCal.timeInMillis, endOfMonth.timeInMillis)
+
+    return Pair(finalStart, finalEnd)
+}
+
+fun formatDayLabel(timestamp: Long): String {
+    val sdf = SimpleDateFormat("EEEE, dd 'de' MMM", Locale("pt", "BR"))
+    val raw = sdf.format(Date(timestamp))
+    return if (raw.isNotEmpty()) {
+        raw.substring(0, 1).uppercase(Locale("pt", "BR")) + raw.substring(1)
+    } else {
+        raw
+    }
+}
+
+/**
+ * Groups daily records hierarchically into a list of list items.
+ * A week that spans across two months is divided; the days that fall in each month
+ * count towards that specific month's totals (so week groups are subdivisions within the calendar month).
+ */
+fun groupRecordsHierarchically(records: List<DailyRecord>, isAscending: Boolean): List<HistoryListItem> {
+    if (records.isEmpty()) return emptyList()
+
+    // 1. Sort records first
+    val sortedRecords = if (isAscending) {
+        records.sortedWith(compareBy<DailyRecord> { it.dateTimestamp }.thenBy { it.id })
+    } else {
+        records.sortedWith(compareByDescending<DailyRecord> { it.dateTimestamp }.thenByDescending { it.id })
+    }
+
+    data class DayKey(val year: Int, val month: Int, val dayOfMonth: Int)
+    data class WeekKey(val year: Int, val month: Int, val weekStart: Long, val weekEnd: Long)
+
+    val yearToMonths = LinkedHashMap<Int, LinkedHashMap<Int, LinkedHashMap<WeekKey, LinkedHashMap<DayKey, List<DailyRecord>>>>>()
+
+    for (record in sortedRecords) {
+        val cal = Calendar.getInstance().apply {
+            timeInMillis = record.dateTimestamp
+            firstDayOfWeek = Calendar.MONDAY
+        }
+        val y = cal.get(Calendar.YEAR)
+        val m = cal.get(Calendar.MONTH)
+        val d = cal.get(Calendar.DAY_OF_MONTH)
+
+        val boundaries = getWeekSubdivisionBoundaries(record.dateTimestamp, y, m)
+        val weekKey = WeekKey(y, m, boundaries.first, boundaries.second)
+        val dayKey = DayKey(y, m, d)
+
+        val monthsMap = yearToMonths.getOrPut(y) { LinkedHashMap() }
+        val weeksMap = monthsMap.getOrPut(m) { LinkedHashMap() }
+        val daysMap = weeksMap.getOrPut(weekKey) { LinkedHashMap() }
+        val dayRecords = daysMap[dayKey] ?: emptyList()
+        daysMap[dayKey] = dayRecords + record
+    }
+
+    val resultList = mutableListOf<HistoryListItem>()
+
+    for ((y, monthsMap) in yearToMonths) {
+        var yearGross = 0.0
+        var yearNet = 0.0
+        val yearItems = mutableListOf<HistoryListItem>()
+
+        for ((m, weeksMap) in monthsMap) {
+            var monthGross = 0.0
+            var monthNet = 0.0
+            val monthItems = mutableListOf<HistoryListItem>()
+
+            for ((weekKey, daysMap) in weeksMap) {
+                var weekGross = 0.0
+                var weekNet = 0.0
+                val weekItems = mutableListOf<HistoryListItem>()
+
+                for ((dayKey, dayRecords) in daysMap) {
+                    val representativeTimestamp = dayRecords.first().dateTimestamp
+                    val dayLabel = formatDayLabel(representativeTimestamp)
+                    
+                    weekItems.add(HistoryListItem.DayHeader(representativeTimestamp, dayLabel))
+                    for (rec in dayRecords) {
+                        weekItems.add(HistoryListItem.RecordRow(rec))
+                        weekGross += rec.grossEarnings
+                        weekNet += rec.netProfit
+                    }
+                }
+
+                monthItems.add(HistoryListItem.WeekHeader(weekKey.weekStart, weekKey.weekEnd, weekGross, weekNet))
+                monthItems.addAll(weekItems)
+
+                monthGross += weekGross
+                monthNet += weekNet
+            }
+
+            yearItems.add(HistoryListItem.MonthHeader(y, m, monthGross, monthNet))
+            yearItems.addAll(monthItems)
+
+            yearGross += monthGross
+            yearNet += monthNet
+        }
+
+        resultList.add(HistoryListItem.YearHeader(y, yearGross, yearNet))
+        resultList.addAll(yearItems)
+    }
+
+    return resultList
+}
+
+@Composable
+fun YearHeaderCard(year: Int, totalGross: Double, totalNet: Double) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("year_header_$year"),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = year.toString(),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "Faturamento",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = String.format(Locale.GERMAN, "R$ %.2f", totalGross),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Lucro Líquido",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = String.format(Locale.GERMAN, "R$ %.2f", totalNet),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (totalNet >= 0) Color(0xFF10B981) else Color(0xFFF43F5E)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MonthHeaderCard(monthLabel: String, totalGross: Double, totalNet: Double) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 8.dp)
+            .testTag("month_header_$monthLabel"),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Text(
+                text = monthLabel,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "Faturamento",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = String.format(Locale.GERMAN, "R$ %.2f", totalGross),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Lucro Líquido",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = String.format(Locale.GERMAN, "R$ %.2f", totalNet),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (totalNet >= 0) Color(0xFF10B981) else Color(0xFFF43F5E)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WeekHeaderCard(weekLabel: String, totalGross: Double, totalNet: Double) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp)
+            .testTag("week_header_$weekLabel"),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = weekLabel,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Fat.",
+                        fontSize = 9.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = String.format(Locale.GERMAN, "R$ %.0f", totalGross),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Lucro",
+                        fontSize = 9.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = String.format(Locale.GERMAN, "R$ %.0f", totalNet),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (totalNet >= 0) Color(0xFF10B981) else Color(0xFFF43F5E)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DayHeaderView(label: String) {
+    Text(
+        text = label,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+        modifier = Modifier
+            .padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
+            .testTag("day_header_$label")
+    )
 }
 
 @Composable
