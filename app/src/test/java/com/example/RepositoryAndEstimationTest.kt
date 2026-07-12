@@ -791,10 +791,13 @@ class RepositoryAndEstimationTest {
         val userLon = -46.600
 
         val results = elements.mapNotNull { element ->
-            val name = element.tags?.get("name") ?: return@mapNotNull null
-            val brand = element.tags.get("brand") ?: element.tags.get("operator")
-            val lat = element.lat ?: return@mapNotNull null
-            val lon = element.lon ?: return@mapNotNull null
+            val name = element.tags?.get("name")
+                ?: element.tags?.get("brand")
+                ?: element.tags?.get("operator")
+                ?: "Posto de Combustível"
+            val brand = element.tags?.get("brand") ?: element.tags?.get("operator")
+            val lat = element.lat ?: element.center?.lat ?: return@mapNotNull null
+            val lon = element.lon ?: element.center?.lon ?: return@mapNotNull null
             val distance = com.example.network.GasStationRepository.calculateDistance(userLat, userLon, lat, lon)
             com.example.network.GasStationResult(
                 name = name,
@@ -805,10 +808,45 @@ class RepositoryAndEstimationTest {
             )
         }.sortedBy { it.distanceMeters }
 
-        assertEquals(2, results.size)
-        assertEquals("Posto Shell", results[0].name)
-        assertEquals("Posto Ipiranga", results[1].name)
+        assertEquals(3, results.size)
+        assertEquals("Shell", results[0].name)
+        assertEquals("Posto Shell", results[1].name)
+        assertEquals("Posto Ipiranga", results[2].name)
         assertTrue(results[0].distanceMeters < results[1].distanceMeters)
+    }
+
+    @Test
+    fun testMockResponseNoNameButHasBrandFallback() = runTest {
+        val element = com.example.network.OverpassElement(
+            id = 5L,
+            lat = -23.502,
+            lon = -46.602,
+            tags = mapOf("brand" to "Ipiranga")
+        )
+        
+        val name = element.tags?.get("name")
+            ?: element.tags?.get("brand")
+            ?: element.tags?.get("operator")
+            ?: "Posto de Combustível"
+            
+        assertEquals("Ipiranga", name)
+    }
+
+    @Test
+    fun testMockResponseNoNameNoBrandNoOperatorFallback() = runTest {
+        val element = com.example.network.OverpassElement(
+            id = 6L,
+            lat = -23.503,
+            lon = -46.603,
+            tags = emptyMap()
+        )
+        
+        val name = element.tags?.get("name")
+            ?: element.tags?.get("brand")
+            ?: element.tags?.get("operator")
+            ?: "Posto de Combustível"
+            
+        assertEquals("Posto de Combustível", name)
     }
 
     @Test

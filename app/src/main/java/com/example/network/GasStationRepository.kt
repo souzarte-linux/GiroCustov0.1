@@ -53,8 +53,11 @@ object GasStationRepository {
                 val response = overpassApiService.getNearbyStations(endpoint, query)
                 val elements = response.elements
                 val results = elements.mapNotNull { element ->
-                    val name = element.tags?.get("name") ?: return@mapNotNull null
-                    val brand = element.tags.get("brand") ?: element.tags.get("operator")
+                    val name = element.tags?.get("name")
+                        ?: element.tags?.get("brand")
+                        ?: element.tags?.get("operator")
+                        ?: "Posto de Combustível"
+                    val brand = element.tags?.get("brand") ?: element.tags?.get("operator")
                     val elementLat = element.lat ?: element.center?.lat ?: return@mapNotNull null
                     val elementLon = element.lon ?: element.center?.lon ?: return@mapNotNull null
                     val distance = calculateDistance(lat, lon, elementLat, elementLon)
