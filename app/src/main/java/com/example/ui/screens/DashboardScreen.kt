@@ -35,6 +35,7 @@ import com.example.data.Vehicle
 import com.example.data.VehiclePart
 import com.example.data.MaintenanceRecord
 import com.example.ui.util.filterByPeriod
+import com.example.ui.util.getCurrentMonthRange
 import com.example.ui.GiroCustoViewModel
 import com.example.ui.Period
 import com.example.ui.components.CustomPeriodDialog
@@ -155,7 +156,8 @@ fun DashboardScreen(
                         val selectedLabel = when (selectedPeriod) {
                             Period.SEMANA -> "Semana"
                             Period.QUINZENA -> "Quinzena"
-                            Period.MENSAL -> "Mensal"
+                            Period.MENSAL -> "Mês Atual"
+                            Period.ULTIMOS_30_DIAS -> "Últimos 30 dias"
                             Period.PERSONALIZADO -> "Personalizado"
                         }
                         Text(
@@ -192,9 +194,16 @@ fun DashboardScreen(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Mensal", fontSize = 14.sp) },
+                            text = { Text("Mês Atual", fontSize = 14.sp) },
                             onClick = {
                                 viewModel.setPeriod(Period.MENSAL)
+                                dropdownExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Últimos 30 dias", fontSize = 14.sp) },
+                            onClick = {
+                                viewModel.setPeriod(Period.ULTIMOS_30_DIAS)
                                 dropdownExpanded = false
                             }
                         )
@@ -283,7 +292,8 @@ fun DashboardScreen(
                     val labelPeriod = when (selectedPeriod) {
                         Period.SEMANA -> "LUCRO LÍQUIDO (SEMANA)"
                         Period.QUINZENA -> "LUCRO LÍQUIDO (QUINZENA)"
-                        Period.MENSAL -> "LUCRO LÍQUIDO (MENSAL)"
+                        Period.MENSAL -> "LUCRO LÍQUIDO (MÊS ATUAL)"
+                        Period.ULTIMOS_30_DIAS -> "LUCRO LÍQUIDO (30 DIAS)"
                         Period.PERSONALIZADO -> {
                             val startStr = displayFormat.format(Date(customStart))
                             val endStr = displayFormat.format(Date(customEnd))
@@ -589,8 +599,8 @@ fun DashboardScreen(
         val weeklyDelAct = weeklyRecords.sumOf { it.deliveriesCount }
 
         val monthlyRecords = remember(records) {
-            val limit = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000
-            records.filter { it.dateTimestamp >= limit }
+            val (startMonth, endMonth) = getCurrentMonthRange()
+            records.filter { it.dateTimestamp in startMonth..endMonth }
         }
         val monthlyGrossAct = monthlyRecords.sumOf { it.grossEarnings }
         val monthlyNetAct = monthlyRecords.sumOf { it.netProfit }
@@ -619,7 +629,7 @@ fun DashboardScreen(
         // Renderizar os 3 Cards de Meta
         GoalCard(title = "Meta Diária (Hoje)", grossAct = dailyGrossAct, grossGoal = dailyGGoal, netAct = dailyNetAct, netGoal = dailyNGoal, kmAct = dailyKmAct, kmGoal = dailyKGoal, delAct = dailyDelAct, delGoal = dailyDGoal)
         GoalCard(title = "Meta Semanal (7 dias)", grossAct = weeklyGrossAct, grossGoal = weeklyGGoal, netAct = weeklyNetAct, netGoal = weeklyNGoal, kmAct = weeklyKmAct, kmGoal = weeklyKGoal, delAct = weeklyDelAct, delGoal = weeklyDGoal)
-        GoalCard(title = "Meta Mensal (30 dias)", grossAct = monthlyGrossAct, grossGoal = monthlyGGoal, netAct = monthlyNetAct, netGoal = monthlyNGoal, kmAct = monthlyKmAct, kmGoal = monthlyKGoal, delAct = monthlyDelAct, delGoal = monthlyDGoal)
+        GoalCard(title = "Meta Mensal (Mês Atual)", grossAct = monthlyGrossAct, grossGoal = monthlyGGoal, netAct = monthlyNetAct, netGoal = monthlyNGoal, kmAct = monthlyKmAct, kmGoal = monthlyKGoal, delAct = monthlyDelAct, delGoal = monthlyDGoal)
 
         // Botão para Ajustar Metas (Polished Green Outlined Style)
         OutlinedButton(

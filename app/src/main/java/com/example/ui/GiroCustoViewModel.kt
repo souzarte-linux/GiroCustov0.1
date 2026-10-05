@@ -15,6 +15,7 @@ enum class Period {
     SEMANA,
     QUINZENA,
     MENSAL,
+    ULTIMOS_30_DIAS,
     PERSONALIZADO
 }
 
@@ -202,6 +203,9 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     var deliveriesCount = MutableStateFlow("")
     var fuelPrice = MutableStateFlow("")
     var foodExpense = MutableStateFlow("")
+    var startTime = MutableStateFlow("")
+    var endTime = MutableStateFlow("")
+    var pauseDuration = MutableStateFlow("")
     val launchDateTimestamp = MutableStateFlow(System.currentTimeMillis())
     val platform = MutableStateFlow("")
 
@@ -269,6 +273,9 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
         grossEarnings.value = ""
         deliveriesCount.value = ""
         foodExpense.value = ""
+        startTime.value = ""
+        endTime.value = ""
+        pauseDuration.value = ""
         launchDateTimestamp.value = System.currentTimeMillis()
         platform.value = ""
     }
@@ -446,7 +453,10 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
                     startOdometer = startOdoVal,
                     endOdometer = endOdoVal,
                     fuelPrice = fuelPriceVal,
-                    foodExpense = foodExpenseVal
+                    foodExpense = foodExpenseVal,
+                    startTime = startTime.value.trim(),
+                    endTime = endTime.value.trim(),
+                    pauseDuration = pauseDuration.value.trim()
                 )
                 
                 // Limpar campos para o próximo dia
@@ -475,6 +485,9 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
         endOdometer: Double,
         fuelPrice: Double,
         foodExpense: Double,
+        startTime: String = "",
+        endTime: String = "",
+        pauseDuration: String = "",
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
@@ -494,7 +507,10 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
                     startOdometer = startOdometer,
                     endOdometer = endOdometer,
                     fuelPrice = fuelPrice,
-                    foodExpense = foodExpense
+                    foodExpense = foodExpense,
+                    startTime = startTime.trim(),
+                    endTime = endTime.trim(),
+                    pauseDuration = pauseDuration.trim()
                 )
                 onSuccess()
             } catch (e: Exception) {

@@ -38,6 +38,7 @@ import com.example.data.DailyRecord
 import com.example.ui.GiroCustoViewModel
 import com.example.ui.Period
 import com.example.ui.components.CustomPeriodDialog
+import com.example.ui.util.filterByPeriod
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -88,34 +89,8 @@ fun HistoryScreen(
 
     // Filtragem e Ordenação
     val filteredAndSortedRecords = remember(records, historyPeriod, historyCustomStart, historyCustomEnd, selectedPlatformFilter, selectedSortOption) {
-        val now = System.currentTimeMillis()
-        
-        // 1. Filtrar por Período
-        val dateFiltered = if (historyPeriod == Period.PERSONALIZADO) {
-            val calStart = Calendar.getInstance().apply {
-                timeInMillis = historyCustomStart
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-            val calEnd = Calendar.getInstance().apply {
-                timeInMillis = historyCustomEnd
-                set(Calendar.HOUR_OF_DAY, 23)
-                set(Calendar.MINUTE, 59)
-                set(Calendar.SECOND, 59)
-                set(Calendar.MILLISECOND, 999)
-            }
-            records.filter { it.dateTimestamp in calStart.timeInMillis..calEnd.timeInMillis }
-        } else {
-            val limit = when (historyPeriod) {
-                Period.SEMANA -> now - 7L * 24 * 60 * 60 * 1000
-                Period.QUINZENA -> now - 15L * 24 * 60 * 60 * 1000
-                Period.MENSAL -> now - 30L * 24 * 60 * 60 * 1000
-                else -> 0L
-            }
-            records.filter { it.dateTimestamp >= limit }
-        }
+        // 1. Filtrar por Período usando utilitário padronizado
+        val dateFiltered = filterByPeriod(records, historyPeriod, historyCustomStart, historyCustomEnd) { it.dateTimestamp }
 
         // 2. Filtrar por Plataforma
         val platformFiltered = if (selectedPlatformFilter == "Todas") {
@@ -188,7 +163,8 @@ fun HistoryScreen(
                     val label = when (historyPeriod) {
                         Period.SEMANA -> "Semana"
                         Period.QUINZENA -> "Quinzena"
-                        Period.MENSAL -> "Mensal"
+                        Period.MENSAL -> "Mês Atual"
+                        Period.ULTIMOS_30_DIAS -> "30 Dias"
                         Period.PERSONALIZADO -> "Personaliz."
                     }
                     Text(
@@ -226,9 +202,16 @@ fun HistoryScreen(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Mensal", fontSize = 13.sp) },
+                        text = { Text("Mês Atual", fontSize = 13.sp) },
                         onClick = {
                             historyPeriod = Period.MENSAL
+                            periodExpanded = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Últimos 30 dias", fontSize = 13.sp) },
+                        onClick = {
+                            historyPeriod = Period.ULTIMOS_30_DIAS
                             periodExpanded = false
                         }
                     )
@@ -492,7 +475,7 @@ fun HistoryScreen(
                 showEditDialog = false
                 recordToEdit = null
             },
-            onSave = { platform, startOdo, endOdo, gross, deliveries, fuelPrice, foodExpense ->
+            onSave = { platform, startOdo, endOdo, gross, deliveries, fuelPrice, foodExpense, sTime, eTime, pDuration ->
                 viewModel.updateDailyRecord(
                     recordId = recordToEdit!!.id,
                     dateString = recordToEdit!!.dateString,
@@ -504,6 +487,9 @@ fun HistoryScreen(
                     endOdometer = endOdo,
                     fuelPrice = fuelPrice,
                     foodExpense = foodExpense,
+                    startTime = sTime,
+                    endTime = eTime,
+                    pauseDuration = pDuration,
                     onSuccess = {
                         showEditDialog = false
                         recordToEdit = null
@@ -613,6 +599,47 @@ fun HistoryRecordCard(
                             contentDescription = "Excluir Lançamento",
                             tint = Color(0xFFF43F5E),
                             modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+
+            if (record.startTime.isNotBlank() && record.endTime.isNotBlank()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(Icons.Filled.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+                        Text(
+                            text = "${record.startTime} - ${record.endTime}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (record.pauseDuration.isNotBlank()) {
+                            Text(
+                                text = "• Pausa: ${record.pauseDuration}",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    if (record.totalWorkHours > 0) {
+                        Text(
+                            text = record.formattedWorkDuration,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF10B981)
                         )
                     }
                 }
@@ -1103,7 +1130,7 @@ fun DayHeaderView(label: String) {
 fun EditRecordDialog(
     record: DailyRecord,
     onDismiss: () -> Unit,
-    onSave: (String, Double, Double, Double, Int, Double, Double) -> Unit
+    onSave: (String, Double, Double, Double, Int, Double, Double, String, String, String) -> Unit
 ) {
     var platformState by remember { mutableStateOf(record.platform) }
     var startOdo by remember { mutableStateOf(record.startOdometer.toString()) }
@@ -1112,8 +1139,12 @@ fun EditRecordDialog(
     var deliveries by remember { mutableStateOf(record.deliveriesCount.toString()) }
     var fuelPrice by remember { mutableStateOf(record.fuelPrice.toString()) }
     var foodExpense by remember { mutableStateOf(record.foodExpense.toString()) }
+    var startTimeState by remember { mutableStateOf(record.startTime) }
+    var endTimeState by remember { mutableStateOf(record.endTime) }
+    var pauseDurationState by remember { mutableStateOf(record.pauseDuration) }
 
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -1218,13 +1249,87 @@ fun EditRecordDialog(
                         value = foodExpense,
                         onValueChange = { foodExpense = it },
                         label = { Text("Alimentação (R$)", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f).height(56.dp).testTag("edit_food_expense")
                     )
                 }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextField(
+                        value = startTimeState,
+                        onValueChange = { startTimeState = it },
+                        label = { Text("Hora Início", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        placeholder = { Text("08:00") },
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                val sParts = startTimeState.split(":")
+                                val initialH = sParts.getOrNull(0)?.toIntOrNull() ?: 8
+                                val initialM = sParts.getOrNull(1)?.toIntOrNull() ?: 0
+                                android.app.TimePickerDialog(context, { _, h, m ->
+                                    startTimeState = String.format(Locale.US, "%02d:%02d", h, m)
+                                }, initialH, initialM, true).show()
+                            }) {
+                                Icon(Icons.Filled.Schedule, contentDescription = "Hora Início", tint = MaterialTheme.colorScheme.primary)
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f).height(56.dp).testTag("edit_start_time")
+                    )
+
+                    TextField(
+                        value = endTimeState,
+                        onValueChange = { endTimeState = it },
+                        label = { Text("Hora Final", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        placeholder = { Text("18:00") },
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                val eParts = endTimeState.split(":")
+                                val initialH = eParts.getOrNull(0)?.toIntOrNull() ?: 18
+                                val initialM = eParts.getOrNull(1)?.toIntOrNull() ?: 0
+                                android.app.TimePickerDialog(context, { _, h, m ->
+                                    endTimeState = String.format(Locale.US, "%02d:%02d", h, m)
+                                }, initialH, initialM, true).show()
+                            }) {
+                                Icon(Icons.Filled.Schedule, contentDescription = "Hora Final", tint = MaterialTheme.colorScheme.primary)
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f).height(56.dp).testTag("edit_end_time")
+                    )
+                }
+
+                TextField(
+                    value = pauseDurationState,
+                    onValueChange = { pauseDurationState = it },
+                    label = { Text("Total Tempo Pause", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    placeholder = { Text("01:00") },
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            val pParts = pauseDurationState.split(":")
+                            val initialH = pParts.getOrNull(0)?.toIntOrNull() ?: 1
+                            val initialM = pParts.getOrNull(1)?.toIntOrNull() ?: 0
+                            android.app.TimePickerDialog(context, { _, h, m ->
+                                pauseDurationState = String.format(Locale.US, "%02d:%02d", h, m)
+                            }, initialH, initialM, true).show()
+                        }) {
+                            Icon(Icons.Filled.Timer, contentDescription = "Pausa", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().height(56.dp).testTag("edit_pause_duration")
+                )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -1247,7 +1352,7 @@ fun EditRecordDialog(
                             val foodExpenseVal = foodExpense.toDoubleOrNull() ?: 0.0
 
                             if (grossVal > 0.0 && fuelPriceVal > 0.0 && platformState.isNotBlank()) {
-                                onSave(platformState, startOdoVal, endOdoVal, grossVal, deliveriesVal, fuelPriceVal, foodExpenseVal)
+                                onSave(platformState, startOdoVal, endOdoVal, grossVal, deliveriesVal, fuelPriceVal, foodExpenseVal, startTimeState, endTimeState, pauseDurationState)
                             }
                         },
                         colors = ButtonDefaults.buttonColors(

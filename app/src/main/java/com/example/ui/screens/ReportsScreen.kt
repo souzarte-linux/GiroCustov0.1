@@ -100,6 +100,22 @@ fun ReportsScreen(
     val avgProfitPerDay = if (filteredRecords.isNotEmpty()) realNetProfit / filteredRecords.size else 0.0
     val avgKmPerDay = if (filteredRecords.isNotEmpty()) filteredRecords.sumOf { it.kmRodados } / filteredRecords.size else 0.0
 
+    // Métricas de Jornada e Rendimento por Hora
+    val totalWorkMinutes = filteredRecords.sumOf { it.totalWorkMinutes }
+    val totalWorkHours = totalWorkMinutes / 60.0
+    val totalPauseMinutes = filteredRecords.sumOf { it.pauseMinutes }
+    val grossPerHour = if (totalWorkHours > 0) totalEarnings / totalWorkHours else 0.0
+    val netPerHour = if (totalWorkHours > 0) realNetProfit / totalWorkHours else 0.0
+    val avgHoursPerShift = if (filteredRecords.isNotEmpty()) totalWorkHours / filteredRecords.size else 0.0
+
+    val workHoursPart = totalWorkMinutes / 60
+    val workMinPart = totalWorkMinutes % 60
+    val formattedTotalWork = "${workHoursPart}h ${String.format(Locale.GERMAN, "%02d", workMinPart)}m"
+
+    val pauseHoursPart = totalPauseMinutes / 60
+    val pauseMinPart = totalPauseMinutes % 60
+    val formattedTotalPause = "${pauseHoursPart}h ${String.format(Locale.GERMAN, "%02d", pauseMinPart)}m"
+
     // Meta Mensal configurada para ver se alcança nas projeções
     val monthlyNGoal by viewModel.monthlyGoalNet.collectAsStateWithLifecycle()
     val monthlyWorkingDays = vehicle?.plannedWorkDays ?: 22
@@ -131,7 +147,8 @@ fun ReportsScreen(
                 val periodLabel = when (selectedPeriod) {
                     Period.SEMANA -> "Período: Semana"
                     Period.QUINZENA -> "Período: Quinzena"
-                    Period.MENSAL -> "Período: Mensal"
+                    Period.MENSAL -> "Período: Mês Atual"
+                    Period.ULTIMOS_30_DIAS -> "Período: Últimos 30 dias"
                     Period.PERSONALIZADO -> "Filtro: ${displayFormat.format(Date(customStart))} até ${displayFormat.format(Date(customEnd))}"
                 }
                 Text(
@@ -162,7 +179,8 @@ fun ReportsScreen(
                         val selectedLabel = when (selectedPeriod) {
                             Period.SEMANA -> "Semana"
                             Period.QUINZENA -> "Quinzena"
-                            Period.MENSAL -> "Mensal"
+                            Period.MENSAL -> "Mês Atual"
+                            Period.ULTIMOS_30_DIAS -> "Últimos 30 dias"
                             Period.PERSONALIZADO -> "Personalizado"
                         }
                         Text(
@@ -199,9 +217,16 @@ fun ReportsScreen(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Mensal", fontSize = 14.sp) },
+                            text = { Text("Mês Atual", fontSize = 14.sp) },
                             onClick = {
                                 viewModel.setReportsPeriod(Period.MENSAL)
+                                dropdownExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Últimos 30 dias", fontSize = 14.sp) },
+                            onClick = {
+                                viewModel.setReportsPeriod(Period.ULTIMOS_30_DIAS)
                                 dropdownExpanded = false
                             }
                         )
@@ -428,7 +453,120 @@ fun ReportsScreen(
             }
         }
 
-        // 4. DESTAKES DE RECORDES (Melhor e Pior turnos) (Professional Polish Slate/Green Cards Style)
+        // 4. JORNADA DE TRABALHO E RENDIMENTO POR HORA
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, Color(0xFF2D2D34)),
+            elevation = CardDefaults.cardElevation(0.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.AccessTime,
+                        contentDescription = "Jornada e Horas",
+                        tint = Color(0xFF10B981),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Jornada & Eficiência por Hora",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        fontSize = 14.sp
+                    )
+                }
+                Text(
+                    text = "Tempo em rota, pausas e remuneração calculada por hora trabalhada",
+                    fontSize = 11.sp,
+                    color = Color(0xFF94A3B8)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Métricas Principais de Lucro e Faturamento por Hora
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = "Lucro Líquido / Hora",
+                            fontSize = 11.sp,
+                            color = Color(0xFF94A3B8)
+                        )
+                        Text(
+                            text = String.format(Locale.GERMAN, "R$ %.2f /h", netPerHour),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                            color = Color(0xFF10B981)
+                        )
+                    }
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "Faturamento Bruto / Hora",
+                            fontSize = 11.sp,
+                            color = Color(0xFF94A3B8)
+                        )
+                        Text(
+                            text = String.format(Locale.GERMAN, "R$ %.2f /h", grossPerHour),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                            color = Color(0xFF38BDF8)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider(color = Color(0xFF2D2D34))
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Linha de Detalhes: Tempo Efetivo, Pausas e Média Diária
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text("Tempo Efetivo", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = formattedTotalWork,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                    }
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Tempo em Pausa", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = formattedTotalPause,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFFFBBF24)
+                        )
+                    }
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("Média / Turno", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = String.format(Locale.GERMAN, "%.1fh", avgHoursPerShift),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFFE2E8F0)
+                        )
+                    }
+                }
+            }
+        }
+
+        // 5. DESTAQUES DE RECORDES (Melhor e Pior turnos) (Professional Polish Slate/Green Cards Style)
         if (bestDay != null || worstDay != null) {
             Text(
                 text = "DESTAQUES E RECORDES",

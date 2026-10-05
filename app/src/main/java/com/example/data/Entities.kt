@@ -48,11 +48,69 @@ data class DailyRecord(
     val fuelCost: Double, // (endOdometer - startOdometer) / consumption * fuelPrice
     val wearCost: Double, // (endOdometer - startOdometer) * sum(parts wearCostPerKm)
     val proportionalFixedCost: Double, // monthlyFixedCosts / plannedWorkDays
-    val netProfit: Double // grossEarnings - fuelCost - wearCost - proportionalFixedCost - foodExpense
+    val netProfit: Double, // grossEarnings - fuelCost - wearCost - proportionalFixedCost - foodExpense
+    val startTime: String = "", // formato "HH:mm" (ex: "08:00")
+    val endTime: String = "", // formato "HH:mm" (ex: "18:00")
+    val pauseDuration: String = "" // formato "HH:mm" (ex: "01:00")
 ) {
     val kmRodados: Double
         get() = (endOdometer - startOdometer).coerceAtLeast(0.0)
+
+    val pauseMinutes: Long
+        get() {
+            val clean = pauseDuration.trim()
+            if (clean.isBlank()) return 0L
+            return if (clean.contains(":")) {
+                val parts = clean.split(":")
+                val h = parts.getOrNull(0)?.trim()?.toLongOrNull() ?: 0L
+                val m = parts.getOrNull(1)?.trim()?.toLongOrNull() ?: 0L
+                (h * 60L + m).coerceAtLeast(0L)
+            } else {
+                (clean.replace("[^0-9]".toRegex(), "").toLongOrNull() ?: 0L).coerceAtLeast(0L)
+            }
+        }
+
+    val totalWorkMinutes: Long
+        get() {
+            val s = startTime.trim()
+            val e = endTime.trim()
+            if (!s.contains(":") || !e.contains(":")) return 0L
+            val sParts = s.split(":")
+            val eParts = e.split(":")
+            val sH = sParts.getOrNull(0)?.trim()?.toLongOrNull() ?: return 0L
+            val sM = sParts.getOrNull(1)?.trim()?.toLongOrNull() ?: return 0L
+            val eH = eParts.getOrNull(0)?.trim()?.toLongOrNull() ?: return 0L
+            val eM = eParts.getOrNull(1)?.trim()?.toLongOrNull() ?: return 0L
+
+            val startTotal = sH * 60L + sM
+            var endTotal = eH * 60L + eM
+            if (endTotal < startTotal) {
+                // Turno noturno que atravessou a meia-noite (ex: 22:00 às 04:00)
+                endTotal += 24L * 60L
+            }
+            val grossMinutes = endTotal - startTotal
+            return (grossMinutes - pauseMinutes).coerceAtLeast(0L)
+        }
+
+    val totalWorkHours: Double
+        get() = totalWorkMinutes / 60.0
+
+    val grossPerHour: Double
+        get() = if (totalWorkHours > 0.0) grossEarnings / totalWorkHours else 0.0
+
+    val netPerHour: Double
+        get() = if (totalWorkHours > 0.0) netProfit / totalWorkHours else 0.0
+
+    val formattedWorkDuration: String
+        get() {
+            val mins = totalWorkMinutes
+            if (mins <= 0L) return "--"
+            val h = mins / 60
+            val m = mins % 60
+            return if (m > 0) "${h}h ${m}m" else "${h}h"
+        }
 }
+
 
 @Entity(tableName = "user_profile")
 data class UserProfile(

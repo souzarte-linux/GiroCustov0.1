@@ -111,7 +111,10 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
         startOdometer: Double,
         endOdometer: Double,
         fuelPrice: Double,
-        foodExpense: Double
+        foodExpense: Double,
+        startTime: String = "",
+        endTime: String = "",
+        pauseDuration: String = ""
     ) {
         db.withTransaction {
             val vehicle = vehicleDao.getActiveVehicle() ?: Vehicle()
@@ -148,7 +151,10 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
                 fuelCost = fuelCost,
                 wearCost = wearCost,
                 proportionalFixedCost = proportionalFixedCost,
-                netProfit = netProfit
+                netProfit = netProfit,
+                startTime = startTime,
+                endTime = endTime,
+                pauseDuration = pauseDuration
             )
 
             // 3. Salvar registro
@@ -173,7 +179,10 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
         startOdometer: Double,
         endOdometer: Double,
         fuelPrice: Double,
-        foodExpense: Double
+        foodExpense: Double,
+        startTime: String = "",
+        endTime: String = "",
+        pauseDuration: String = ""
     ) {
         db.withTransaction {
             val oldRecord = recordDao.getRecordById(recordId)
@@ -214,7 +223,10 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
                 fuelCost = fuelCost,
                 wearCost = wearCost,
                 proportionalFixedCost = proportionalFixedCost,
-                netProfit = netProfit
+                netProfit = netProfit,
+                startTime = startTime,
+                endTime = endTime,
+                pauseDuration = pauseDuration
             )
 
             // Salvar registro atualizado substituindo o anterior
@@ -317,7 +329,10 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
                     fuelCost = fuelCost,
                     wearCost = wearCost,
                     proportionalFixedCost = fixedCostPerDay,
-                    netProfit = net
+                    netProfit = net,
+                    startTime = "08:00",
+                    endTime = "17:30",
+                    pauseDuration = "01:00"
                 )
                 recordDao.insertRecord(record)
             }
@@ -527,7 +542,10 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
                     fuelCost = fuelCost,
                     wearCost = wearCost,
                     proportionalFixedCost = fixedCostPerDay,
-                    netProfit = net
+                    netProfit = net,
+                    startTime = "08:00",
+                    endTime = "17:30",
+                    pauseDuration = "01:00"
                 )
                 recordDao.insertRecord(record)
 
