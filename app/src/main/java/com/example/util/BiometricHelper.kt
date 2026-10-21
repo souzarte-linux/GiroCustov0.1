@@ -23,17 +23,24 @@ object BiometricHelper {
     private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
     private const val KEY_BIOMETRIC_EMAIL = "biometric_user_email"
 
+    @Volatile
+    var testHardwareAvailable: Boolean? = null
+
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
     fun isBiometricHardwareAvailable(context: Context): Boolean {
+        testHardwareAvailable?.let { return it }
         val manager = BiometricManager.from(context)
         val canAuth = manager.canAuthenticate(BIOMETRIC_STRONG or BIOMETRIC_WEAK)
         return canAuth == BiometricManager.BIOMETRIC_SUCCESS
     }
 
     fun checkAvailability(context: Context): BiometricAvailability {
+        testHardwareAvailable?.let { available ->
+            return if (available) BiometricAvailability.AVAILABLE else BiometricAvailability.NO_HARDWARE
+        }
         val manager = BiometricManager.from(context)
         return when (manager.canAuthenticate(BIOMETRIC_STRONG or BIOMETRIC_WEAK)) {
             BiometricManager.BIOMETRIC_SUCCESS -> BiometricAvailability.AVAILABLE
@@ -49,6 +56,9 @@ object BiometricHelper {
         return getPrefs(context).getBoolean(KEY_BIOMETRIC_ENABLED, false)
     }
 
+    fun canUnlockWithBiometrics(context: Context): Boolean =
+        isBiometricHardwareAvailable(context) && isBiometricEnabled(context)
+
     fun setBiometricEnabled(context: Context, enabled: Boolean, email: String? = null) {
         getPrefs(context).edit().apply {
             putBoolean(KEY_BIOMETRIC_ENABLED, enabled)
@@ -57,7 +67,7 @@ object BiometricHelper {
             } else if (!enabled) {
                 remove(KEY_BIOMETRIC_EMAIL)
             }
-            apply()
+            commit()
         }
     }
 
@@ -66,7 +76,7 @@ object BiometricHelper {
     }
 
     fun clearBiometrics(context: Context) {
-        getPrefs(context).edit().clear().apply()
+        getPrefs(context).edit().clear().commit()
     }
 
     fun showBiometricPrompt(

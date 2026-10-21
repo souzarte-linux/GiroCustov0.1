@@ -50,7 +50,7 @@ import java.net.SocketTimeoutException
 @Config(sdk = [34])
 class AuthBiometricsAndViaCepTest {
 
-    private val testDispatcher = UnconfinedTestDispatcher()
+    private lateinit var testDispatcher: kotlinx.coroutines.test.TestDispatcher
     private lateinit var context: Context
     private lateinit var db: GiroCustoDatabase
     private lateinit var repository: GiroCustoRepository
@@ -64,6 +64,7 @@ class AuthBiometricsAndViaCepTest {
 
     @Before
     fun setUp() {
+        testDispatcher = UnconfinedTestDispatcher()
         Dispatchers.setMain(testDispatcher)
         context = ApplicationProvider.getApplicationContext()
 
@@ -77,7 +78,7 @@ class AuthBiometricsAndViaCepTest {
         repository = GiroCustoRepository(db)
 
         // Limpa estado anterior de Supabase e Biometria
-        supabaseClient = SupabaseClient.getInstance(context)
+        supabaseClient = SupabaseClient.resetForTesting(context)
         supabaseClient.setAuthSession(null)
         supabaseClient.testAuthApi = object : com.example.network.supabase.SupabaseAuthApi {
             override suspend fun signUp(request: com.example.network.supabase.AuthRequest): Response<com.example.network.supabase.AuthResponse> =
@@ -86,21 +87,22 @@ class AuthBiometricsAndViaCepTest {
             override suspend fun signInWithPassword(grantType: String, request: com.example.network.supabase.AuthRequest): Response<com.example.network.supabase.AuthResponse> =
                 Response.success(com.example.network.supabase.AuthResponse(accessToken = "token-test", refreshToken = "refresh-test"))
 
+            override suspend fun refreshToken(grantType: String, request: com.example.network.supabase.RefreshTokenRequest): Response<com.example.network.supabase.AuthResponse> =
+                Response.success(com.example.network.supabase.AuthResponse(accessToken = "token-refreshed", refreshToken = "refresh-refreshed"))
+
             override suspend fun logout(): Response<Unit> = Response.success(Unit)
 
             override suspend fun getUser(): Response<com.example.network.supabase.SupabaseUser> =
                 Response.success(com.example.network.supabase.SupabaseUser("usr-test", "user@test.com"))
         }
         BiometricHelper.clearBiometrics(context)
+        BiometricHelper.testHardwareAvailable = null
         ViaCepNetworkClient.testApi = null
 
-        // Instancia ViewModel com ciclo de vida gerenciado
+        // Instancia ViewModel diretamente para isolamento determinístico
         val app = ApplicationProvider.getApplicationContext<Application>()
         viewModelStore = ViewModelStore()
-        viewModel = ViewModelProvider(
-            viewModelStore,
-            ViewModelProvider.AndroidViewModelFactory.getInstance(app)
-        )[GiroCustoViewModel::class.java]
+        viewModel = GiroCustoViewModel(app)
     }
 
     @After
@@ -110,6 +112,8 @@ class AuthBiometricsAndViaCepTest {
         supabaseClient.testRestApi = null
         supabaseClient.setAuthSession(null)
         BiometricHelper.clearBiometrics(context)
+        BiometricHelper.testHardwareAvailable = null
+        SupabaseClient.resetForTesting(context)
         viewModelStore.clear()
         Dispatchers.resetMain()
         db.close()
@@ -723,6 +727,13 @@ class AuthBiometricsAndViaCepTest {
 
     @Test
     fun testSignInWithBiometrics_createsSessionAndTriggersSuccess() = runTest(testDispatcher) {
+        val savedSession = AuthSession(
+            accessToken = "token-persisted-real",
+            refreshToken = "refresh-persisted-real",
+            userId = "usr-persisted-real",
+            userEmail = "biometric.user@girocusto.com"
+        )
+        supabaseClient.setAuthSession(savedSession)
         BiometricHelper.setBiometricEnabled(context, true, "biometric.user@girocusto.com")
 
         var successCalled = false
@@ -739,11 +750,74 @@ class AuthBiometricsAndViaCepTest {
 
         assertTrue(supabaseClient.isAuthenticated)
         assertEquals("biometric.user@girocusto.com", supabaseClient.sessionState.value?.userEmail)
+        assertFalse(viewModel.isBiometricLocked.value)
         assertTrue(viewModel.authUiState.value is AuthUiState.Success)
         assertEquals(
             "Autenticado via biometria com sucesso!",
             (viewModel.authUiState.value as AuthUiState.Success).message
         )
+    }
+
+    @Test
+    fun testBiometricHelper_canUnlockWithBiometrics() {
+        BiometricHelper.clearBiometrics(context)
+        assertFalse(BiometricHelper.canUnlockWithBiometrics(context))
+
+        BiometricHelper.setBiometricEnabled(context, true, "motorista@girocusto.com")
+        // canUnlockWithBiometrics requer tanto hardware quanto enabled
+        val expected = BiometricHelper.isBiometricHardwareAvailable(context)
+        assertEquals(expected, BiometricHelper.canUnlockWithBiometrics(context))
+
+        BiometricHelper.clearBiometrics(context)
+        assertFalse(BiometricHelper.canUnlockWithBiometrics(context))
+    }
+
+    @Test
+    fun testSupabaseClient_savedSessionMethods() {
+        supabaseClient.clearSavedSession()
+        assertFalse(supabaseClient.hasSavedSession())
+        assertNull(supabaseClient.getSavedSession())
+
+        val session = AuthSession(
+            accessToken = "access-123",
+            refreshToken = "refresh-123",
+            userId = "user-123",
+            userEmail = "persist@girocusto.com"
+        )
+        supabaseClient.setAuthSession(session)
+        assertTrue(supabaseClient.hasSavedSession())
+        assertEquals(session, supabaseClient.getSavedSession())
+        assertEquals("persist@girocusto.com", supabaseClient.getSavedUserEmail())
+
+        supabaseClient.clearSavedSession()
+        assertFalse(supabaseClient.hasSavedSession())
+        assertNull(supabaseClient.getSavedSession())
+    }
+
+    @Test
+    fun testUnlockWithBiometrics_restoresSessionAndRefreshesToken() = runTest(testDispatcher) {
+        val savedSession = AuthSession(
+            accessToken = "token-initial",
+            refreshToken = "refresh-initial",
+            userId = "usr-init",
+            userEmail = "user.bio@girocusto.com"
+        )
+        supabaseClient.setAuthSession(savedSession)
+        BiometricHelper.setBiometricEnabled(context, true, "user.bio@girocusto.com")
+
+        // Dispara unlock
+        var unlocked = false
+        var errorMsg: String? = null
+        viewModel.unlockWithBiometrics { ok, err ->
+            unlocked = ok
+            errorMsg = err
+        }
+        runCurrent()
+
+        assertTrue(unlocked)
+        assertNull(errorMsg)
+        assertFalse(viewModel.isBiometricLocked.value)
+        assertTrue(supabaseClient.isAuthenticated)
     }
 
     @Test
@@ -759,8 +833,8 @@ class AuthBiometricsAndViaCepTest {
 
     @Test
     fun testAuthUiState_instances() {
-        val idle = AuthUiState.Idle
-        val loading = AuthUiState.Loading
+        val idle: AuthUiState = AuthUiState.Idle
+        val loading: AuthUiState = AuthUiState.Loading
         val success = AuthUiState.Success("Pronto")
         val error = AuthUiState.Error("Falha")
 
@@ -772,8 +846,8 @@ class AuthBiometricsAndViaCepTest {
 
     @Test
     fun testViaCepUiState_instances() {
-        val idle = ViaCepUiState.Idle
-        val loading = ViaCepUiState.Loading
+        val idle: ViaCepUiState = ViaCepUiState.Idle
+        val loading: ViaCepUiState = ViaCepUiState.Loading
         val success = ViaCepUiState.Success(ViaCepResponse(cep = "01001-000"))
         val error = ViaCepUiState.Error("Não encontrado")
 
@@ -782,4 +856,315 @@ class AuthBiometricsAndViaCepTest {
         assertEquals("01001-000", success.address.cep)
         assertEquals("Não encontrado", error.message)
     }
+
+    // =========================================================================
+    // 7. CENÁRIOS ESPECÍFICOS DE BIOMETRIA VS SESSÃO PERSISTENTE (TC-BIO-01..06)
+    // =========================================================================
+
+    @Test
+    fun testTC_BIO_01_initializationLockedWhenSessionExistsAndBiometricsEnabled() = runTest(testDispatcher) {
+        // 1. Configura sessão prévia salva em disco (SharedPreferences)
+        val savedSession = AuthSession(
+            accessToken = "stored-access-token-01",
+            refreshToken = "stored-refresh-token-01",
+            userId = "usr-bio-01",
+            userEmail = "motorista01@girocusto.com"
+        )
+        supabaseClient.setAuthSession(savedSession)
+        assertTrue(supabaseClient.hasSavedSession())
+
+        // 2. Configura biometria com hardware disponível e ativada pelo usuário
+        BiometricHelper.testHardwareAvailable = true
+        BiometricHelper.setBiometricEnabled(context, true, "motorista01@girocusto.com")
+        assertTrue(BiometricHelper.canUnlockWithBiometrics(context))
+
+        // 3. Simula cold start / abertura do app instanciando um novo ViewModel
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val coldStartViewModel = GiroCustoViewModel(app)
+
+        runCurrent()
+
+        // 4. Valida que o aplicativo inicia bloqueado
+        assertTrue(coldStartViewModel.isBiometricLocked.value)
+        assertEquals(RootNavState.BiometricLocked, coldStartViewModel.rootNavState.value)
+        assertTrue(supabaseClient.hasSavedSession())
+    }
+
+    @Test
+    fun testTC_BIO_02_unlockWithBiometricsRestoresRealSessionAndTransitionsToAuthenticatedReady() = runTest(testDispatcher) {
+        // 1. Configura sessão prévia real e persistida
+        val realSession = AuthSession(
+            accessToken = "real-access-token-tc02",
+            refreshToken = "real-refresh-token-tc02",
+            userId = "usr-tc02-real",
+            userEmail = "carlos.tc02@girocusto.com"
+        )
+        supabaseClient.setAuthSession(realSession)
+        BiometricHelper.testHardwareAvailable = true
+        BiometricHelper.setBiometricEnabled(context, true, "carlos.tc02@girocusto.com")
+
+        // Perfil completo no Room
+        repository.saveUserProfile(
+            UserProfile(id = 1, name = "Carlos Real", phone = "11999990000", city = "SP", onboardingCompleted = true)
+        )
+
+        var capturedRefreshToken: String? = null
+        supabaseClient.testAuthApi = object : com.example.network.supabase.SupabaseAuthApi {
+            override suspend fun signUp(request: com.example.network.supabase.AuthRequest) = throw NotImplementedError()
+            override suspend fun signInWithPassword(grantType: String, request: com.example.network.supabase.AuthRequest) = throw NotImplementedError()
+            override suspend fun refreshToken(grantType: String, request: com.example.network.supabase.RefreshTokenRequest): Response<com.example.network.supabase.AuthResponse> {
+                capturedRefreshToken = request.refreshToken
+                return Response.success(com.example.network.supabase.AuthResponse(
+                    accessToken = "real-access-token-tc02",
+                    refreshToken = "real-refresh-token-tc02",
+                    user = com.example.network.supabase.SupabaseUser("usr-tc02-real", "carlos.tc02@girocusto.com")
+                ))
+            }
+            override suspend fun logout() = Response.success(Unit)
+            override suspend fun getUser() = Response.success(com.example.network.supabase.SupabaseUser("usr-tc02-real", "carlos.tc02@girocusto.com"))
+        }
+
+        // Simula bloqueio inicial com nova instância
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val bioViewModel = GiroCustoViewModel(app)
+        runCurrent()
+        assertTrue(bioViewModel.isBiometricLocked.value)
+        assertEquals(RootNavState.BiometricLocked, bioViewModel.rootNavState.value)
+
+        // 2. Invoca unlockWithBiometrics()
+        var unlocked = false
+        var errorMsg: String? = null
+        bioViewModel.unlockWithBiometrics { ok, err ->
+            unlocked = ok
+            errorMsg = err
+        }
+        runCurrent()
+
+        // 3. Valida restauração fiel dos tokens reais e transição de estado
+        assertTrue(unlocked)
+        assertNull(errorMsg)
+        assertFalse(bioViewModel.isBiometricLocked.value)
+        assertEquals("real-refresh-token-tc02", capturedRefreshToken)
+
+        // Tokens reais restaurados do disco
+        assertEquals("real-access-token-tc02", supabaseClient.currentAccessToken)
+        assertEquals("usr-tc02-real", supabaseClient.currentUserId)
+        assertEquals("real-refresh-token-tc02", supabaseClient.sessionState.value?.refreshToken)
+        assertEquals("carlos.tc02@girocusto.com", supabaseClient.sessionState.value?.userEmail)
+
+        // Transição imediata para AuthenticatedReady
+        assertEquals(RootNavState.AuthenticatedReady, bioViewModel.rootNavState.value)
+    }
+
+    @Test
+    fun testTC_BIO_03_eliminationOfFakeTokens_strictRealPayloadValidation() = runTest(testDispatcher) {
+        BiometricHelper.testHardwareAvailable = true
+        BiometricHelper.clearBiometrics(context)
+        supabaseClient.clearSavedSession()
+
+        // 1. Tentar desbloqueio biométrico sem nenhuma sessão prévia no disco
+        var unlockSuccess = false
+        var unlockError: String? = null
+        viewModel.unlockWithBiometrics { ok, err ->
+            unlockSuccess = ok
+            unlockError = err
+        }
+        runCurrent()
+
+        // Valida que NÃO gera fake token nem autentica artificialmente
+        assertFalse(unlockSuccess)
+        assertNotNull(unlockError)
+        assertNull(supabaseClient.currentAccessToken)
+        assertNull(supabaseClient.currentUserId)
+        assertFalse(supabaseClient.isAuthenticated)
+        assertFalse(supabaseClient.hasSavedSession())
+        assertNotEquals(RootNavState.AuthenticatedReady, viewModel.rootNavState.value)
+
+        // 2. Realiza login com credenciais reais da API
+        val expectedAccessToken = "real-api-access-token-9988"
+        val expectedRefreshToken = "real-api-refresh-token-9988"
+        val expectedUserId = "real-uuid-9988"
+        val expectedEmail = "driver9988@girocusto.com"
+
+        supabaseClient.testAuthApi = object : com.example.network.supabase.SupabaseAuthApi {
+            override suspend fun signUp(request: com.example.network.supabase.AuthRequest) = Response.error<com.example.network.supabase.AuthResponse>(400, "error".toResponseBody())
+            override suspend fun signInWithPassword(grantType: String, request: com.example.network.supabase.AuthRequest) =
+                Response.success(com.example.network.supabase.AuthResponse(
+                    accessToken = expectedAccessToken,
+                    refreshToken = expectedRefreshToken,
+                    user = com.example.network.supabase.SupabaseUser(expectedUserId, expectedEmail)
+                ))
+            override suspend fun refreshToken(grantType: String, request: com.example.network.supabase.RefreshTokenRequest) = Response.error<com.example.network.supabase.AuthResponse>(400, "error".toResponseBody())
+            override suspend fun logout() = Response.success(Unit)
+            override suspend fun getUser() = Response.success(com.example.network.supabase.SupabaseUser(expectedUserId, expectedEmail))
+        }
+
+        viewModel.signInWithEmail(expectedEmail, "password123")
+        runCurrent()
+
+        // 3. Validação rigorosa: nenhum token gravado contém prefixo 'biometric-token-' ou 'fake-'
+        val currentAccess = supabaseClient.currentAccessToken
+        val currentRefresh = supabaseClient.sessionState.value?.refreshToken
+        val savedSession = supabaseClient.getSavedSession()
+
+        assertNotNull(currentAccess)
+        assertNotNull(currentRefresh)
+        assertFalse("Token não pode conter prefixo fake", currentAccess!!.startsWith("biometric-token-"))
+        assertFalse("Refresh token não pode conter prefixo fake", currentRefresh!!.startsWith("biometric-token-"))
+        assertFalse("Token não pode conter prefixo fake", currentAccess.startsWith("fake-"))
+        assertFalse("Refresh token não pode conter prefixo fake", currentRefresh.startsWith("fake-"))
+
+        assertEquals(expectedAccessToken, currentAccess)
+        assertEquals(expectedRefreshToken, currentRefresh)
+        assertEquals(expectedAccessToken, savedSession?.accessToken)
+        assertEquals(expectedRefreshToken, savedSession?.refreshToken)
+        assertEquals(expectedUserId, savedSession?.userId)
+        assertEquals(expectedEmail, savedSession?.userEmail)
+    }
+
+    @Test
+    fun testTC_BIO_04_lockAppForBiometricsPreservesSessionTokensOnDisk() = runTest(testDispatcher) {
+        val originalSession = AuthSession(
+            accessToken = "stable-access-token-04",
+            refreshToken = "stable-refresh-token-04",
+            userId = "usr-stable-04",
+            userEmail = "stable@girocusto.com"
+        )
+        supabaseClient.setAuthSession(originalSession)
+        BiometricHelper.testHardwareAvailable = true
+        BiometricHelper.setBiometricEnabled(context, true, "stable@girocusto.com")
+        repository.saveUserProfile(
+            UserProfile(id = 1, name = "Stable User", phone = "11988887777", city = "SP", onboardingCompleted = true)
+        )
+        runCurrent()
+
+        // Desbloqueado inicialmente
+        assertFalse(viewModel.isBiometricLocked.value)
+        assertEquals(RootNavState.AuthenticatedReady, viewModel.rootNavState.value)
+
+        // Executa lockAppForBiometrics()
+        viewModel.lockAppForBiometrics()
+        runCurrent()
+
+        // Valida que o app foi bloqueado
+        assertTrue(viewModel.isBiometricLocked.value)
+        assertEquals(RootNavState.BiometricLocked, viewModel.rootNavState.value)
+
+        // Valida que os tokens no disco e na sessão NUNCA foram apagados nem alterados
+        assertTrue(supabaseClient.hasSavedSession())
+        val persisted = supabaseClient.getSavedSession()
+        assertNotNull(persisted)
+        assertEquals("stable-access-token-04", persisted?.accessToken)
+        assertEquals("stable-refresh-token-04", persisted?.refreshToken)
+        assertEquals("usr-stable-04", persisted?.userId)
+        assertEquals("stable@girocusto.com", persisted?.userEmail)
+        assertEquals("stable-access-token-04", supabaseClient.currentAccessToken)
+    }
+
+    @Test
+    fun testTC_BIO_05_logoutDestroysSessionOnMemoryAndDiskAndDisablesBiometrics() = runTest(testDispatcher) {
+        val session = AuthSession(
+            accessToken = "token-to-destroy",
+            refreshToken = "refresh-to-destroy",
+            userId = "usr-to-destroy",
+            userEmail = "destroy@girocusto.com"
+        )
+        supabaseClient.setAuthSession(session)
+        BiometricHelper.testHardwareAvailable = true
+        BiometricHelper.setBiometricEnabled(context, true, "destroy@girocusto.com")
+        repository.saveUserProfile(
+            UserProfile(id = 1, name = "Destructive", phone = "11999991111", city = "SP", onboardingCompleted = true)
+        )
+        runCurrent()
+
+        // Pré-condição: logado e biometria ativa
+        assertTrue(supabaseClient.isAuthenticated)
+        assertTrue(BiometricHelper.isBiometricEnabled(context))
+
+        // Executa logout
+        viewModel.logout()
+        advanceUntilIdle()
+
+        // Valida destruição total em memória e em disco
+        assertNull(supabaseClient.currentUserId)
+        assertNull(supabaseClient.currentAccessToken)
+        assertFalse(supabaseClient.isAuthenticated)
+        assertFalse(supabaseClient.hasSavedSession())
+        assertNull(supabaseClient.getSavedSession())
+
+        // Valida desativação da biometria
+        assertFalse(BiometricHelper.isBiometricEnabled(context))
+        assertNull(BiometricHelper.getBiometricEmail(context))
+        assertFalse(viewModel.isBiometricLocked.value)
+
+        // Valida transição imediata para Unauthenticated
+        assertEquals(RootNavState.Unauthenticated, viewModel.rootNavState.value)
+        assertEquals(AuthUiState.Idle, viewModel.authUiState.value)
+    }
+
+    @Test
+    fun testTC_BIO_06_refreshCurrentSession_successAndFailureResilience() = runTest(testDispatcher) {
+        val initialSession = AuthSession(
+            accessToken = "access-token-v1",
+            refreshToken = "refresh-token-v1",
+            userId = "usr-refresh-06",
+            userEmail = "refresh@girocusto.com"
+        )
+        supabaseClient.setAuthSession(initialSession)
+
+        // Cenário 1: Sucesso na renovação do token
+        supabaseClient.testAuthApi = object : com.example.network.supabase.SupabaseAuthApi {
+            override suspend fun signUp(request: com.example.network.supabase.AuthRequest) = throw NotImplementedError()
+            override suspend fun signInWithPassword(grantType: String, request: com.example.network.supabase.AuthRequest) = throw NotImplementedError()
+            override suspend fun refreshToken(grantType: String, request: com.example.network.supabase.RefreshTokenRequest): Response<com.example.network.supabase.AuthResponse> {
+                assertEquals("refresh-token-v1", request.refreshToken)
+                return Response.success(com.example.network.supabase.AuthResponse(
+                    accessToken = "access-token-v2-renewed",
+                    refreshToken = "refresh-token-v2-renewed",
+                    user = com.example.network.supabase.SupabaseUser("usr-refresh-06", "refresh@girocusto.com")
+                ))
+            }
+            override suspend fun logout() = Response.success(Unit)
+            override suspend fun getUser() = Response.success(com.example.network.supabase.SupabaseUser("usr-refresh-06", "refresh@girocusto.com"))
+        }
+
+        val refreshResult = supabaseClient.refreshCurrentSession()
+        assertTrue(refreshResult.isSuccess)
+        val newSession = refreshResult.getOrNull()
+        assertNotNull(newSession)
+        assertEquals("access-token-v2-renewed", newSession?.accessToken)
+        assertEquals("refresh-token-v2-renewed", newSession?.refreshToken)
+        assertEquals("access-token-v2-renewed", supabaseClient.currentAccessToken)
+        assertEquals("access-token-v2-renewed", supabaseClient.getSavedSession()?.accessToken)
+
+        // Cenário 2: Falha na renovação (erro 500 do servidor ou queda de conexão)
+        supabaseClient.testAuthApi = object : com.example.network.supabase.SupabaseAuthApi {
+            override suspend fun signUp(request: com.example.network.supabase.AuthRequest) = throw NotImplementedError()
+            override suspend fun signInWithPassword(grantType: String, request: com.example.network.supabase.AuthRequest) = throw NotImplementedError()
+            override suspend fun refreshToken(grantType: String, request: com.example.network.supabase.RefreshTokenRequest): Response<com.example.network.supabase.AuthResponse> {
+                return Response.error(500, "Server Error".toResponseBody("text/plain".toMediaTypeOrNull()))
+            }
+            override suspend fun logout() = Response.success(Unit)
+            override suspend fun getUser() = throw NotImplementedError()
+        }
+
+        val failureResult = supabaseClient.refreshCurrentSession()
+        assertTrue("Deve retornar failure", failureResult.isFailure)
+
+        // Sessão local e tokens salvos no disco NÃO DEVEM ser corrompidos nem apagados
+        assertTrue(supabaseClient.isAuthenticated)
+        assertEquals("access-token-v2-renewed", supabaseClient.currentAccessToken)
+        assertEquals("refresh-token-v2-renewed", supabaseClient.sessionState.value?.refreshToken)
+        val stillPersisted = supabaseClient.getSavedSession()
+        assertNotNull(stillPersisted)
+        assertEquals("access-token-v2-renewed", stillPersisted?.accessToken)
+        assertEquals("refresh-token-v2-renewed", stillPersisted?.refreshToken)
+
+        // Cenário 3: Tentativa de renovação sem refresh token
+        supabaseClient.clearSavedSession()
+        val emptyResult = supabaseClient.refreshCurrentSession()
+        assertTrue(emptyResult.isFailure)
+        assertTrue(emptyResult.exceptionOrNull() is IllegalStateException)
+    }
 }
+

@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
 
 class SupabaseClient private constructor(context: Context? = null) {
 
-    private val prefs: SharedPreferences? = context?.getSharedPreferences("giro_custo_supabase_auth", Context.MODE_PRIVATE)
+    private var prefs: SharedPreferences? = context?.getSharedPreferences("giro_custo_supabase_auth", Context.MODE_PRIVATE)
 
     private val _sessionState = MutableStateFlow<AuthSession?>(null)
     val sessionState: StateFlow<AuthSession?> = _sessionState.asStateFlow()
@@ -26,22 +26,40 @@ class SupabaseClient private constructor(context: Context? = null) {
     private var activeToken: String? = null
 
     init {
-        // Carrega sessão salva anteriormente caso exista
-        prefs?.let {
-            val token = it.getString(KEY_ACCESS_TOKEN, null)
-            val refresh = it.getString(KEY_REFRESH_TOKEN, null) ?: ""
-            val userId = it.getString(KEY_USER_ID, null)
-            val email = it.getString(KEY_EMAIL, null)
-            if (!token.isNullOrBlank() && !userId.isNullOrBlank()) {
-                activeToken = token
-                _sessionState.value = AuthSession(
-                    accessToken = token,
-                    refreshToken = refresh,
-                    userId = userId,
-                    userEmail = email
-                )
-            }
-        }
+        restoreSavedSession()
+    }
+
+    fun hasSavedSession(): Boolean {
+        val token = prefs?.getString(KEY_ACCESS_TOKEN, null)
+        val userId = prefs?.getString(KEY_USER_ID, null)
+        return !token.isNullOrBlank() && !userId.isNullOrBlank()
+    }
+
+    fun getSavedSession(): AuthSession? {
+        val token = prefs?.getString(KEY_ACCESS_TOKEN, null) ?: return null
+        val userId = prefs?.getString(KEY_USER_ID, null) ?: return null
+        val refresh = prefs?.getString(KEY_REFRESH_TOKEN, null) ?: ""
+        val email = prefs?.getString(KEY_EMAIL, null)
+        return AuthSession(
+            accessToken = token,
+            refreshToken = refresh,
+            userId = userId,
+            userEmail = email
+        )
+    }
+
+    fun getSavedUserEmail(): String? {
+        return prefs?.getString(KEY_EMAIL, null) ?: _sessionState.value?.userEmail
+    }
+
+    fun restoreSavedSession(): Boolean {
+        val session = getSavedSession() ?: return false
+        setAuthSession(session)
+        return true
+    }
+
+    fun clearSavedSession() {
+        setAuthSession(null)
     }
 
     fun setAuthSession(session: AuthSession?) {
@@ -59,7 +77,7 @@ class SupabaseClient private constructor(context: Context? = null) {
                 remove(KEY_USER_ID)
                 remove(KEY_EMAIL)
             }
-            apply()
+            commit()
         }
     }
 
@@ -176,13 +194,39 @@ class SupabaseClient private constructor(context: Context? = null) {
         }
     }
 
+    suspend fun refreshCurrentSession(): Result<AuthSession> {
+        val current = _sessionState.value ?: getSavedSession()
+        if (current == null || current.refreshToken.isBlank()) {
+            return Result.failure(IllegalStateException("Nenhum refresh token disponível"))
+        }
+        return try {
+            val response = authApi.refreshToken(request = RefreshTokenRequest(refreshToken = current.refreshToken))
+            if (response.isSuccessful && response.body() != null) {
+                val body = response.body()!!
+                val newSession = AuthSession(
+                    accessToken = body.accessToken,
+                    refreshToken = if (body.refreshToken.isNotBlank()) body.refreshToken else current.refreshToken,
+                    userId = body.user?.id ?: current.userId,
+                    userEmail = body.user?.email ?: current.userEmail
+                )
+                setAuthSession(newSession)
+                Result.success(newSession)
+            } else {
+                val errorMsg = response.errorBody()?.string() ?: "Erro ao renovar token (${response.code()})"
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun signOut(): Result<Unit> {
         return try {
             authApi.logout()
-            setAuthSession(null)
+            clearSavedSession()
             Result.success(Unit)
         } catch (e: Exception) {
-            setAuthSession(null)
+            clearSavedSession()
             Result.success(Unit)
         }
     }
@@ -197,8 +241,22 @@ class SupabaseClient private constructor(context: Context? = null) {
         private var INSTANCE: SupabaseClient? = null
 
         fun getInstance(context: Context? = null): SupabaseClient {
-            return INSTANCE ?: synchronized(this) {
+            val existing = INSTANCE
+            if (existing != null) {
+                if (existing.prefs == null && context != null) {
+                    existing.prefs = context.applicationContext.getSharedPreferences("giro_custo_supabase_auth", Context.MODE_PRIVATE)
+                    existing.restoreSavedSession()
+                }
+                return existing
+            }
+            return synchronized(this) {
                 INSTANCE ?: SupabaseClient(context?.applicationContext).also { INSTANCE = it }
+            }
+        }
+
+        fun resetForTesting(context: Context? = null): SupabaseClient {
+            return synchronized(this) {
+                SupabaseClient(context?.applicationContext).also { INSTANCE = it }
             }
         }
     }

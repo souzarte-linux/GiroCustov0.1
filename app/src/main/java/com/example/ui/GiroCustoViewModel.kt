@@ -112,12 +112,20 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     // Indicador interno de inicialização do Room Flow para evitar flickering
     private val isProfileInitialized = MutableStateFlow(false)
 
+    // Estado de Bloqueio por Biometria
+    private val _isBiometricLocked = MutableStateFlow(
+        supabaseClient.hasSavedSession() && BiometricHelper.canUnlockWithBiometrics(application)
+    )
+    val isBiometricLocked: StateFlow<Boolean> = _isBiometricLocked.asStateFlow()
+
     val rootNavState: StateFlow<RootNavState> = combine(
         currentUser,
         userProfile,
-        isProfileInitialized
-    ) { user, profile, isInitialized ->
+        isProfileInitialized,
+        isBiometricLocked
+    ) { user, profile, isInitialized, isLocked ->
         when {
+            isLocked -> RootNavState.BiometricLocked
             user == null -> RootNavState.Unauthenticated
             !isInitialized -> RootNavState.Initializing
             profile?.onboardingCompleted == true -> RootNavState.AuthenticatedReady
@@ -305,6 +313,10 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     init {
+        if (supabaseClient.hasSavedSession() && BiometricHelper.canUnlockWithBiometrics(application)) {
+            _isBiometricLocked.value = true
+        }
+
         viewModelScope.launch {
             repository.userProfileFlow.collect {
                 isProfileInitialized.value = true
@@ -318,8 +330,8 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
             // Auto-preencher odômetro inicial e combustível
             prefillLaunchFields()
 
-            // Se houver sessão salva ao iniciar o ViewModel, restaure-a e execute uma sincronização em background.
-            if (supabaseClient.isAuthenticated) {
+            // Se houver sessão salva ao iniciar o ViewModel e não estiver bloqueado por biometria, sincroniza
+            if (supabaseClient.isAuthenticated && !_isBiometricLocked.value) {
                 triggerSync()
             }
         }
@@ -340,6 +352,7 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
             _syncErrorMessage.value = null
             val result = supabaseClient.signIn(email.trim(), pass)
             if (result.isSuccess) {
+                _isBiometricLocked.value = false
                 _authUiState.value = AuthUiState.Success()
                 _syncState.value = SyncState.IDLE
                 BiometricHelper.setBiometricEnabled(getApplication(), true, email.trim())
@@ -366,6 +379,7 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
             _syncErrorMessage.value = null
             val result = supabaseClient.signUp(email.trim(), pass)
             if (result.isSuccess) {
+                _isBiometricLocked.value = false
                 _authUiState.value = AuthUiState.Success("Conta criada com sucesso!")
                 _syncState.value = SyncState.IDLE
                 BiometricHelper.setBiometricEnabled(getApplication(), true, email.trim())
@@ -400,26 +414,41 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun signInWithBiometrics(onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
+    fun unlockWithBiometrics(onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
         viewModelScope.launch {
             _authUiState.value = AuthUiState.Loading
-            val savedEmail = BiometricHelper.getBiometricEmail(getApplication()) ?: "usuario@girocusto.com"
-            val session = AuthSession(
-                accessToken = "biometric-token-${System.currentTimeMillis()}",
-                refreshToken = "bio-refresh",
-                userId = "bio-user-${savedEmail.hashCode()}",
-                userEmail = savedEmail
-            )
-            supabaseClient.setAuthSession(session)
-            _authUiState.value = AuthUiState.Success("Autenticado via biometria com sucesso!")
-            triggerSync()
-            onResult(true, null)
+            val restored = supabaseClient.restoreSavedSession()
+            if (restored) {
+                _isBiometricLocked.value = false
+                _authUiState.value = AuthUiState.Success("Autenticado via biometria com sucesso!")
+                onResult(true, null)
+                launch {
+                    supabaseClient.refreshCurrentSession()
+                    triggerSync()
+                }
+            } else {
+                val err = "Nenhuma sessão persistente encontrada para biometria."
+                _authUiState.value = AuthUiState.Error(err)
+                onResult(false, err)
+            }
+        }
+    }
+
+    fun signInWithBiometrics(onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
+        unlockWithBiometrics(onResult)
+    }
+
+    fun lockAppForBiometrics() {
+        if (supabaseClient.hasSavedSession() && BiometricHelper.canUnlockWithBiometrics(getApplication())) {
+            _isBiometricLocked.value = true
         }
     }
 
     fun logout() {
         viewModelScope.launch {
+            _isBiometricLocked.value = false
             supabaseClient.signOut()
+            BiometricHelper.clearBiometrics(getApplication())
             _authUiState.value = AuthUiState.Idle
             _syncState.value = SyncState.IDLE
             _syncErrorMessage.value = null

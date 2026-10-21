@@ -4,6 +4,9 @@ sealed interface RootNavState {
     /** Carregamento inicial do token em disco e leitura inicial do Room */
     data object Initializing : RootNavState
 
+    /** Sessão válida existente em disco, mas bloqueada aguardando biometria */
+    data object BiometricLocked : RootNavState
+
     /** Usuário não logado: apresenta tela de boas-vindas / login / cadastro */
     data object Unauthenticated : RootNavState
 

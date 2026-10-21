@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,6 +59,7 @@ private val ColorGoogleBlue = Color(0xFF3B82F6)
 fun AuthGateScreen(
     onAuthSuccess: () -> Unit = {},
     viewModel: GiroCustoViewModel = viewModel(),
+    isBiometricLocked: Boolean = false,
     isBiometricSupported: Boolean = false,
     onTriggerBiometric: ((onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit)? = null,
     onGoogleSignInClick: () -> Unit = {}
@@ -68,6 +70,8 @@ fun AuthGateScreen(
     val authState by viewModel.authUiState.collectAsStateWithLifecycle()
     val isBiometricAvailableState by viewModel.isBiometricAvailable.collectAsStateWithLifecycle()
     val canAuthenticateBiometric = isBiometricAvailableState || isBiometricSupported
+
+    var hasAutoTriggeredBiometric by rememberSaveable { mutableStateOf(false) }
 
     var selectedTabIndex by remember { mutableIntStateOf(0) } // 0: Email, 1: Celular
     var isRegisterMode by remember { mutableStateOf(false) }
@@ -86,7 +90,7 @@ fun AuthGateScreen(
     val triggerBiometricAuth: () -> Unit = {
         if (onTriggerBiometric != null) {
             onTriggerBiometric(
-                { viewModel.signInWithBiometrics { ok, _ -> if (ok) onAuthSuccess() } },
+                { viewModel.unlockWithBiometrics { ok, _ -> if (ok) onAuthSuccess() } },
                 { /* Erro tratado no callback */ }
             )
         } else {
@@ -98,7 +102,7 @@ fun AuthGateScreen(
                     subtitle = "Confirme sua digital ou reconhecimento facial",
                     negativeButtonText = "Usar Senha",
                     onSuccess = {
-                        viewModel.signInWithBiometrics { ok, _ ->
+                        viewModel.unlockWithBiometrics { ok, _ ->
                             if (ok) onAuthSuccess()
                         }
                     },
@@ -107,10 +111,21 @@ fun AuthGateScreen(
                 )
             } else {
                 // Modo fallback para emulador ou preview sem FragmentActivity
-                viewModel.signInWithBiometrics { ok, _ ->
+                viewModel.unlockWithBiometrics { ok, _ ->
                     if (ok) onAuthSuccess()
                 }
             }
+        }
+    }
+
+    LaunchedEffect(isBiometricLocked) {
+        if (isBiometricLocked) {
+            if (!hasAutoTriggeredBiometric) {
+                hasAutoTriggeredBiometric = true
+                triggerBiometricAuth()
+            }
+        } else {
+            hasAutoTriggeredBiometric = false
         }
     }
 
@@ -205,45 +220,126 @@ fun AuthGateScreen(
                 }
             }
 
-            // ==========================================
-            // BOTÃO DE BIOMETRIA INSTANTÂNEA (CONDICIONAL)
-            // ==========================================
-            if (canAuthenticateBiometric) {
-                Surface(
+            if (isBiometricLocked) {
+                // ==========================================
+                // TELA LIMPA DE DESBLOQUEIO COM BIOMETRIA
+                // ==========================================
+                val savedEmail = remember(context) {
+                    BiometricHelper.getBiometricEmail(context)
+                        ?: viewModel.currentUser.value?.userEmail
+                        ?: "Motorista"
+                }
+
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .clickable(enabled = !isLoading) { triggerBiometricAuth() }
-                        .testTag("auth_biometric_button")
-                        .semantics { testTag = "auth_gate_biometric_btn" },
-                    color = ColorSurfaceCard,
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.5.dp, ColorBrandEmerald.copy(alpha = 0.7f))
+                        .testTag("auth_biometric_locked_card"),
+                    colors = CardDefaults.cardColors(containerColor = ColorSurfaceCard),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, ColorBorder)
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.Fingerprint,
-                            contentDescription = "Biometria",
-                            tint = ColorBrandEmerald,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(32.dp))
+                                .background(ColorBrandEmerald.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Lock,
+                                contentDescription = "Bloqueio Biométrico",
+                                tint = ColorBrandEmerald,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+
                         Text(
-                            text = "Entrar com Digital / Biometria",
-                            fontSize = 15.sp,
+                            text = "Olá, $savedEmail",
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = ColorTextPrimary
+                            color = ColorTextPrimary,
+                            textAlign = TextAlign.Center
                         )
+
+                        Text(
+                            text = "Confirme sua digital ou biometria facial para acessar o GiroCusto com total segurança.",
+                            fontSize = 13.sp,
+                            color = ColorTextMuted,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 18.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Botão largo de digital "Desbloquear com Biometria"
+                        Button(
+                            onClick = { triggerBiometricAuth() },
+                            enabled = !isLoading,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .testTag("auth_biometric_button")
+                                .semantics { testTag = "auth_gate_biometric_btn" },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ColorBrandEmerald,
+                                contentColor = ColorOnPrimary
+                            )
+                        ) {
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .testTag("auth_loading_indicator"),
+                                    color = ColorOnPrimary,
+                                    strokeWidth = 2.5.dp
+                                )
+                            } else {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Fingerprint,
+                                        contentDescription = "Digital",
+                                        modifier = Modifier.size(26.dp),
+                                        tint = ColorOnPrimary
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = "Desbloquear com Biometria",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+
+                        // Botão secundário "Entrar com outra conta"
+                        TextButton(
+                            onClick = { viewModel.logout() },
+                            enabled = !isLoading,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("auth_switch_account_btn")
+                        ) {
+                            Text(
+                                text = "Entrar com outra conta",
+                                color = ColorTextMuted,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
-            }
+            } else {
 
             // ==========================================
             // ABAS SEGMENTADAS (EMAIL / CELULAR)
@@ -653,6 +749,7 @@ fun AuthGateScreen(
                     )
                 }
             }
+        }
 
             // ==========================================
             // RODAPÉ LEGAL

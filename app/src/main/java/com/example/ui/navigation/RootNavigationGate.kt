@@ -43,8 +43,11 @@ fun RootNavigationGate(viewModel: GiroCustoViewModel) {
                     )
                 }
             }
+            RootNavState.BiometricLocked -> {
+                AuthGateScreen(viewModel = viewModel, isBiometricLocked = true)
+            }
             RootNavState.Unauthenticated -> {
-                AuthGateScreen(viewModel = viewModel)
+                AuthGateScreen(viewModel = viewModel, isBiometricLocked = false)
             }
             RootNavState.OnboardingPending -> {
                 OnboardingProfileScreen(viewModel = viewModel)
