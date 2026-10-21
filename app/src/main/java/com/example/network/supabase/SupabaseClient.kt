@@ -112,8 +112,19 @@ class SupabaseClient private constructor(context: Context? = null) {
         .addConverterFactory(MoshiConverterFactory.create(moshi))
         .build()
 
-    val authApi: SupabaseAuthApi = retrofit.create(SupabaseAuthApi::class.java)
-    val restApi: SupabaseRestApi = retrofit.create(SupabaseRestApi::class.java)
+    private val realAuthApi: SupabaseAuthApi = retrofit.create(SupabaseAuthApi::class.java)
+    private val realRestApi: SupabaseRestApi = retrofit.create(SupabaseRestApi::class.java)
+
+    @Volatile
+    var testAuthApi: SupabaseAuthApi? = null
+    @Volatile
+    var testRestApi: SupabaseRestApi? = null
+
+    val authApi: SupabaseAuthApi
+        get() = testAuthApi ?: realAuthApi
+
+    val restApi: SupabaseRestApi
+        get() = testRestApi ?: realRestApi
 
     // ==========================================
     // MÉTODOS DE AUTHENTICATION

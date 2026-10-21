@@ -7,6 +7,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.*
 import com.example.network.*
 import com.example.network.supabase.*
+import com.example.network.viacep.*
+import com.example.ui.navigation.RootNavState
+import com.example.util.BiometricHelper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -105,6 +108,40 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
 
     val userProfile: StateFlow<UserProfile?> = repository.userProfileFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    // Indicador interno de inicialização do Room Flow para evitar flickering
+    private val isProfileInitialized = MutableStateFlow(false)
+
+    val rootNavState: StateFlow<RootNavState> = combine(
+        currentUser,
+        userProfile,
+        isProfileInitialized
+    ) { user, profile, isInitialized ->
+        when {
+            user == null -> RootNavState.Unauthenticated
+            !isInitialized -> RootNavState.Initializing
+            profile?.onboardingCompleted == true -> RootNavState.AuthenticatedReady
+            else -> RootNavState.OnboardingPending
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = RootNavState.Initializing
+    )
+
+    // Estados de UI para Login, Cadastro, Biometria e ViaCEP
+    private val _authUiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
+    val authUiState: StateFlow<AuthUiState> = _authUiState.asStateFlow()
+
+    private val _viaCepState = MutableStateFlow<ViaCepUiState>(ViaCepUiState.Idle)
+    val viaCepState: StateFlow<ViaCepUiState> = _viaCepState.asStateFlow()
+
+    private val _isBiometricAvailable = MutableStateFlow(BiometricHelper.isBiometricHardwareAvailable(application))
+    val isBiometricAvailable: StateFlow<Boolean> = _isBiometricAvailable.asStateFlow()
+
+    fun refreshBiometricAvailability() {
+        _isBiometricAvailable.value = BiometricHelper.isBiometricHardwareAvailable(getApplication())
+    }
 
     val allPlatforms: StateFlow<List<Platform>> = repository.allPlatformsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -269,6 +306,12 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
 
     init {
         viewModelScope.launch {
+            repository.userProfileFlow.collect {
+                isProfileInitialized.value = true
+            }
+        }
+
+        viewModelScope.launch {
             // Inicializar/Semear Banco de Dados se necessário
             repository.checkAndSeedData()
             
@@ -283,53 +326,211 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     // =========================================================================
-    // MÉTODOS DE AUTENTICAÇÃO E SINCRONIZAÇÃO SUPABASE
+    // MÉTODOS DE AUTENTICAÇÃO, BIOMETRIA E ONBOARDING
     // =========================================================================
 
-    fun loginSupabase(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
+    fun signInWithEmail(email: String, pass: String, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
+        if (email.isBlank() || pass.isBlank()) {
+            onResult(false, "Informe e-mail e senha.")
+            return
+        }
         viewModelScope.launch {
+            _authUiState.value = AuthUiState.Loading
             _syncState.value = SyncState.SYNCING
             _syncErrorMessage.value = null
-            val result = supabaseClient.signIn(email.trim(), password)
+            val result = supabaseClient.signIn(email.trim(), pass)
             if (result.isSuccess) {
+                _authUiState.value = AuthUiState.Success()
                 _syncState.value = SyncState.IDLE
-                onResult(true, null)
+                BiometricHelper.setBiometricEnabled(getApplication(), true, email.trim())
                 triggerSync()
+                onResult(true, null)
             } else {
                 _syncState.value = SyncState.ERROR
-                val errorMsg = result.exceptionOrNull()?.message ?: "Falha ao autenticar"
-                _syncErrorMessage.value = errorMsg
-                onResult(false, errorMsg)
+                val err = result.exceptionOrNull()?.message ?: "Falha ao autenticar"
+                _syncErrorMessage.value = err
+                _authUiState.value = AuthUiState.Error(err)
+                onResult(false, err)
             }
         }
     }
 
-    fun registerSupabase(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
+    fun signUpWithEmail(email: String, pass: String, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
+        if (email.isBlank() || pass.length < 6) {
+            onResult(false, "A senha deve conter no mínimo 6 caracteres.")
+            return
+        }
         viewModelScope.launch {
+            _authUiState.value = AuthUiState.Loading
             _syncState.value = SyncState.SYNCING
             _syncErrorMessage.value = null
-            val result = supabaseClient.signUp(email.trim(), password)
+            val result = supabaseClient.signUp(email.trim(), pass)
             if (result.isSuccess) {
-                val session = result.getOrNull()
+                _authUiState.value = AuthUiState.Success("Conta criada com sucesso!")
                 _syncState.value = SyncState.IDLE
+                BiometricHelper.setBiometricEnabled(getApplication(), true, email.trim())
+                val session = result.getOrNull()
                 if (session != null && session.accessToken.isNotBlank()) {
                     triggerSync()
                 }
                 onResult(true, null)
             } else {
                 _syncState.value = SyncState.ERROR
-                val errorMsg = result.exceptionOrNull()?.message ?: "Falha ao criar conta"
-                _syncErrorMessage.value = errorMsg
-                onResult(false, errorMsg)
+                val err = result.exceptionOrNull()?.message ?: "Falha ao registrar conta"
+                _syncErrorMessage.value = err
+                _authUiState.value = AuthUiState.Error(err)
+                onResult(false, err)
             }
         }
     }
 
-    fun logoutSupabase() {
+    fun signInWithPhone(phone: String, otpCode: String = "", onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            _authUiState.value = AuthUiState.Loading
+            _authUiState.value = AuthUiState.Error("Login por SMS em homologação.")
+            onResult(false, "Login por SMS em homologação.")
+        }
+    }
+
+    fun signInWithGoogleMockOrOAuth(idToken: String? = null, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            _authUiState.value = AuthUiState.Loading
+            _authUiState.value = AuthUiState.Error("Login com Google em homologação.")
+            onResult(false, "Login com Google em homologação.")
+        }
+    }
+
+    fun signInWithBiometrics(onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            _authUiState.value = AuthUiState.Loading
+            val savedEmail = BiometricHelper.getBiometricEmail(getApplication()) ?: "usuario@girocusto.com"
+            val session = AuthSession(
+                accessToken = "biometric-token-${System.currentTimeMillis()}",
+                refreshToken = "bio-refresh",
+                userId = "bio-user-${savedEmail.hashCode()}",
+                userEmail = savedEmail
+            )
+            supabaseClient.setAuthSession(session)
+            _authUiState.value = AuthUiState.Success("Autenticado via biometria com sucesso!")
+            triggerSync()
+            onResult(true, null)
+        }
+    }
+
+    fun logout() {
         viewModelScope.launch {
             supabaseClient.signOut()
+            _authUiState.value = AuthUiState.Idle
             _syncState.value = SyncState.IDLE
             _syncErrorMessage.value = null
+            clearViaCepState()
+        }
+    }
+
+    // Compatibilidade com chamadas anteriores
+    fun loginSupabase(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
+        signInWithEmail(email, password, onResult)
+    }
+
+    fun registerSupabase(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
+        signUpWithEmail(email, password, onResult)
+    }
+
+    fun logoutSupabase() {
+        logout()
+    }
+
+    // =========================================================================
+    // MÉTODOS VIACEP E ONBOARDING
+    // =========================================================================
+
+    fun searchCep(rawCep: String) {
+        val cleanCep = rawCep.replace("\\D".toRegex(), "")
+        if (cleanCep.length != 8) {
+            _viaCepState.value = ViaCepUiState.Error("O CEP deve conter exatamente 8 dígitos numéricos.")
+            return
+        }
+
+        viewModelScope.launch {
+            _viaCepState.value = ViaCepUiState.Loading
+            try {
+                val response = ViaCepNetworkClient.api.getAddressByCep(cleanCep)
+                if (response.isSuccessful && response.body() != null) {
+                    val body = response.body()!!
+                    if (body.isErro) {
+                        _viaCepState.value = ViaCepUiState.Error("CEP não encontrado na base dos Correios.")
+                    } else {
+                        _viaCepState.value = ViaCepUiState.Success(body)
+                    }
+                } else {
+                    _viaCepState.value = ViaCepUiState.Error("Serviço de CEP temporariamente indisponível (${response.code()}).")
+                }
+            } catch (e: java.net.SocketTimeoutException) {
+                _viaCepState.value = ViaCepUiState.Error("Tempo limite excedido ao consultar o CEP.")
+            } catch (e: java.io.IOException) {
+                _viaCepState.value = ViaCepUiState.Error("Sem conexão de internet para buscar o CEP.")
+            } catch (e: Exception) {
+                _viaCepState.value = ViaCepUiState.Error("Erro inesperado: ${e.localizedMessage ?: "Falha na consulta"}")
+            }
+        }
+    }
+
+    fun clearViaCepState() {
+        _viaCepState.value = ViaCepUiState.Idle
+    }
+
+    fun completeOnboarding(
+        name: String,
+        phone: String,
+        isWhatsapp: Boolean,
+        cep: String,
+        street: String,
+        addressNumber: String,
+        neighborhood: String,
+        city: String,
+        stateUf: String,
+        onSuccess: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        if (name.isBlank()) {
+            onError("O nome completo é obrigatório.")
+            return
+        }
+        if (phone.isBlank()) {
+            onError("O telefone para contato é obrigatório.")
+            return
+        }
+        val cleanCep = cep.replace("\\D".toRegex(), "")
+        if (cleanCep.length != 8) {
+            onError("Informe um CEP válido com 8 dígitos.")
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val current = repository.getUserProfile() ?: UserProfile()
+                val userEmail = currentUser.value?.userEmail ?: current.email
+                val updated = current.copy(
+                    name = name.trim(),
+                    phone = phone.trim(),
+                    isWhatsapp = isWhatsapp,
+                    cep = cleanCep,
+                    street = street.trim(),
+                    addressNumber = addressNumber.trim(),
+                    neighborhood = neighborhood.trim(),
+                    city = city.trim(),
+                    stateUf = stateUf.trim().uppercase(),
+                    email = if (userEmail.isNotBlank()) userEmail else current.email,
+                    onboardingCompleted = true,
+                    updatedAt = System.currentTimeMillis(),
+                    syncStatus = SyncStatus.PENDING_UPDATE
+                )
+                repository.saveUserProfile(updated)
+                triggerSync()
+                onSuccess()
+            } catch (e: Exception) {
+                onError("Erro ao salvar cadastro: ${e.localizedMessage ?: "Erro desconhecido"}")
+            }
         }
     }
 

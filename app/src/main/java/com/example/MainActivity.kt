@@ -2,14 +2,14 @@ package com.example
 
 import android.os.Bundle
 import java.io.File
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ui.navigation.GiroCustoMainApp
+import com.example.ui.navigation.RootNavigationGate
 import com.example.ui.GiroCustoViewModel
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     
@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
     enableEdgeToEdge()
     setContent {
       val viewModel: GiroCustoViewModel = viewModel()
-      GiroCustoMainApp(viewModel = viewModel)
+      RootNavigationGate(viewModel = viewModel)
     }
   }
 }
