@@ -36,6 +36,7 @@ data class Vehicle(
 @Entity(tableName = "vehicle_parts")
 data class VehiclePart(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val vehicleId: Long = 0L,
     val name: String,
     val price: Double, // Preço de troca
     val lifespanKm: Double, // Durabilidade em km

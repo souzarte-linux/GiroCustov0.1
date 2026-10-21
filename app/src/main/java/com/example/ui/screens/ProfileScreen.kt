@@ -75,6 +75,7 @@ fun ProfileScreen(
     onNavigateToPlatforms: () -> Unit = {}
 ) {
     val allVehicles by viewModel.allVehicles.collectAsStateWithLifecycle()
+    val activeVehicle by viewModel.vehicle.collectAsStateWithLifecycle()
     val parts by viewModel.parts.collectAsStateWithLifecycle()
     val userProfileState by viewModel.userProfile.collectAsStateWithLifecycle()
     val allPlatforms by viewModel.allPlatforms.collectAsStateWithLifecycle()
@@ -96,6 +97,7 @@ fun ProfileScreen(
                 userProfile = userProfileState ?: UserProfile(),
                 allPlatforms = allPlatforms,
                 allVehicles = allVehicles,
+                activeVehicle = activeVehicle,
                 parts = parts,
                 viaCepState = viaCepState,
                 isDark = isDark,
@@ -144,6 +146,7 @@ private fun ProfileSectionsContent(
     userProfile: UserProfile,
     allPlatforms: List<Platform>,
     allVehicles: List<Vehicle>,
+    activeVehicle: Vehicle?,
     parts: List<VehiclePart>,
     viaCepState: ViaCepUiState,
     isDark: Boolean,
@@ -153,6 +156,7 @@ private fun ProfileSectionsContent(
 ) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
+    val currentActiveVehicle = activeVehicle ?: allVehicles.find { it.active }
 
     var showAddPartDialog by remember { mutableStateOf(false) }
     var showEditPartDialog by remember { mutableStateOf(false) }
@@ -243,6 +247,7 @@ private fun ProfileSectionsContent(
         // SEÇÃO 4: MONITORAMENTO DE DESGASTE
         // =========================================================================
         PartsWearSection(
+            activeVehicle = currentActiveVehicle,
             parts = parts,
             onAddPartClick = { showAddPartDialog = true },
             onEditPartClick = { part ->
@@ -265,9 +270,10 @@ private fun ProfileSectionsContent(
     // Diálogos de Peças
     if (showAddPartDialog) {
         ProfileAddPartDialog(
+            activeVehicle = currentActiveVehicle,
             onDismiss = { showAddPartDialog = false },
             onAdd = { name: String, price: Double, lifespan: Double ->
-                viewModel.addPart(name, price, lifespan)
+                viewModel.addPart(name, price, lifespan, vehicleId = currentActiveVehicle?.id ?: 0L)
                 showAddPartDialog = false
                 Toast.makeText(context, "Nova peça adicionada!", Toast.LENGTH_SHORT).show()
             }
@@ -277,12 +283,20 @@ private fun ProfileSectionsContent(
     if (showEditPartDialog && partToEdit != null) {
         ProfileEditPartDialog(
             part = partToEdit!!,
+            activeVehicle = currentActiveVehicle,
             onDismiss = {
                 showEditPartDialog = false
                 partToEdit = null
             },
             onSave = { name: String, price: Double, lifespan: Double, runKm: Double ->
-                viewModel.updatePart(partToEdit!!.id, name, price, lifespan, runKm)
+                viewModel.updatePart(
+                    partId = partToEdit!!.id,
+                    name = name,
+                    price = price,
+                    lifespan = lifespan,
+                    runKmSinceChange = runKm,
+                    vehicleId = currentActiveVehicle?.id ?: partToEdit!!.vehicleId
+                )
                 showEditPartDialog = false
                 partToEdit = null
                 Toast.makeText(context, "Peça de desgaste atualizada!", Toast.LENGTH_SHORT).show()
@@ -302,8 +316,10 @@ private fun CadastralDataCard(
     viewModel: GiroCustoViewModel
 ) {
     val context = LocalContext.current
+    val streetFocusRequester = remember { FocusRequester() }
     val numberFocusRequester = remember { FocusRequester() }
 
+    var isManualCep by remember { mutableStateOf(false) }
     var name by remember(userProfile.name) { mutableStateOf(userProfile.name) }
     var phoneDigits by remember(userProfile.phone) { mutableStateOf(userProfile.phone.filter { it.isDigit() }) }
     var isWhatsapp by remember(userProfile.isWhatsapp) { mutableStateOf(userProfile.isWhatsapp) }
@@ -314,7 +330,7 @@ private fun CadastralDataCard(
     var city by remember(userProfile.city) { mutableStateOf(userProfile.city) }
     var stateUf by remember(userProfile.stateUf) { mutableStateOf(userProfile.stateUf) }
 
-    // Dispara busca automática ao preencher 8 dígitos de CEP
+    // Dispara busca automática ao preencher 8 dígitos de CEP (caso não esteja em modo manual)
     LaunchedEffect(cepDigits) {
         if (cepDigits.length == 8) {
             viewModel.searchCep(cepDigits)
@@ -470,8 +486,11 @@ private fun CadastralDataCard(
                 value = cepDigits,
                 onValueChange = { input ->
                     cepDigits = input.filter { it.isDigit() }.take(8)
+                    if (cepDigits.length == 8) {
+                        isManualCep = false
+                    }
                 },
-                label = { Text("CEP Residencial") },
+                label = { Text(if (isManualCep) "CEP Residencial (Opcional)" else "CEP Residencial") },
                 placeholder = { Text("01001-000", color = ColorTextMuted) },
                 leadingIcon = {
                     Icon(Icons.Filled.PinDrop, contentDescription = null, tint = ColorTextMuted)
@@ -534,11 +553,40 @@ private fun CadastralDataCard(
                     .testTag("profile_cep_input")
             )
 
-            // Link "Não sei meu CEP" (Abre URL externa dos Correios)
+            // Links/Ações de CEP: Preenchimento manual e Consulta nos Correios
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                TextButton(
+                    onClick = {
+                        isManualCep = true
+                        viewModel.clearViaCepState()
+                        try {
+                            streetFocusRequester.requestFocus()
+                        } catch (_: Exception) {
+                            try {
+                                numberFocusRequester.requestFocus()
+                            } catch (_: Exception) {}
+                        }
+                    },
+                    modifier = Modifier.testTag("profile_manual_cep_toggle")
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.EditNote,
+                        contentDescription = null,
+                        tint = ColorBrandEmerald,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Não sei meu CEP / Preencher manual",
+                        fontSize = 12.sp,
+                        color = ColorBrandEmerald
+                    )
+                }
+
                 TextButton(
                     onClick = {
                         val intent = Intent(
@@ -552,14 +600,14 @@ private fun CadastralDataCard(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                         contentDescription = null,
-                        tint = ColorBrandEmerald,
+                        tint = ColorTextMuted,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Não sei meu CEP (Consultar Correios)",
+                        text = "Consultar Correios",
                         fontSize = 12.sp,
-                        color = ColorBrandEmerald
+                        color = ColorTextMuted
                     )
                 }
             }
@@ -589,6 +637,7 @@ private fun CadastralDataCard(
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .weight(0.7f)
+                        .focusRequester(streetFocusRequester)
                         .testTag("profile_street_input")
                 )
 
@@ -663,6 +712,7 @@ private fun CadastralDataCard(
             ) {
                 Button(
                     onClick = {
+                        // Não bloqueia o salvamento caso o CEP esteja vazio quando em modo manual (permitindo salvar com CEP vazio ou parcial se preenchido manualmente)
                         viewModel.updateUserProfile(
                             name = name.trim(),
                             phone = phoneDigits.trim(),
@@ -678,7 +728,8 @@ private fun CadastralDataCard(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("profile_save_cadastrais_btn"),
+                        .testTag("profile_save_cadastrais_btn")
+                        .semantics { testTag = "profile_save_btn" },
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = ColorBrandEmerald,
@@ -1149,6 +1200,7 @@ private fun MyVehiclesSection(
 
 @Composable
 private fun PartsWearSection(
+    activeVehicle: Vehicle?,
     parts: List<VehiclePart>,
     onAddPartClick: () -> Unit,
     onEditPartClick: (VehiclePart) -> Unit,
@@ -1165,16 +1217,26 @@ private fun PartsWearSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
+                val vehicleName = activeVehicle?.model?.takeIf { it.isNotBlank() }
+                val headerTitle = if (vehicleName != null) {
+                    "MONITORAMENTO DE DESGASTE • $vehicleName"
+                } else {
+                    "MONITORAMENTO DE DESGASTE"
+                }
                 Text(
-                    text = "MONITORAMENTO DE DESGASTE",
+                    text = headerTitle,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = ColorBrandEmerald,
-                    letterSpacing = 1.sp
+                    letterSpacing = 0.5.sp
                 )
                 Text(
-                    text = "Componentes do veículo em uso ativo",
+                    text = if (vehicleName != null) {
+                        "Componentes vinculados ao veículo ativo ($vehicleName)"
+                    } else {
+                        "Componentes do veículo em uso ativo"
+                    },
                     fontSize = 11.sp,
                     color = ColorTextMuted
                 )
@@ -1205,8 +1267,9 @@ private fun PartsWearSection(
                         .padding(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
+                    val targetVehicleDesc = activeVehicle?.model?.takeIf { it.isNotBlank() } ?: "este veículo"
                     Text(
-                        text = "Nenhuma peça monitorada para este veículo.",
+                        text = "Nenhuma peça monitorada para $targetVehicleDesc.",
                         color = ColorTextMuted,
                         fontSize = 12.sp
                     )
@@ -2182,6 +2245,7 @@ private fun VehicleFormSection(
 
 @Composable
 private fun ProfileAddPartDialog(
+    activeVehicle: Vehicle? = null,
     onDismiss: () -> Unit,
     onAdd: (String, Double, Double) -> Unit
 ) {
@@ -2203,12 +2267,23 @@ private fun ProfileAddPartDialog(
                 modifier = Modifier.padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = "Adicionar Peça de Desgaste",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = ColorTextPrimary
-                )
+                Column {
+                    Text(
+                        text = "Adicionar Peça de Desgaste",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ColorTextPrimary
+                    )
+                    val vehicleModel = activeVehicle?.model?.takeIf { it.isNotBlank() }
+                    if (vehicleModel != null) {
+                        Text(
+                            text = "Veículo associado: $vehicleModel",
+                            fontSize = 12.sp,
+                            color = ColorBrandEmerald,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
                 HorizontalDivider(color = ColorBorder)
 
                 OutlinedTextField(
@@ -2276,6 +2351,7 @@ private fun ProfileAddPartDialog(
 @Composable
 private fun ProfileEditPartDialog(
     part: VehiclePart,
+    activeVehicle: Vehicle? = null,
     onDismiss: () -> Unit,
     onSave: (String, Double, Double, Double) -> Unit
 ) {
@@ -2298,12 +2374,23 @@ private fun ProfileEditPartDialog(
                 modifier = Modifier.padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = "Editar Peça de Desgaste",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = ColorTextPrimary
-                )
+                Column {
+                    Text(
+                        text = "Editar Peça de Desgaste",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ColorTextPrimary
+                    )
+                    val vehicleModel = activeVehicle?.model?.takeIf { it.isNotBlank() }
+                    if (vehicleModel != null) {
+                        Text(
+                            text = "Veículo associado: $vehicleModel",
+                            fontSize = 12.sp,
+                            color = ColorBrandEmerald,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
                 HorizontalDivider(color = ColorBorder)
 
                 OutlinedTextField(

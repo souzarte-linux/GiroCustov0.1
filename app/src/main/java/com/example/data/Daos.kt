@@ -59,8 +59,14 @@ interface VehiclePartDao {
     @Query("SELECT * FROM vehicle_parts WHERE isDeleted = 0 ORDER BY id ASC")
     fun getAllPartsFlow(): Flow<List<VehiclePart>>
 
+    @Query("SELECT * FROM vehicle_parts WHERE (vehicleId = :vehicleId OR vehicleId = 0) AND isDeleted = 0 ORDER BY id ASC")
+    fun getPartsForVehicleFlow(vehicleId: Long): Flow<List<VehiclePart>>
+
     @Query("SELECT * FROM vehicle_parts WHERE isDeleted = 0 ORDER BY id ASC")
     suspend fun getAllParts(): List<VehiclePart>
+
+    @Query("SELECT * FROM vehicle_parts WHERE (vehicleId = :vehicleId OR vehicleId = 0) AND isDeleted = 0 ORDER BY id ASC")
+    suspend fun getPartsForVehicle(vehicleId: Long): List<VehiclePart>
 
     @Query("SELECT * FROM vehicle_parts WHERE id = :partId LIMIT 1")
     suspend fun getPartById(partId: Long): VehiclePart?

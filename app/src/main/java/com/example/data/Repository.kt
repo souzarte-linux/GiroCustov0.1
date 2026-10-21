@@ -39,6 +39,15 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
         }
     }
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val partsForActiveVehicleFlow: Flow<List<VehiclePart>> = vehicleFlow.flatMapLatest { vehicle ->
+        if (vehicle != null) {
+            partDao.getPartsForVehicleFlow(vehicle.id)
+        } else {
+            partDao.getAllPartsFlow()
+        }
+    }
+
     suspend fun getVehicle(): Vehicle? = vehicleDao.getActiveVehicle()
 
     suspend fun saveVehicle(vehicle: Vehicle) {
@@ -120,8 +129,14 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
 
     suspend fun savePart(part: VehiclePart) {
         val isNew = part.id == 0L
+        val activeVehicleId = if (part.vehicleId == 0L) {
+            vehicleDao.getActiveVehicle()?.id ?: 0L
+        } else {
+            part.vehicleId
+        }
         val status = if (isNew || part.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
         val toSave = part.copy(
+            vehicleId = activeVehicleId,
             remoteId = if (part.remoteId.isNotBlank()) part.remoteId else UUID.randomUUID().toString(),
             syncStatus = status,
             updatedAt = System.currentTimeMillis(),
@@ -130,9 +145,21 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
         partDao.insertPart(toSave)
     }
 
+    suspend fun addPart(part: VehiclePart) {
+        savePart(part)
+    }
+
     suspend fun updatePart(part: VehiclePart) {
+        val activeVehicleId = if (part.vehicleId == 0L) {
+            partDao.getPartById(part.id)?.vehicleId?.takeIf { it != 0L }
+                ?: vehicleDao.getActiveVehicle()?.id
+                ?: 0L
+        } else {
+            part.vehicleId
+        }
         val status = if (part.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
         val toSave = part.copy(
+            vehicleId = activeVehicleId,
             remoteId = if (part.remoteId.isNotBlank()) part.remoteId else UUID.randomUUID().toString(),
             syncStatus = status,
             updatedAt = System.currentTimeMillis()
@@ -183,8 +210,9 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
         db.withTransaction {
             val oldKmRodados = (record.endOdometer - record.startOdometer).coerceAtLeast(0.0)
 
-            // Reverte desgaste de peças
-            val parts = partDao.getAllParts()
+            // Reverte desgaste de peças do veículo ativo
+            val vehicle = vehicleDao.getActiveVehicle() ?: Vehicle()
+            val parts = partDao.getPartsForVehicle(vehicle.id)
             for (part in parts) {
                 val newRunKm = (part.runKmSinceChange - oldKmRodados).coerceAtLeast(0.0)
                 val pStatus = if (part.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
@@ -228,8 +256,8 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
             val vehicle = vehicleDao.getActiveVehicle() ?: Vehicle()
             val kmRodados = (endOdometer - startOdometer).coerceAtLeast(0.0)
 
-            // 1. Obter peças para calcular o custo de desgaste acumulado
-            val parts = partDao.getAllParts()
+            // 1. Obter peças para calcular o custo de desgaste acumulado do veículo ativo
+            val parts = partDao.getPartsForVehicle(vehicle.id)
             val totalWearCostPerKm = parts.sumOf { it.wearCostPerKm }
             val wearCost = kmRodados * totalWearCostPerKm
 
@@ -311,13 +339,14 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
             val kmRodados = (endOdometer - startOdometer).coerceAtLeast(0.0)
             val diffKm = kmRodados - oldKmRodados
 
-            // 1. Obter peças para calcular o custo de desgaste acumulado
-            val parts = partDao.getAllParts()
+            val vehicle = vehicleDao.getActiveVehicle() ?: Vehicle()
+
+            // 1. Obter peças para calcular o custo de desgaste acumulado do veículo ativo
+            val parts = partDao.getPartsForVehicle(vehicle.id)
             val totalWearCostPerKm = parts.sumOf { it.wearCostPerKm }
             val wearCost = kmRodados * totalWearCostPerKm
 
             // 2. Calcular custos restantes
-            val vehicle = vehicleDao.getActiveVehicle() ?: Vehicle()
             val fuelCost = if (vehicle.averageConsumption > 0) {
                 (kmRodados / vehicle.averageConsumption) * fuelPrice
             } else {
@@ -541,23 +570,24 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
                     syncStatus = SyncStatus.PENDING_INSERT,
                     updatedAt = System.currentTimeMillis()
                 )
-                vehicleDao.insertVehicle(vehicle)
+                val insertedId = vehicleDao.insertVehicle(vehicle)
+                vehicle = vehicle.copy(id = insertedId)
             }
 
-            var parts = partDao.getAllParts()
+            var parts = partDao.getPartsForVehicle(vehicle.id)
             if (parts.isEmpty()) {
                 val initialParts = listOf(
-                    VehiclePart(name = "Óleo do Motor", price = 45.0, lifespanKm = 1500.0, runKmSinceChange = 1300.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                    VehiclePart(name = "Kit Relação (Coroa/Pinhão/Corrente)", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 4500.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                    VehiclePart(name = "Pneu Traseiro", price = 220.0, lifespanKm = 12000.0, runKmSinceChange = 11000.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                    VehiclePart(name = "Pneu Dianteiro", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 3000.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                    VehiclePart(name = "Pastilhas de Freio", price = 40.0, lifespanKm = 6000.0, runKmSinceChange = 1200.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                    VehiclePart(name = "Lona de Freio Traseira", price = 35.0, lifespanKm = 10000.0, runKmSinceChange = 2500.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT)
+                    VehiclePart(vehicleId = vehicle.id, name = "Óleo do Motor", price = 45.0, lifespanKm = 1500.0, runKmSinceChange = 1300.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                    VehiclePart(vehicleId = vehicle.id, name = "Kit Relação (Coroa/Pinhão/Corrente)", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 4500.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                    VehiclePart(vehicleId = vehicle.id, name = "Pneu Traseiro", price = 220.0, lifespanKm = 12000.0, runKmSinceChange = 11000.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                    VehiclePart(vehicleId = vehicle.id, name = "Pneu Dianteiro", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 3000.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                    VehiclePart(vehicleId = vehicle.id, name = "Pastilhas de Freio", price = 40.0, lifespanKm = 6000.0, runKmSinceChange = 1200.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                    VehiclePart(vehicleId = vehicle.id, name = "Lona de Freio Traseira", price = 35.0, lifespanKm = 10000.0, runKmSinceChange = 2500.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT)
                 )
                 for (part in initialParts) {
                     partDao.insertPart(part)
                 }
-                parts = partDao.getAllParts()
+                parts = partDao.getPartsForVehicle(vehicle.id)
             }
 
             val totalWearCostPerKm = parts.sumOf { it.price / it.lifespanKm }.takeIf { it > 0 } ?: 0.075

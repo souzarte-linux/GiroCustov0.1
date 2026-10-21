@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Vehicle::class, VehiclePart::class, DailyRecord::class, UserProfile::class, Platform::class, FuelRefill::class, MaintenanceRecord::class],
-    version = 11,
+    version = 12,
     exportSchema = true
 )
 abstract class GiroCustoDatabase : RoomDatabase() {
@@ -179,6 +179,13 @@ abstract class GiroCustoDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `vehicle_parts` ADD COLUMN `vehicleId` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE `vehicle_parts` SET `vehicleId` = (SELECT id FROM vehicle WHERE active = 1 LIMIT 1) WHERE `vehicleId` = 0 AND (SELECT id FROM vehicle WHERE active = 1 LIMIT 1) IS NOT NULL")
+            }
+        }
+
         fun getDatabase(context: Context): GiroCustoDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -186,7 +193,7 @@ abstract class GiroCustoDatabase : RoomDatabase() {
                     GiroCustoDatabase::class.java,
                     "giro_custo_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                 .build()
                 INSTANCE = instance
                 instance

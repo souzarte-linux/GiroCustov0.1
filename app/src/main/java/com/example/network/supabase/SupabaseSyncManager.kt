@@ -72,9 +72,11 @@ class SupabaseSyncManager(
         // --- 2. PEÇAS DE DESGASTE ---
         val pendingParts = partDao.getPendingParts()
         if (pendingParts.isNotEmpty()) {
+            val allVehicles = vehicleDao.getAllVehicles()
             val dtos = pendingParts.map { part ->
                 val remId = if (part.remoteId.isNotBlank()) part.remoteId else UUID.randomUUID().toString()
-                part.copy(remoteId = remId).toDto(userId, defaultRemoteVehicleId)
+                val partRemoteVehicleId = allVehicles.firstOrNull { it.id == part.vehicleId }?.remoteId?.takeIf { it.isNotBlank() } ?: defaultRemoteVehicleId
+                part.copy(remoteId = remId).toDto(userId, partRemoteVehicleId)
             }
             restApi.upsertVehicleParts(dtos)
             db.withTransaction {
@@ -222,13 +224,14 @@ class SupabaseSyncManager(
                 val remoteUpdated = SupabaseMappers.parseIsoTimestamp(dto.updatedAt)
                 if (existing == null) {
                     if (dto.deletedAt == null) {
-                        partDao.insertPart(dto.toEntity(existingId = 0))
+                        partDao.insertPart(dto.toEntity(existingId = 0, vehicleId = defaultLocalVehicleId))
                     }
                 } else {
                     val shouldUpdate = existing.syncStatus == SyncStatus.SYNCED || remoteUpdated >= existing.updatedAt
                     if (shouldUpdate) {
                         val isDel = dto.deletedAt != null
-                        partDao.updatePart(dto.toEntity(existingId = existing.id).copy(isDeleted = isDel))
+                        val vId = if (existing.vehicleId != 0L) existing.vehicleId else defaultLocalVehicleId
+                        partDao.updatePart(dto.toEntity(existingId = existing.id, vehicleId = vId).copy(isDeleted = isDel))
                     }
                 }
             }

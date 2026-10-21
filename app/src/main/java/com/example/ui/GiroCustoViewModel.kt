@@ -171,7 +171,7 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     val allPlatforms: StateFlow<List<Platform>> = repository.allPlatformsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val parts: StateFlow<List<VehiclePart>> = repository.allPartsFlow
+    val parts: StateFlow<List<VehiclePart>> = repository.partsForActiveVehicleFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val records: StateFlow<List<DailyRecord>> = repository.allRecordsFlow
@@ -948,16 +948,18 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     // Ações de Peças de Desgaste
-    fun addPart(name: String, price: Double, lifespan: Double) {
+    fun addPart(name: String, price: Double, lifespan: Double, vehicleId: Long? = null) {
         viewModelScope.launch {
-            val part = VehiclePart(name = name, price = price, lifespanKm = lifespan, runKmSinceChange = 0.0)
+            val vId = vehicleId ?: vehicle.value?.id ?: 0L
+            val part = VehiclePart(vehicleId = vId, name = name, price = price, lifespanKm = lifespan, runKmSinceChange = 0.0)
             repository.savePart(part)
         }
     }
 
-    fun updatePart(partId: Long, name: String, price: Double, lifespan: Double, runKmSinceChange: Double) {
+    fun updatePart(partId: Long, name: String, price: Double, lifespan: Double, runKmSinceChange: Double, vehicleId: Long? = null) {
         viewModelScope.launch {
-            val part = VehiclePart(id = partId, name = name, price = price, lifespanKm = lifespan, runKmSinceChange = runKmSinceChange)
+            val vId = vehicleId ?: vehicle.value?.id ?: 0L
+            val part = VehiclePart(id = partId, vehicleId = vId, name = name, price = price, lifespanKm = lifespan, runKmSinceChange = runKmSinceChange)
             repository.updatePart(part)
         }
     }

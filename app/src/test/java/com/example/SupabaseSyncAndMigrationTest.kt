@@ -380,9 +380,9 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // Abre agora com Room versão 11 executando MIGRATION_9_10 e MIGRATION_10_11
+        // Abre agora com Room versão 12 executando MIGRATION_9_10, MIGRATION_10_11 e MIGRATION_11_12
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_9_10, GiroCustoDatabase.MIGRATION_10_11)
+            .addMigrations(GiroCustoDatabase.MIGRATION_9_10, GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12)
             .allowMainThreadQueries()
             .build()
 
@@ -599,9 +599,9 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // Abre agora com Room versão 11 executando MIGRATION_10_11
+        // Abre agora com Room versão 12 executando MIGRATION_10_11 e MIGRATION_11_12
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_10_11)
+            .addMigrations(GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12)
             .allowMainThreadQueries()
             .build()
 
@@ -637,6 +637,253 @@ class SupabaseSyncAndMigrationTest {
         assertEquals("", profile?.neighborhood)
         assertEquals("", profile?.stateUf)
         assertEquals(false, profile?.onboardingCompleted)
+
+        roomDb.close()
+    }
+
+    @Test
+    fun testMigration11To12_addsVehicleIdAndLinksToActiveVehicle() = runTest {
+        val dbName = "test_migration_11_12_${System.currentTimeMillis()}.db"
+        context.deleteDatabase(dbName)
+
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(dbName)
+                .callback(object : SupportSQLiteOpenHelper.Callback(11) {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        // vehicle v11
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `vehicle` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`model` TEXT NOT NULL, " +
+                                "`averageConsumption` REAL NOT NULL, " +
+                                "`fuelType` TEXT NOT NULL, " +
+                                "`monthlyFixedCosts` REAL NOT NULL, " +
+                                "`plannedWorkDays` INTEGER NOT NULL, " +
+                                "`currentOdometer` REAL NOT NULL, " +
+                                "`active` INTEGER NOT NULL, " +
+                                "`remoteId` TEXT NOT NULL DEFAULT '', " +
+                                "`syncStatus` TEXT NOT NULL DEFAULT 'SYNCED', " +
+                                "`updatedAt` INTEGER NOT NULL DEFAULT 0, " +
+                                "`isDeleted` INTEGER NOT NULL DEFAULT 0, " +
+                                "`vehicleType` TEXT NOT NULL DEFAULT 'MOTO', " +
+                                "`brand` TEXT NOT NULL DEFAULT '', " +
+                                "`manufacturingYear` TEXT NOT NULL DEFAULT '', " +
+                                "`tankCapacity` REAL NOT NULL DEFAULT 16.0, " +
+                                "`hasTopBox` INTEGER NOT NULL DEFAULT 0, " +
+                                "`hasDeliveryBag` INTEGER NOT NULL DEFAULT 0, " +
+                                "`carBodyType` TEXT NOT NULL DEFAULT '')"
+                        )
+
+                        // vehicle_parts v11 (sem vehicleId)
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `vehicle_parts` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`name` TEXT NOT NULL, " +
+                                "`price` REAL NOT NULL, " +
+                                "`lifespanKm` REAL NOT NULL, " +
+                                "`runKmSinceChange` REAL NOT NULL, " +
+                                "`remoteId` TEXT NOT NULL DEFAULT '', " +
+                                "`syncStatus` TEXT NOT NULL DEFAULT 'SYNCED', " +
+                                "`updatedAt` INTEGER NOT NULL DEFAULT 0, " +
+                                "`isDeleted` INTEGER NOT NULL DEFAULT 0)"
+                        )
+
+                        // daily_records v11
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `daily_records` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`dateString` TEXT NOT NULL, " +
+                                "`dateTimestamp` INTEGER NOT NULL, " +
+                                "`platform` TEXT NOT NULL, " +
+                                "`grossEarnings` REAL NOT NULL, " +
+                                "`deliveriesCount` INTEGER NOT NULL, " +
+                                "`startOdometer` REAL NOT NULL, " +
+                                "`endOdometer` REAL NOT NULL, " +
+                                "`fuelPrice` REAL NOT NULL, " +
+                                "`foodExpense` REAL NOT NULL, " +
+                                "`fuelCost` REAL NOT NULL, " +
+                                "`wearCost` REAL NOT NULL, " +
+                                "`proportionalFixedCost` REAL NOT NULL, " +
+                                "`netProfit` REAL NOT NULL, " +
+                                "`startTime` TEXT NOT NULL, " +
+                                "`endTime` TEXT NOT NULL, " +
+                                "`pauseDuration` TEXT NOT NULL, " +
+                                "`remoteId` TEXT NOT NULL DEFAULT '', " +
+                                "`syncStatus` TEXT NOT NULL DEFAULT 'SYNCED', " +
+                                "`updatedAt` INTEGER NOT NULL DEFAULT 0, " +
+                                "`isDeleted` INTEGER NOT NULL DEFAULT 0)"
+                        )
+
+                        // user_profile v11
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `user_profile` (" +
+                                "`id` INTEGER NOT NULL, " +
+                                "`name` TEXT NOT NULL, " +
+                                "`phone` TEXT NOT NULL, " +
+                                "`city` TEXT NOT NULL, " +
+                                "`isWhatsapp` INTEGER NOT NULL DEFAULT 1, " +
+                                "`cep` TEXT NOT NULL DEFAULT '', " +
+                                "`street` TEXT NOT NULL DEFAULT '', " +
+                                "`addressNumber` TEXT NOT NULL DEFAULT '', " +
+                                "`neighborhood` TEXT NOT NULL DEFAULT '', " +
+                                "`stateUf` TEXT NOT NULL DEFAULT '', " +
+                                "`onboardingCompleted` INTEGER NOT NULL DEFAULT 0, " +
+                                "`remoteId` TEXT NOT NULL DEFAULT '', " +
+                                "`syncStatus` TEXT NOT NULL DEFAULT 'SYNCED', " +
+                                "`updatedAt` INTEGER NOT NULL DEFAULT 0, " +
+                                "`isDeleted` INTEGER NOT NULL DEFAULT 0, " +
+                                "`email` TEXT NOT NULL DEFAULT '', " +
+                                "PRIMARY KEY(`id`))"
+                        )
+
+                        // platforms v11
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `platforms` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`name` TEXT NOT NULL, " +
+                                "`segment` TEXT NOT NULL, " +
+                                "`paymentModel` TEXT NOT NULL, " +
+                                "`cycle` TEXT NOT NULL, " +
+                                "`paymentDay` TEXT NOT NULL, " +
+                                "`fixedPayDelay` INTEGER NOT NULL, " +
+                                "`cycleEntriesJson` TEXT NOT NULL, " +
+                                "`bankName` TEXT NOT NULL, " +
+                                "`bankAgency` TEXT NOT NULL, " +
+                                "`bankAccount` TEXT NOT NULL, " +
+                                "`pixKeyType` TEXT NOT NULL, " +
+                                "`pixKey` TEXT NOT NULL, " +
+                                "`active` INTEGER NOT NULL, " +
+                                "`remoteId` TEXT NOT NULL DEFAULT '', " +
+                                "`syncStatus` TEXT NOT NULL DEFAULT 'SYNCED', " +
+                                "`updatedAt` INTEGER NOT NULL DEFAULT 0, " +
+                                "`isDeleted` INTEGER NOT NULL DEFAULT 0)"
+                        )
+
+                        // fuel_refills v11
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `fuel_refills` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`vehicleId` INTEGER NOT NULL, " +
+                                "`dateTimestamp` INTEGER NOT NULL, " +
+                                "`dateString` TEXT NOT NULL, " +
+                                "`gasStation` TEXT NOT NULL, " +
+                                "`fuelType` TEXT NOT NULL, " +
+                                "`pricePerLiter` REAL NOT NULL, " +
+                                "`liters` REAL NOT NULL, " +
+                                "`discount` REAL NOT NULL, " +
+                                "`totalPaid` REAL NOT NULL, " +
+                                "`odometer` REAL NOT NULL, " +
+                                "`isFullTank` INTEGER NOT NULL, " +
+                                "`paymentMethod` TEXT NOT NULL, " +
+                                "`isInstallment` INTEGER NOT NULL, " +
+                                "`installmentsCount` INTEGER NOT NULL, " +
+                                "`remoteId` TEXT NOT NULL DEFAULT '', " +
+                                "`syncStatus` TEXT NOT NULL DEFAULT 'SYNCED', " +
+                                "`updatedAt` INTEGER NOT NULL DEFAULT 0, " +
+                                "`isDeleted` INTEGER NOT NULL DEFAULT 0)"
+                        )
+
+                        // maintenance_records v11
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `maintenance_records` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`vehicleId` INTEGER NOT NULL, " +
+                                "`dateTimestamp` INTEGER NOT NULL, " +
+                                "`dateString` TEXT NOT NULL, " +
+                                "`description` TEXT NOT NULL, " +
+                                "`location` TEXT NOT NULL, " +
+                                "`value` REAL NOT NULL, " +
+                                "`odometer` REAL NOT NULL, " +
+                                "`remoteId` TEXT NOT NULL DEFAULT '', " +
+                                "`syncStatus` TEXT NOT NULL DEFAULT 'SYNCED', " +
+                                "`updatedAt` INTEGER NOT NULL DEFAULT 0, " +
+                                "`isDeleted` INTEGER NOT NULL DEFAULT 0)"
+                        )
+                    }
+
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+                })
+                .build()
+        )
+
+        val rawDb = helper.writableDatabase
+
+        // Inserir veículo ativo com id 10
+        val cvActiveVeh = ContentValues().apply {
+            put("id", 10L)
+            put("model", "Honda Titan 160")
+            put("averageConsumption", 40.0)
+            put("fuelType", "Gasolina")
+            put("monthlyFixedCosts", 150.0)
+            put("plannedWorkDays", 22)
+            put("currentOdometer", 12000.0)
+            put("active", 1)
+        }
+        rawDb.insert("vehicle", 0, cvActiveVeh)
+
+        // Inserir veículo inativo com id 20
+        val cvInactiveVeh = ContentValues().apply {
+            put("id", 20L)
+            put("model", "Fiat Uno")
+            put("averageConsumption", 12.0)
+            put("fuelType", "Gasolina")
+            put("monthlyFixedCosts", 300.0)
+            put("plannedWorkDays", 20)
+            put("currentOdometer", 85000.0)
+            put("active", 0)
+        }
+        rawDb.insert("vehicle", 0, cvInactiveVeh)
+
+        // Inserir peças de desgaste v11 (sem vehicleId)
+        val cvPart1 = ContentValues().apply {
+            put("name", "Óleo do Motor")
+            put("price", 45.0)
+            put("lifespanKm", 1500.0)
+            put("runKmSinceChange", 800.0)
+        }
+        rawDb.insert("vehicle_parts", 0, cvPart1)
+
+        val cvPart2 = ContentValues().apply {
+            put("name", "Pneu Traseiro")
+            put("price", 220.0)
+            put("lifespanKm", 12000.0)
+            put("runKmSinceChange", 4000.0)
+        }
+        rawDb.insert("vehicle_parts", 0, cvPart2)
+
+        rawDb.close()
+        helper.close()
+
+        // Abre agora com Room versão 12 executando MIGRATION_11_12
+        val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
+            .addMigrations(GiroCustoDatabase.MIGRATION_11_12)
+            .allowMainThreadQueries()
+            .build()
+
+        val partDao = roomDb.vehiclePartDao()
+        val allParts = partDao.getAllParts()
+        assertEquals(2, allParts.size)
+
+        // As peças existentes devem ter sido vinculadas ao veículo ativo (id = 10)
+        assertTrue(allParts.all { it.vehicleId == 10L })
+
+        val partsForActive = partDao.getPartsForVehicle(10L)
+        assertEquals(2, partsForActive.size)
+
+        // Adiciona peça vinculada explicitamente ao veículo 20
+        partDao.insertPart(
+            VehiclePart(
+                vehicleId = 20L,
+                name = "Pneu de Carro",
+                price = 350.0,
+                lifespanKm = 50000.0
+            )
+        )
+
+        val partsForUno = partDao.getPartsForVehicle(20L)
+        assertEquals(1, partsForUno.size)
+        assertEquals("Pneu de Carro", partsForUno[0].name)
 
         roomDb.close()
     }

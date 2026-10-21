@@ -1,8 +1,12 @@
 package com.example
 
 import android.app.Application
+import android.content.ContentValues
 import android.content.Context
 import androidx.room.Room
+import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.db.SupportSQLiteOpenHelper
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.*
 import com.example.network.fipe.*
@@ -15,6 +19,7 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -29,6 +34,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import retrofit2.Response
+import java.io.File
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -41,6 +47,10 @@ import java.net.UnknownHostException
  *    e alternância de veículo ativo (setActiveVehicle) garantindo exclusividade de active=true
  * 4. Cálculos de saúde, custo por km e desgaste de peças (VehiclePart) incluindo resetPartWear
  * 5. Integridade do enum DrawerDestination (ausência de VEICULO e presença dos 5 destinos válidos)
+ * 6. Vínculo de VehiclePart ao veículo ativo, isolamento de desgaste no DailyRecord e alternância dinâmica no StateFlow
+ * 7. Execução e validação da MIGRATION_11_12 (adicionando vehicleId em vehicle_parts e migrando registros legados)
+ * 8. Salvamento de UserProfile com CEP em branco / preenchimento manual de endereço
+ * 9. Confirmação de ausência de regressões com a remoção de VehicleScreen.kt
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -693,5 +703,602 @@ class VehicleAndFipeIntegrationTest {
         assertEquals("ABASTECIMENTOS", DrawerDestination.ABASTECIMENTOS.name)
         assertEquals("MANUTENCAO", DrawerDestination.MANUTENCAO.name)
         assertEquals("NUVEM", DrawerDestination.NUVEM.name)
+    }
+
+    // =========================================================================
+    // 6. VÍNCULO DE PEÇAS AO VEÍCULO ATIVO, ISOLAMENTO DE WEAR COST E STATEFLOW
+    // =========================================================================
+
+    @Test
+    fun testVehicleParts_linkedToVehicleId_isolatedPerVehicleInDaoAndRepository() = runTest(testDispatcher) {
+        // Cadastrar Moto (id 1, ativa) e Carro (id 2, inativo)
+        val moto = Vehicle(
+            brand = "Honda",
+            model = "CG 160 Fan Flex",
+            vehicleType = "MOTO",
+            active = true
+        )
+        val carro = Vehicle(
+            brand = "Toyota",
+            model = "Corolla GLi",
+            vehicleType = "CARRO",
+            active = false
+        )
+        val motoId = repository.addVehicle(moto)
+        val carroId = repository.addVehicle(carro)
+
+        // Criar peças vinculadas explicitamente a cada veículo
+        val partMoto1 = VehiclePart(
+            vehicleId = motoId,
+            name = "Kit Relação (Coroa/Pinhão/Corrente)",
+            price = 180.0,
+            lifespanKm = 15000.0,
+            runKmSinceChange = 0.0
+        )
+        val partMoto2 = VehiclePart(
+            vehicleId = motoId,
+            name = "Pneu Traseiro Moto",
+            price = 220.0,
+            lifespanKm = 12000.0,
+            runKmSinceChange = 0.0
+        )
+        val partCarro1 = VehiclePart(
+            vehicleId = carroId,
+            name = "Óleo Sintético Carro",
+            price = 250.0,
+            lifespanKm = 10000.0,
+            runKmSinceChange = 0.0
+        )
+        val partCarro2 = VehiclePart(
+            vehicleId = carroId,
+            name = "Pneu Aro 16 Carro",
+            price = 450.0,
+            lifespanKm = 40000.0,
+            runKmSinceChange = 0.0
+        )
+
+        repository.savePart(partMoto1)
+        repository.savePart(partMoto2)
+        repository.savePart(partCarro1)
+        repository.savePart(partCarro2)
+
+        // 1. Validar consulta de peças da Moto no DAO (deve retornar apenas as 2 peças da moto)
+        val motoParts = db.vehiclePartDao().getPartsForVehicle(motoId)
+        assertEquals(2, motoParts.size)
+        assertTrue(motoParts.any { it.name == "Kit Relação (Coroa/Pinhão/Corrente)" })
+        assertTrue(motoParts.any { it.name == "Pneu Traseiro Moto" })
+        assertFalse(motoParts.any { it.name.contains("Carro") })
+        assertTrue(motoParts.all { it.vehicleId == motoId })
+
+        // 2. Validar consulta de peças do Carro no DAO (deve retornar apenas as 2 peças do carro)
+        val carroParts = db.vehiclePartDao().getPartsForVehicle(carroId)
+        assertEquals(2, carroParts.size)
+        assertTrue(carroParts.any { it.name == "Óleo Sintético Carro" })
+        assertTrue(carroParts.any { it.name == "Pneu Aro 16 Carro" })
+        assertFalse(carroParts.any { it.name.contains("Moto") || it.name.contains("Relação") })
+        assertTrue(carroParts.all { it.vehicleId == carroId })
+
+        // 3. Validar Flows reativos por veículo no DAO
+        val motoPartsFlow = db.vehiclePartDao().getPartsForVehicleFlow(motoId).first()
+        assertEquals(2, motoPartsFlow.size)
+        val carroPartsFlow = db.vehiclePartDao().getPartsForVehicleFlow(carroId).first()
+        assertEquals(2, carroPartsFlow.size)
+
+        // 4. Testar auto-vinculação do vehicleId quando salvo com vehicleId = 0L (vincula ao ativo)
+        // Moto está ativa no momento:
+        val partAutoMoto = VehiclePart(
+            vehicleId = 0L,
+            name = "Vela de Ignição Moto",
+            price = 35.0,
+            lifespanKm = 12000.0
+        )
+        repository.savePart(partAutoMoto)
+
+        val updatedMotoParts = db.vehiclePartDao().getPartsForVehicle(motoId)
+        assertEquals(3, updatedMotoParts.size)
+        assertTrue(updatedMotoParts.any { it.name == "Vela de Ignição Moto" && it.vehicleId == motoId })
+
+        // Alternar para o Carro como ativo e salvar com vehicleId = 0L
+        repository.setActiveVehicle(carroId)
+        val partAutoCarro = VehiclePart(
+            vehicleId = 0L,
+            name = "Pastilha Dianteira Carro",
+            price = 140.0,
+            lifespanKm = 30000.0
+        )
+        repository.savePart(partAutoCarro)
+
+        val updatedCarroParts = db.vehiclePartDao().getPartsForVehicle(carroId)
+        assertEquals(3, updatedCarroParts.size)
+        assertTrue(updatedCarroParts.any { it.name == "Pastilha Dianteira Carro" && it.vehicleId == carroId })
+
+        // Assegurar que as peças da moto não foram contaminadas
+        val finalMotoParts = db.vehiclePartDao().getPartsForVehicle(motoId)
+        assertEquals(3, finalMotoParts.size)
+    }
+
+    @Test
+    fun testDailyRecord_wearCostCalculation_isolatedByActiveVehicle() = runTest(testDispatcher) {
+        // Cadastrar Moto (ativa) e Carro (inativo)
+        val moto = Vehicle(
+            brand = "Honda",
+            model = "CG 160 Fan Flex",
+            vehicleType = "MOTO",
+            averageConsumption = 40.0,
+            monthlyFixedCosts = 100.0,
+            plannedWorkDays = 20,
+            active = true
+        )
+        val carro = Vehicle(
+            brand = "Toyota",
+            model = "Corolla GLi",
+            vehicleType = "CARRO",
+            averageConsumption = 10.0,
+            monthlyFixedCosts = 300.0,
+            plannedWorkDays = 20,
+            active = false
+        )
+        val motoId = repository.addVehicle(moto)
+        val carroId = repository.addVehicle(carro)
+
+        // Peças da Moto:
+        // P1: R$ 150 / 15000 km = 0.010 R$/km
+        // P2: R$ 240 / 12000 km = 0.020 R$/km
+        // Total desgaste Moto = 0.030 R$/km
+        repository.savePart(VehiclePart(vehicleId = motoId, name = "Relação Moto", price = 150.0, lifespanKm = 15000.0, runKmSinceChange = 0.0))
+        repository.savePart(VehiclePart(vehicleId = motoId, name = "Pneu Moto", price = 240.0, lifespanKm = 12000.0, runKmSinceChange = 0.0))
+
+        // Peças do Carro:
+        // P3: R$ 300 / 10000 km = 0.030 R$/km
+        // P4: R$ 1600 / 40000 km = 0.040 R$/km
+        // Total desgaste Carro = 0.070 R$/km
+        repository.savePart(VehiclePart(vehicleId = carroId, name = "Óleo Carro", price = 300.0, lifespanKm = 10000.0, runKmSinceChange = 0.0))
+        repository.savePart(VehiclePart(vehicleId = carroId, name = "Pneus Carro", price = 1600.0, lifespanKm = 40000.0, runKmSinceChange = 0.0))
+
+        // 1. Salvar DailyRecord com a MOTO ATIVA
+        // 100 km rodados (1000 a 1100), gasolina a R$ 5,00
+        repository.insertDailyRecord(
+            dateString = "2026-10-21",
+            dateTimestamp = System.currentTimeMillis(),
+            platform = "iFood",
+            grossEarnings = 200.0,
+            deliveriesCount = 12,
+            startOdometer = 1000.0,
+            endOdometer = 1100.0,
+            fuelPrice = 5.0,
+            foodExpense = 20.0
+        )
+
+        val records = repository.allRecordsFlow.first()
+        assertEquals(1, records.size)
+        val recordMoto = records[0]
+
+        // Cálculo esperado para a moto:
+        // kmRodados = 100.0
+        // wearCost = 100.0 * 0.030 = 3.00 R$ (se usasse peças do carro, seria 10.00 R$)
+        assertEquals(100.0, recordMoto.endOdometer - recordMoto.startOdometer, 0.001)
+        assertEquals(3.00, recordMoto.wearCost, 0.001)
+
+        // Verificar que apenas as peças da Moto tiveram runKmSinceChange incrementado
+        val motoPartsAfterRecord = db.vehiclePartDao().getPartsForVehicle(motoId)
+        assertTrue(motoPartsAfterRecord.all { it.runKmSinceChange == 100.0 })
+
+        val carroPartsAfterMotoRecord = db.vehiclePartDao().getPartsForVehicle(carroId)
+        assertTrue("As peças do carro não devem sofrer desgaste com rodagem da moto",
+            carroPartsAfterMotoRecord.all { it.runKmSinceChange == 0.0 })
+
+        // 2. Alternar para o CARRO como veículo ativo
+        repository.setActiveVehicle(carroId)
+
+        // Salvar DailyRecord com o CARRO ATIVO
+        // 50 km rodados (50000 a 50050), gasolina a R$ 5,00
+        repository.insertDailyRecord(
+            dateString = "2026-10-22",
+            dateTimestamp = System.currentTimeMillis() + 86400000L,
+            platform = "Uber",
+            grossEarnings = 180.0,
+            deliveriesCount = 8,
+            startOdometer = 50000.0,
+            endOdometer = 50050.0,
+            fuelPrice = 5.0,
+            foodExpense = 15.0
+        )
+
+        val updatedRecords = repository.allRecordsFlow.first()
+        assertEquals(2, updatedRecords.size)
+        val recordCarro = updatedRecords.first { it.dateString == "2026-10-22" }
+
+        // Cálculo esperado para o carro:
+        // kmRodados = 50.0
+        // wearCost = 50.0 * 0.070 = 3.50 R$
+        assertEquals(50.0, recordCarro.endOdometer - recordCarro.startOdometer, 0.001)
+        assertEquals(3.50, recordCarro.wearCost, 0.001)
+
+        // Verificar desgaste após expediente do carro:
+        // Peças do carro devem ter recebido 50.0 km
+        val carroPartsAfterCarroRecord = db.vehiclePartDao().getPartsForVehicle(carroId)
+        assertTrue(carroPartsAfterCarroRecord.all { it.runKmSinceChange == 50.0 })
+
+        // Peças da moto devem ter permanecido com 100.0 km (não foram alteradas)
+        val motoPartsAfterCarroRecord = db.vehiclePartDao().getPartsForVehicle(motoId)
+        assertTrue("As peças da moto devem manter 100.0 km intactos",
+            motoPartsAfterCarroRecord.all { it.runKmSinceChange == 100.0 })
+    }
+
+    @Test
+    fun testViewModel_partsStateFlow_emitsOnlyActiveVehiclePartsUponSwitching() = runTest(testDispatcher) {
+        // Cadastrar Moto (ativa) e Carro (inativo)
+        val motoId = repository.addVehicle(
+            Vehicle(brand = "Honda", model = "CG 160 Fan Flex", vehicleType = "MOTO", active = true)
+        )
+        val carroId = repository.addVehicle(
+            Vehicle(brand = "Toyota", model = "Corolla GLi", vehicleType = "CARRO", active = false)
+        )
+
+        // Adicionar peças vinculadas a cada veículo
+        repository.savePart(VehiclePart(vehicleId = motoId, name = "Corrente DID Moto", price = 100.0, lifespanKm = 10000.0))
+        repository.savePart(VehiclePart(vehicleId = motoId, name = "Pastilha Freio Moto", price = 40.0, lifespanKm = 6000.0))
+
+        repository.savePart(VehiclePart(vehicleId = carroId, name = "Filtro de Cabine Carro", price = 80.0, lifespanKm = 15000.0))
+        repository.savePart(VehiclePart(vehicleId = carroId, name = "Velas de Ignição Carro", price = 160.0, lifespanKm = 40000.0))
+
+        // Inicia coleta no StateFlow parts do ViewModel para ativar o WhileSubscribed
+        val collectedEmissions = mutableListOf<List<VehiclePart>>()
+        val collectJob = backgroundScope.launch(testDispatcher) {
+            viewModel.parts.collect { collectedEmissions.add(it) }
+        }
+
+        // 1. Inicialmente, Moto está ativa: StateFlow parts deve emitir apenas as peças da moto
+        val initialParts = viewModel.parts.value
+        assertEquals(2, initialParts.size)
+        assertTrue(initialParts.any { it.name == "Corrente DID Moto" })
+        assertTrue(initialParts.any { it.name == "Pastilha Freio Moto" })
+        assertFalse(initialParts.any { it.name.contains("Carro") })
+        assertTrue(initialParts.all { it.vehicleId == motoId })
+
+        // 2. Alternar para o Carro via ViewModel: setActiveVehicle
+        viewModel.setActiveVehicle(carroId)
+
+        // StateFlow parts deve atualizar para conter unicamente as peças do carro
+        val carParts = viewModel.parts.value
+        assertEquals(2, carParts.size)
+        assertTrue(carParts.any { it.name == "Filtro de Cabine Carro" })
+        assertTrue(carParts.any { it.name == "Velas de Ignição Carro" })
+        assertFalse(carParts.any { it.name.contains("Moto") })
+        assertTrue(carParts.all { it.vehicleId == carroId })
+
+        // 3. Alternar de volta para a Moto
+        viewModel.setActiveVehicle(motoId)
+
+        val backToMotoParts = viewModel.parts.value
+        assertEquals(2, backToMotoParts.size)
+        assertTrue(backToMotoParts.any { it.name == "Corrente DID Moto" })
+        assertTrue(backToMotoParts.any { it.name == "Pastilha Freio Moto" })
+        assertFalse(backToMotoParts.any { it.name.contains("Carro") })
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun testMigration_11_to_12_addsVehicleIdColumnAndMigratesExistingPartsToActiveVehicle() = runTest(testDispatcher) {
+        val dbName = "test_fipe_migration_11_12.db"
+        val dbFile = File(context.cacheDir, dbName)
+        if (dbFile.exists()) dbFile.delete()
+
+        // 1. Cria o banco SQLite versão 11 puro (sem vehicleId em vehicle_parts)
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(dbName)
+                .callback(object : SupportSQLiteOpenHelper.Callback(11) {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        // Tabela vehicle v11
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `vehicle` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`brand` TEXT NOT NULL DEFAULT '', " +
+                                "`model` TEXT NOT NULL, " +
+                                "`vehicleType` TEXT NOT NULL DEFAULT 'MOTO', " +
+                                "`manufacturingYear` TEXT NOT NULL DEFAULT '', " +
+                                "`carBodyType` TEXT NOT NULL DEFAULT '', " +
+                                "`hasTopBox` INTEGER NOT NULL DEFAULT 0, " +
+                                "`hasDeliveryBag` INTEGER NOT NULL DEFAULT 0, " +
+                                "`averageConsumption` REAL NOT NULL, " +
+                                "`fuelType` TEXT NOT NULL, " +
+                                "`monthlyFixedCosts` REAL NOT NULL, " +
+                                "`plannedWorkDays` INTEGER NOT NULL, " +
+                                "`tankCapacity` REAL NOT NULL DEFAULT 0.0, " +
+                                "`currentOdometer` REAL NOT NULL, " +
+                                "`active` INTEGER NOT NULL, " +
+                                "`remoteId` TEXT NOT NULL DEFAULT '', " +
+                                "`syncStatus` TEXT NOT NULL DEFAULT 'SYNCED', " +
+                                "`updatedAt` INTEGER NOT NULL DEFAULT 0, " +
+                                "`isDeleted` INTEGER NOT NULL DEFAULT 0)"
+                        )
+
+                        // Tabela vehicle_parts v11 (SEM a coluna vehicleId)
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `vehicle_parts` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`name` TEXT NOT NULL, " +
+                                "`price` REAL NOT NULL, " +
+                                "`lifespanKm` REAL NOT NULL, " +
+                                "`runKmSinceChange` REAL NOT NULL, " +
+                                "`remoteId` TEXT NOT NULL DEFAULT '', " +
+                                "`syncStatus` TEXT NOT NULL DEFAULT 'SYNCED', " +
+                                "`updatedAt` INTEGER NOT NULL DEFAULT 0, " +
+                                "`isDeleted` INTEGER NOT NULL DEFAULT 0)"
+                        )
+
+                        // daily_records v11
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `daily_records` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`dateString` TEXT NOT NULL, " +
+                                "`dateTimestamp` INTEGER NOT NULL, " +
+                                "`platform` TEXT NOT NULL, " +
+                                "`grossEarnings` REAL NOT NULL, " +
+                                "`deliveriesCount` INTEGER NOT NULL, " +
+                                "`startOdometer` REAL NOT NULL, " +
+                                "`endOdometer` REAL NOT NULL, " +
+                                "`fuelPrice` REAL NOT NULL, " +
+                                "`foodExpense` REAL NOT NULL, " +
+                                "`fuelCost` REAL NOT NULL, " +
+                                "`wearCost` REAL NOT NULL, " +
+                                "`proportionalFixedCost` REAL NOT NULL, " +
+                                "`netProfit` REAL NOT NULL, " +
+                                "`startTime` TEXT NOT NULL DEFAULT '', " +
+                                "`endTime` TEXT NOT NULL DEFAULT '', " +
+                                "`pauseDuration` TEXT NOT NULL DEFAULT '', " +
+                                "`remoteId` TEXT NOT NULL DEFAULT '', " +
+                                "`syncStatus` TEXT NOT NULL DEFAULT 'SYNCED', " +
+                                "`updatedAt` INTEGER NOT NULL DEFAULT 0, " +
+                                "`isDeleted` INTEGER NOT NULL DEFAULT 0)"
+                        )
+
+                        // user_profile v11
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `user_profile` (" +
+                                "`id` INTEGER NOT NULL, " +
+                                "`name` TEXT NOT NULL, " +
+                                "`phone` TEXT NOT NULL, " +
+                                "`city` TEXT NOT NULL, " +
+                                "`isWhatsapp` INTEGER NOT NULL, " +
+                                "`cep` TEXT NOT NULL DEFAULT '', " +
+                                "`street` TEXT NOT NULL DEFAULT '', " +
+                                "`addressNumber` TEXT NOT NULL DEFAULT '', " +
+                                "`neighborhood` TEXT NOT NULL DEFAULT '', " +
+                                "`stateUf` TEXT NOT NULL DEFAULT '', " +
+                                "`onboardingCompleted` INTEGER NOT NULL DEFAULT 0, " +
+                                "`remoteId` TEXT NOT NULL DEFAULT '', " +
+                                "`syncStatus` TEXT NOT NULL DEFAULT 'SYNCED', " +
+                                "`updatedAt` INTEGER NOT NULL DEFAULT 0, " +
+                                "`isDeleted` INTEGER NOT NULL DEFAULT 0, " +
+                                "`email` TEXT NOT NULL DEFAULT '', " +
+                                "PRIMARY KEY(`id`))"
+                        )
+
+                        // platforms v11
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `platforms` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`name` TEXT NOT NULL, " +
+                                "`segment` TEXT NOT NULL, " +
+                                "`paymentModel` TEXT NOT NULL, " +
+                                "`cycle` TEXT NOT NULL, " +
+                                "`paymentDay` TEXT NOT NULL, " +
+                                "`fixedPayDelay` INTEGER NOT NULL, " +
+                                "`cycleEntriesJson` TEXT NOT NULL, " +
+                                "`bankName` TEXT NOT NULL, " +
+                                "`bankAgency` TEXT NOT NULL, " +
+                                "`bankAccount` TEXT NOT NULL, " +
+                                "`pixKeyType` TEXT NOT NULL, " +
+                                "`pixKey` TEXT NOT NULL, " +
+                                "`active` INTEGER NOT NULL, " +
+                                "`remoteId` TEXT NOT NULL DEFAULT '', " +
+                                "`syncStatus` TEXT NOT NULL DEFAULT 'SYNCED', " +
+                                "`updatedAt` INTEGER NOT NULL DEFAULT 0, " +
+                                "`isDeleted` INTEGER NOT NULL DEFAULT 0)"
+                        )
+
+                        // fuel_refills v11
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `fuel_refills` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`vehicleId` INTEGER NOT NULL, " +
+                                "`dateTimestamp` INTEGER NOT NULL, " +
+                                "`dateString` TEXT NOT NULL, " +
+                                "`gasStation` TEXT NOT NULL, " +
+                                "`fuelType` TEXT NOT NULL, " +
+                                "`pricePerLiter` REAL NOT NULL, " +
+                                "`liters` REAL NOT NULL, " +
+                                "`discount` REAL NOT NULL, " +
+                                "`totalPaid` REAL NOT NULL, " +
+                                "`odometer` REAL NOT NULL, " +
+                                "`isFullTank` INTEGER NOT NULL, " +
+                                "`paymentMethod` TEXT NOT NULL, " +
+                                "`isInstallment` INTEGER NOT NULL, " +
+                                "`installmentsCount` INTEGER NOT NULL, " +
+                                "`remoteId` TEXT NOT NULL DEFAULT '', " +
+                                "`syncStatus` TEXT NOT NULL DEFAULT 'SYNCED', " +
+                                "`updatedAt` INTEGER NOT NULL DEFAULT 0, " +
+                                "`isDeleted` INTEGER NOT NULL DEFAULT 0)"
+                        )
+
+                        // maintenance_records v11
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `maintenance_records` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`vehicleId` INTEGER NOT NULL, " +
+                                "`dateTimestamp` INTEGER NOT NULL, " +
+                                "`dateString` TEXT NOT NULL, " +
+                                "`description` TEXT NOT NULL, " +
+                                "`location` TEXT NOT NULL, " +
+                                "`value` REAL NOT NULL, " +
+                                "`odometer` REAL NOT NULL, " +
+                                "`remoteId` TEXT NOT NULL DEFAULT '', " +
+                                "`syncStatus` TEXT NOT NULL DEFAULT 'SYNCED', " +
+                                "`updatedAt` INTEGER NOT NULL DEFAULT 0, " +
+                                "`isDeleted` INTEGER NOT NULL DEFAULT 0)"
+                        )
+                    }
+
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+                })
+                .build()
+        )
+
+        val rawDb = helper.writableDatabase
+
+        // Inserir veículo ativo com id = 42
+        val cvActive = ContentValues().apply {
+            put("id", 42L)
+            put("model", "Honda CB 500F")
+            put("averageConsumption", 25.0)
+            put("fuelType", "Gasolina")
+            put("monthlyFixedCosts", 250.0)
+            put("plannedWorkDays", 22)
+            put("currentOdometer", 15000.0)
+            put("active", 1)
+        }
+        rawDb.insert("vehicle", 0, cvActive)
+
+        // Inserir veículo inativo com id = 99
+        val cvInactive = ContentValues().apply {
+            put("id", 99L)
+            put("model", "VW Polo")
+            put("averageConsumption", 13.0)
+            put("fuelType", "Flex")
+            put("monthlyFixedCosts", 400.0)
+            put("plannedWorkDays", 20)
+            put("currentOdometer", 40000.0)
+            put("active", 0)
+        }
+        rawDb.insert("vehicle", 0, cvInactive)
+
+        // Inserir 2 peças de desgaste v11 (sem a coluna vehicleId)
+        val cvPart1 = ContentValues().apply {
+            put("name", "Filtro de Óleo")
+            put("price", 60.0)
+            put("lifespanKm", 5000.0)
+            put("runKmSinceChange", 1000.0)
+        }
+        rawDb.insert("vehicle_parts", 0, cvPart1)
+
+        val cvPart2 = ContentValues().apply {
+            put("name", "Pastilha Traseira")
+            put("price", 85.0)
+            put("lifespanKm", 8000.0)
+            put("runKmSinceChange", 2000.0)
+        }
+        rawDb.insert("vehicle_parts", 0, cvPart2)
+
+        rawDb.close()
+        helper.close()
+
+        // 2. Abrir o banco com Room versão 12 executando a MIGRATION_11_12
+        val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
+            .addMigrations(GiroCustoDatabase.MIGRATION_11_12)
+            .allowMainThreadQueries()
+            .build()
+
+        val partDao = roomDb.vehiclePartDao()
+        val allParts = partDao.getAllParts()
+        assertEquals(2, allParts.size)
+
+        // As peças antigas devem ter sido atribuídas ao veículo ativo (id = 42)
+        assertTrue("Todas as peças devem ter recebido vehicleId = 42", allParts.all { it.vehicleId == 42L })
+
+        val partsForActive = partDao.getPartsForVehicle(42L)
+        assertEquals(2, partsForActive.size)
+
+        // Inserir nova peça explicitamente no veículo inativo 99
+        partDao.insertPart(
+            VehiclePart(
+                vehicleId = 99L,
+                name = "Pneu Aro 15 Carro",
+                price = 320.0,
+                lifespanKm = 50000.0
+            )
+        )
+
+        val partsForCar = partDao.getPartsForVehicle(99L)
+        assertEquals(1, partsForCar.size)
+        assertEquals("Pneu Aro 15 Carro", partsForCar[0].name)
+
+        roomDb.close()
+    }
+
+    @Test
+    fun testUserProfile_saveWithBlankOrManualCep_noExceptionAndPersistsCorrectly() = runTest(testDispatcher) {
+        // Cenário de preenchimento manual do endereço (sem informar CEP)
+        viewModel.updateUserProfile(
+            name = "Carlos Entregador",
+            phone = "11999998888",
+            city = "Campinas",
+            email = "carlos@girocusto.com",
+            isWhatsapp = true,
+            cep = "", // CEP em branco
+            street = "Avenida Francisco Glicério",
+            addressNumber = "450",
+            neighborhood = "Centro",
+            stateUf = "SP",
+            onboardingCompleted = true
+        )
+
+        // Valida que o perfil foi persistido sem nenhuma exceção e que os campos manuais foram preservados
+        val savedProfile = repository.getUserProfile()
+        assertNotNull(savedProfile)
+        assertEquals("Carlos Entregador", savedProfile?.name)
+        assertEquals("11999998888", savedProfile?.phone)
+        assertEquals("Campinas", savedProfile?.city)
+        assertEquals("", savedProfile?.cep)
+        assertEquals("Avenida Francisco Glicério", savedProfile?.street)
+        assertEquals("450", savedProfile?.addressNumber)
+        assertEquals("Centro", savedProfile?.neighborhood)
+        assertEquals("SP", savedProfile?.stateUf)
+        assertTrue(savedProfile?.onboardingCompleted == true)
+
+        // Valida também via inserção direta no repository de perfil com cep vazio
+        val manualProfile = UserProfile(
+            name = "Mariana Silva",
+            phone = "21977776666",
+            city = "Niterói",
+            cep = "",
+            street = "Rua Coronel Moreira César",
+            addressNumber = "100",
+            neighborhood = "Icaraí",
+            stateUf = "RJ",
+            isWhatsapp = true,
+            onboardingCompleted = true
+        )
+        repository.saveUserProfile(manualProfile)
+
+        val reloadedProfile = repository.getUserProfile()
+        assertNotNull(reloadedProfile)
+        assertEquals("Mariana Silva", reloadedProfile?.name)
+        assertEquals("", reloadedProfile?.cep)
+        assertEquals("Icaraí", reloadedProfile?.neighborhood)
+        assertEquals("RJ", reloadedProfile?.stateUf)
+    }
+
+    @Test
+    fun testVehicleScreen_removalIntegrityCheck() {
+        // 1. Confirmar que a antiga classe VehicleScreenKt foi completamente removida do classpath
+        try {
+            Class.forName("com.example.ui.screens.VehicleScreenKt")
+            fail("VehicleScreenKt não deveria mais existir no classpath")
+        } catch (e: ClassNotFoundException) {
+            // Sucesso esperado: classe não existe
+            assertNotNull(e)
+        }
+
+        // 2. Confirmar que o arquivo físico VehicleScreen.kt não existe no diretório do projeto
+        val projectDir = File(System.getProperty("user.dir") ?: ".")
+        val vehicleScreenFile = File(projectDir, "app/src/main/java/com/example/ui/screens/VehicleScreen.kt")
+        assertFalse("VehicleScreen.kt deve ser inexistente no sistema de arquivos", vehicleScreenFile.exists())
+
+        // 3. Confirmar que o DrawerDestination possui apenas PERFIL, PLATAFORMAS, ABASTECIMENTOS, MANUTENCAO, NUVEM
+        val destinations = DrawerDestination.values().map { it.name }
+        assertFalse("DrawerDestination não deve conter VEICULO", destinations.contains("VEICULO"))
     }
 }

@@ -101,9 +101,10 @@ fun VehiclePart.toDto(userId: String, remoteVehicleId: String?): VehiclePartDto 
     )
 }
 
-fun VehiclePartDto.toEntity(existingId: Long = 0): VehiclePart {
+fun VehiclePartDto.toEntity(existingId: Long = 0, vehicleId: Long = 0L): VehiclePart {
     return VehiclePart(
         id = existingId,
+        vehicleId = vehicleId,
         name = name,
         price = price,
         lifespanKm = lifespanKm,
