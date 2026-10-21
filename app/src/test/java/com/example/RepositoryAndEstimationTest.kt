@@ -35,7 +35,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [34])
 class RepositoryAndEstimationTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()

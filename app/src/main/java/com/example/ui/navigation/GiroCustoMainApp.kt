@@ -12,6 +12,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -27,7 +28,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.GiroCustoViewModel
+import com.example.ui.components.CloudSyncTopBarIcon
 import com.example.ui.components.SmartphoneSimulator
+import com.example.ui.screens.CloudSyncScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.HistoryScreen
 import com.example.ui.screens.LaunchScreen
@@ -60,6 +63,8 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
     val records by viewModel.records.collectAsStateWithLifecycle()
     val maintenanceRecords by viewModel.maintenanceRecords.collectAsStateWithLifecycle()
     val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
+    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+    val syncState by viewModel.syncState.collectAsStateWithLifecycle()
 
     // Configuração de Paleta de Cores do GiroCusto (Professional Dark charcoal and Emerald green theme, or soft slate light theme)
     val customColorScheme = if (isDark) {
@@ -134,6 +139,7 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
                                         DrawerDestination.PLATAFORMAS -> "Plataformas"
                                         DrawerDestination.ABASTECIMENTOS -> "Abastecimentos"
                                         DrawerDestination.MANUTENCAO -> "Manutenção"
+                                        DrawerDestination.NUVEM -> "Nuvem & Backup"
                                         GiroTab.PAINEL -> "Painel"
                                         GiroTab.LANCAR -> "Lançar"
                                         GiroTab.RELATORIOS -> "Relatórios"
@@ -145,19 +151,40 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
                                 )
                             },
                             navigationIcon = {
-                                IconButton(
-                                    onClick = {
-                                        coroutineScope.launch {
-                                            drawerState.open()
-                                        }
-                                    },
-                                    modifier = Modifier.testTag("drawer_menu_btn")
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Menu,
-                                        contentDescription = "Abrir Menu"
-                                    )
+                                if (drawerDestination != DrawerDestination.NONE) {
+                                    IconButton(
+                                        onClick = { drawerDestination = DrawerDestination.NONE },
+                                        modifier = Modifier.testTag("topbar_back_btn")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                            contentDescription = "Voltar"
+                                        )
+                                    }
+                                } else {
+                                    IconButton(
+                                        onClick = {
+                                            coroutineScope.launch {
+                                                drawerState.open()
+                                            }
+                                        },
+                                        modifier = Modifier.testTag("drawer_menu_btn")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Menu,
+                                            contentDescription = "Abrir Menu"
+                                        )
+                                    }
                                 }
+                            },
+                            actions = {
+                                CloudSyncTopBarIcon(
+                                    currentUser = currentUser,
+                                    syncState = syncState,
+                                    onClick = {
+                                        drawerDestination = DrawerDestination.NUVEM
+                                    }
+                                )
                             },
                             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                                 containerColor = MaterialTheme.colorScheme.surface,
@@ -229,6 +256,7 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
                                 DrawerDestination.PLATAFORMAS -> PlatformsScreen(viewModel)
                                 DrawerDestination.ABASTECIMENTOS -> FuelRefillsScreen(viewModel)
                                 DrawerDestination.MANUTENCAO -> MaintenanceScreen(viewModel)
+                                DrawerDestination.NUVEM -> CloudSyncScreen(viewModel, onNavigateBack = { drawerDestination = DrawerDestination.NONE })
                                 GiroTab.PAINEL -> DashboardScreen(viewModel, vehicle, parts, records, maintenanceRecords)
                                 GiroTab.LANCAR -> LaunchScreen(viewModel, vehicle, parts)
                                 GiroTab.RELATORIOS -> ReportsScreen(viewModel, vehicle, parts, records, maintenanceRecords)

@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.*
 import com.example.network.*
+import com.example.network.supabase.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -19,9 +20,34 @@ enum class Period {
     PERSONALIZADO
 }
 
+enum class SyncState {
+    IDLE,
+    SYNCING,
+    SUCCESS,
+    ERROR,
+    OFFLINE
+}
+
 class GiroCustoViewModel(application: Application) : AndroidViewModel(application) {
     private val db = GiroCustoDatabase.getDatabase(application)
     private val repository = GiroCustoRepository(db)
+
+    // Supabase Cloud Auth & Sync
+    private val supabaseClient = SupabaseClient.getInstance(application)
+    val currentUser: StateFlow<AuthSession?> = supabaseClient.sessionState
+
+    private val _syncState = MutableStateFlow(SyncState.IDLE)
+    val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
+
+    private val syncPrefs = application.getSharedPreferences("giro_custo_sync_prefs", Context.MODE_PRIVATE)
+
+    private val _lastSyncTime = MutableStateFlow<Long?>(
+        syncPrefs.getLong("last_sync_timestamp", 0L).takeIf { it > 0L }
+    )
+    val lastSyncTime: StateFlow<Long?> = _lastSyncTime.asStateFlow()
+
+    private val _syncErrorMessage = MutableStateFlow<String?>(null)
+    val syncErrorMessage: StateFlow<String?> = _syncErrorMessage.asStateFlow()
 
     // GPS Gas Station Search States
     private val _nearbyGasStations = MutableStateFlow<List<GasStationResult>>(emptyList())
@@ -248,6 +274,117 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
             
             // Auto-preencher odômetro inicial e combustível
             prefillLaunchFields()
+
+            // Se houver sessão salva ao iniciar o ViewModel, restaure-a e execute uma sincronização em background.
+            if (supabaseClient.isAuthenticated) {
+                triggerSync()
+            }
+        }
+    }
+
+    // =========================================================================
+    // MÉTODOS DE AUTENTICAÇÃO E SINCRONIZAÇÃO SUPABASE
+    // =========================================================================
+
+    fun loginSupabase(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            _syncState.value = SyncState.SYNCING
+            _syncErrorMessage.value = null
+            val result = supabaseClient.signIn(email.trim(), password)
+            if (result.isSuccess) {
+                _syncState.value = SyncState.IDLE
+                onResult(true, null)
+                triggerSync()
+            } else {
+                _syncState.value = SyncState.ERROR
+                val errorMsg = result.exceptionOrNull()?.message ?: "Falha ao autenticar"
+                _syncErrorMessage.value = errorMsg
+                onResult(false, errorMsg)
+            }
+        }
+    }
+
+    fun registerSupabase(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            _syncState.value = SyncState.SYNCING
+            _syncErrorMessage.value = null
+            val result = supabaseClient.signUp(email.trim(), password)
+            if (result.isSuccess) {
+                val session = result.getOrNull()
+                _syncState.value = SyncState.IDLE
+                if (session != null && session.accessToken.isNotBlank()) {
+                    triggerSync()
+                }
+                onResult(true, null)
+            } else {
+                _syncState.value = SyncState.ERROR
+                val errorMsg = result.exceptionOrNull()?.message ?: "Falha ao criar conta"
+                _syncErrorMessage.value = errorMsg
+                onResult(false, errorMsg)
+            }
+        }
+    }
+
+    fun logoutSupabase() {
+        viewModelScope.launch {
+            supabaseClient.signOut()
+            _syncState.value = SyncState.IDLE
+            _syncErrorMessage.value = null
+        }
+    }
+
+    fun triggerSync(onComplete: ((Boolean, String?) -> Unit)? = null) {
+        viewModelScope.launch {
+            if (!supabaseClient.isAuthenticated) {
+                _syncState.value = SyncState.IDLE
+                onComplete?.invoke(false, "Usuário não autenticado")
+                return@launch
+            }
+
+            _syncState.value = SyncState.SYNCING
+            _syncErrorMessage.value = null
+
+            val result = repository.syncCurrentSession()
+            when (result) {
+                is SyncResult.Success -> {
+                    val now = System.currentTimeMillis()
+                    _lastSyncTime.value = now
+                    syncPrefs.edit().putLong("last_sync_timestamp", now).apply()
+                    _syncState.value = SyncState.SUCCESS
+                    onComplete?.invoke(true, null)
+                }
+                is SyncResult.Error -> {
+                    val err = result.error
+                    val isOffline = err is java.net.UnknownHostException ||
+                            err is java.net.ConnectException ||
+                            err is java.net.SocketTimeoutException
+                    _syncState.value = if (isOffline) SyncState.OFFLINE else SyncState.ERROR
+                    val msg = err.localizedMessage ?: err.message ?: "Erro na sincronização"
+                    _syncErrorMessage.value = msg
+                    onComplete?.invoke(false, msg)
+                }
+            }
+        }
+    }
+
+    fun formatLastSyncTime(timestamp: Long?): String {
+        if (timestamp == null || timestamp == 0L) return "Nunca sincronizado"
+        val now = Calendar.getInstance()
+        val syncCal = Calendar.getInstance().apply { timeInMillis = timestamp }
+
+        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+
+        val isToday = now.get(Calendar.YEAR) == syncCal.get(Calendar.YEAR) &&
+                now.get(Calendar.DAY_OF_YEAR) == syncCal.get(Calendar.DAY_OF_YEAR)
+
+        val isYesterday = now.get(Calendar.YEAR) == syncCal.get(Calendar.YEAR) &&
+                now.get(Calendar.DAY_OF_YEAR) - syncCal.get(Calendar.DAY_OF_YEAR) == 1
+
+        return when {
+            isToday -> "Hoje às ${timeFormat.format(Date(timestamp))}"
+            isYesterday -> "Ontem às ${timeFormat.format(Date(timestamp))}"
+            else -> dateFormat.format(Date(timestamp))
         }
     }
 

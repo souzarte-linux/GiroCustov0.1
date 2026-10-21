@@ -2,11 +2,7 @@ package com.example.ui.navigation
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Layers
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.TwoWheeler
-import androidx.compose.material.icons.filled.LocalGasStation
-import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -20,7 +16,8 @@ enum class DrawerDestination {
     PERFIL,
     PLATAFORMAS,
     ABASTECIMENTOS,
-    MANUTENCAO
+    MANUTENCAO,
+    NUVEM
 }
 
 @Composable
@@ -116,6 +113,23 @@ fun AppDrawer(
                     modifier = Modifier
                         .padding(NavigationDrawerItemDefaults.ItemPadding)
                         .testTag("drawer_item_maintenance"),
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline)
+
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Filled.Cloud, contentDescription = "Nuvem & Backup") },
+                    label = { Text("Nuvem & Backup") },
+                    selected = selectedDestination == DrawerDestination.NUVEM,
+                    onClick = { onDestinationSelected(DrawerDestination.NUVEM) },
+                    modifier = Modifier
+                        .padding(NavigationDrawerItemDefaults.ItemPadding)
+                        .testTag("drawer_item_cloud_sync"),
                     colors = NavigationDrawerItemDefaults.colors(
                         selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                         selectedIconColor = MaterialTheme.colorScheme.primary,

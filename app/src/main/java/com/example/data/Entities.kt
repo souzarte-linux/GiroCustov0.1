@@ -3,6 +3,13 @@ package com.example.data
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
+object SyncStatus {
+    const val SYNCED = "SYNCED"
+    const val PENDING_INSERT = "PENDING_INSERT"
+    const val PENDING_UPDATE = "PENDING_UPDATE"
+    const val PENDING_DELETE = "PENDING_DELETE"
+}
+
 @Entity(tableName = "vehicle")
 data class Vehicle(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -12,7 +19,11 @@ data class Vehicle(
     val monthlyFixedCosts: Double = 180.0, // IPVA, Seguro, Celular, MEI
     val plannedWorkDays: Int = 22, // Rateio de custos fixos por dia (ex: 22 dias)
     val currentOdometer: Double = 15350.0, // Último hodômetro conhecido
-    val active: Boolean = true
+    val active: Boolean = true,
+    val remoteId: String = "",
+    val syncStatus: String = SyncStatus.SYNCED,
+    val updatedAt: Long = System.currentTimeMillis(),
+    val isDeleted: Boolean = false
 )
 
 @Entity(tableName = "vehicle_parts")
@@ -21,7 +32,11 @@ data class VehiclePart(
     val name: String,
     val price: Double, // Preço de troca
     val lifespanKm: Double, // Durabilidade em km
-    val runKmSinceChange: Double = 0.0 // Quilômetros rodados desde a última troca
+    val runKmSinceChange: Double = 0.0, // Quilômetros rodados desde a última troca
+    val remoteId: String = "",
+    val syncStatus: String = SyncStatus.SYNCED,
+    val updatedAt: Long = System.currentTimeMillis(),
+    val isDeleted: Boolean = false
 ) {
     val healthPercentage: Double
         get() = ((lifespanKm - runKmSinceChange) / lifespanKm * 100.0).coerceIn(0.0, 100.0)
@@ -51,7 +66,11 @@ data class DailyRecord(
     val netProfit: Double, // grossEarnings - fuelCost - wearCost - proportionalFixedCost - foodExpense
     val startTime: String = "", // formato "HH:mm" (ex: "08:00")
     val endTime: String = "", // formato "HH:mm" (ex: "18:00")
-    val pauseDuration: String = "" // formato "HH:mm" (ex: "01:00")
+    val pauseDuration: String = "", // formato "HH:mm" (ex: "01:00")
+    val remoteId: String = "",
+    val syncStatus: String = SyncStatus.SYNCED,
+    val updatedAt: Long = System.currentTimeMillis(),
+    val isDeleted: Boolean = false
 ) {
     val kmRodados: Double
         get() = (endOdometer - startOdometer).coerceAtLeast(0.0)
@@ -111,13 +130,16 @@ data class DailyRecord(
         }
 }
 
-
 @Entity(tableName = "user_profile")
 data class UserProfile(
     @PrimaryKey val id: Int = 1,
     val name: String = "",
     val phone: String = "",
-    val city: String = ""
+    val city: String = "",
+    val remoteId: String = "",
+    val syncStatus: String = SyncStatus.SYNCED,
+    val updatedAt: Long = System.currentTimeMillis(),
+    val isDeleted: Boolean = false
 )
 
 @Entity(tableName = "platforms")
@@ -135,7 +157,11 @@ data class Platform(
     val bankAccount: String = "",
     val pixKeyType: String = "CPF",
     val pixKey: String = "",
-    val active: Boolean = true
+    val active: Boolean = true,
+    val remoteId: String = "",
+    val syncStatus: String = SyncStatus.SYNCED,
+    val updatedAt: Long = System.currentTimeMillis(),
+    val isDeleted: Boolean = false
 )
 
 @Entity(tableName = "fuel_refills")
@@ -154,7 +180,11 @@ data class FuelRefill(
     val isFullTank: Boolean,
     val paymentMethod: String,
     val isInstallment: Boolean = false,
-    val installmentsCount: Int = 1
+    val installmentsCount: Int = 1,
+    val remoteId: String = "",
+    val syncStatus: String = SyncStatus.SYNCED,
+    val updatedAt: Long = System.currentTimeMillis(),
+    val isDeleted: Boolean = false
 )
 
 @Entity(tableName = "maintenance_records")
@@ -166,7 +196,9 @@ data class MaintenanceRecord(
     val description: String,
     val location: String,
     val value: Double,
-    val odometer: Double
+    val odometer: Double,
+    val remoteId: String = "",
+    val syncStatus: String = SyncStatus.SYNCED,
+    val updatedAt: Long = System.currentTimeMillis(),
+    val isDeleted: Boolean = false
 )
-
-

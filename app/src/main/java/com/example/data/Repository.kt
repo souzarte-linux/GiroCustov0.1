@@ -2,8 +2,11 @@ package com.example.data
 
 import android.util.Log
 import androidx.room.withTransaction
+import com.example.network.supabase.AuthSession
+import com.example.network.supabase.SupabaseClient
+import com.example.network.supabase.SupabaseSyncManager
+import com.example.network.supabase.SyncResult
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import java.text.SimpleDateFormat
@@ -35,21 +38,32 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
     }
 
     suspend fun getVehicle(): Vehicle? = vehicleDao.getActiveVehicle()
+
     suspend fun saveVehicle(vehicle: Vehicle) {
         if (vehicle.id == 0L) {
             addVehicle(vehicle)
         } else {
-            vehicleDao.updateVehicle(vehicle)
+            val status = if (vehicle.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
+            vehicleDao.updateVehicle(
+                vehicle.copy(
+                    remoteId = if (vehicle.remoteId.isNotBlank()) vehicle.remoteId else UUID.randomUUID().toString(),
+                    syncStatus = status,
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
         }
     }
 
     suspend fun addVehicle(vehicle: Vehicle): Long {
         val activeVehicle = vehicleDao.getActiveVehicle()
-        val toInsert = if (activeVehicle == null) {
-            vehicle.copy(active = true)
-        } else {
-            vehicle
-        }
+        val assignedRemoteId = if (vehicle.remoteId.isNotBlank()) vehicle.remoteId else UUID.randomUUID().toString()
+        val toInsert = vehicle.copy(
+            active = activeVehicle == null || vehicle.active,
+            remoteId = assignedRemoteId,
+            syncStatus = SyncStatus.PENDING_INSERT,
+            updatedAt = System.currentTimeMillis(),
+            isDeleted = false
+        )
         return vehicleDao.insertVehicle(toInsert)
     }
 
@@ -58,26 +72,107 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
     }
 
     suspend fun deleteVehicle(vehicle: Vehicle) {
-        vehicleDao.deleteVehicle(vehicle)
+        val toDelete = vehicle.copy(
+            isDeleted = true,
+            syncStatus = SyncStatus.PENDING_DELETE,
+            updatedAt = System.currentTimeMillis()
+        )
+        vehicleDao.updateVehicle(toDelete)
     }
 
     suspend fun getUserProfile(): UserProfile? = userProfileDao.getUserProfile()
-    suspend fun saveUserProfile(userProfile: UserProfile) = userProfileDao.insertOrUpdateUserProfile(userProfile)
+
+    suspend fun saveUserProfile(userProfile: UserProfile) {
+        val status = if (userProfile.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
+        val toSave = userProfile.copy(
+            remoteId = if (userProfile.remoteId.isNotBlank()) userProfile.remoteId else UUID.randomUUID().toString(),
+            syncStatus = status,
+            updatedAt = System.currentTimeMillis(),
+            isDeleted = false
+        )
+        userProfileDao.insertOrUpdateUserProfile(toSave)
+    }
 
     suspend fun getPlatformById(id: Long): Platform? = platformDao.getPlatformById(id)
-    suspend fun savePlatform(platform: Platform): Long = platformDao.insertOrUpdatePlatform(platform)
-    suspend fun deletePlatform(platform: Platform) = platformDao.deletePlatform(platform)
 
-    suspend fun savePart(part: VehiclePart) = partDao.insertPart(part)
-    suspend fun updatePart(part: VehiclePart) = partDao.updatePart(part)
-    suspend fun deletePart(part: VehiclePart) = partDao.deletePart(part)
-    suspend fun resetPartWear(partId: Long) = partDao.resetPartWear(partId)
+    suspend fun savePlatform(platform: Platform): Long {
+        val isNew = platform.id == 0L
+        val status = if (isNew || platform.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
+        val toSave = platform.copy(
+            remoteId = if (platform.remoteId.isNotBlank()) platform.remoteId else UUID.randomUUID().toString(),
+            syncStatus = status,
+            updatedAt = System.currentTimeMillis(),
+            isDeleted = false
+        )
+        return platformDao.insertOrUpdatePlatform(toSave)
+    }
+
+    suspend fun deletePlatform(platform: Platform) {
+        val toDelete = platform.copy(
+            isDeleted = true,
+            syncStatus = SyncStatus.PENDING_DELETE,
+            updatedAt = System.currentTimeMillis()
+        )
+        platformDao.updatePlatform(toDelete)
+    }
+
+    suspend fun savePart(part: VehiclePart) {
+        val isNew = part.id == 0L
+        val status = if (isNew || part.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
+        val toSave = part.copy(
+            remoteId = if (part.remoteId.isNotBlank()) part.remoteId else UUID.randomUUID().toString(),
+            syncStatus = status,
+            updatedAt = System.currentTimeMillis(),
+            isDeleted = false
+        )
+        partDao.insertPart(toSave)
+    }
+
+    suspend fun updatePart(part: VehiclePart) {
+        val status = if (part.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
+        val toSave = part.copy(
+            remoteId = if (part.remoteId.isNotBlank()) part.remoteId else UUID.randomUUID().toString(),
+            syncStatus = status,
+            updatedAt = System.currentTimeMillis()
+        )
+        partDao.updatePart(toSave)
+    }
+
+    suspend fun deletePart(part: VehiclePart) {
+        val toDelete = part.copy(
+            isDeleted = true,
+            syncStatus = SyncStatus.PENDING_DELETE,
+            updatedAt = System.currentTimeMillis()
+        )
+        partDao.updatePart(toDelete)
+    }
+
+    suspend fun resetPartWear(partId: Long) {
+        val part = partDao.getPartById(partId)
+        if (part != null) {
+            val status = if (part.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
+            partDao.updatePart(
+                part.copy(
+                    runKmSinceChange = 0.0,
+                    syncStatus = status,
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
+        } else {
+            partDao.resetPartWear(partId)
+        }
+    }
 
     private suspend fun recalculateVehicleOdometer() {
         val vehicle = vehicleDao.getActiveVehicle() ?: Vehicle()
         val mostRecentRecord = recordDao.getMostRecentRecord()
         if (mostRecentRecord != null) {
-            val updatedVehicle = vehicle.copy(currentOdometer = mostRecentRecord.endOdometer)
+            val vStatus = if (vehicle.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
+            val updatedVehicle = vehicle.copy(
+                currentOdometer = mostRecentRecord.endOdometer,
+                syncStatus = vStatus,
+                updatedAt = System.currentTimeMillis()
+            )
             vehicleDao.updateVehicle(updatedVehicle)
         }
     }
@@ -90,18 +185,29 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
             val parts = partDao.getAllParts()
             for (part in parts) {
                 val newRunKm = (part.runKmSinceChange - oldKmRodados).coerceAtLeast(0.0)
-                partDao.updatePart(part.copy(runKmSinceChange = newRunKm))
+                val pStatus = if (part.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
+                partDao.updatePart(
+                    part.copy(
+                        runKmSinceChange = newRunKm,
+                        syncStatus = pStatus,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                )
             }
 
-            // Exclui o registro
-            recordDao.deleteRecordById(record.id)
+            // Soft-delete do registro com marcação pendente para sincronização
+            val toDelete = record.copy(
+                isDeleted = true,
+                syncStatus = SyncStatus.PENDING_DELETE,
+                updatedAt = System.currentTimeMillis()
+            )
+            recordDao.updateRecord(toDelete)
 
             // Recalcula hodômetro do veículo baseado no mais recente após a exclusão
             recalculateVehicleOdometer()
         }
     }
 
-    // Insere registro diário e atualiza o hodômetro do veículo e o desgaste das peças em uma transação
     suspend fun insertDailyRecord(
         dateString: String,
         dateTimestamp: Long,
@@ -139,6 +245,10 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
             val netProfit = grossEarnings - fuelCost - wearCost - proportionalFixedCost - foodExpense
 
             val record = DailyRecord(
+                remoteId = UUID.randomUUID().toString(),
+                syncStatus = SyncStatus.PENDING_INSERT,
+                updatedAt = System.currentTimeMillis(),
+                isDeleted = false,
                 dateString = dateString,
                 dateTimestamp = dateTimestamp,
                 platform = platform,
@@ -164,11 +274,20 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
             recalculateVehicleOdometer()
 
             // 5. Adicionar quilometragem rodada para todas as peças de desgaste
-            partDao.addKmToAllParts(kmRodados)
+            for (part in parts) {
+                val newRunKm = part.runKmSinceChange + kmRodados
+                val pStatus = if (part.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
+                partDao.updatePart(
+                    part.copy(
+                        runKmSinceChange = newRunKm,
+                        syncStatus = pStatus,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                )
+            }
         }
     }
 
-    // Atualiza um registro diário existente recalculando os custos operacionais e ajustando odômetro e peças de desgaste
     suspend fun updateDailyRecord(
         recordId: Long,
         dateString: String,
@@ -209,8 +328,15 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
             }
             val netProfit = grossEarnings - fuelCost - wearCost - proportionalFixedCost - foodExpense
 
+            val rStatus = if (oldRecord?.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
+            val remId = oldRecord?.remoteId?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString()
+
             val record = DailyRecord(
                 id = recordId,
+                remoteId = remId,
+                syncStatus = rStatus,
+                updatedAt = System.currentTimeMillis(),
+                isDeleted = false,
                 dateString = dateString,
                 dateTimestamp = dateTimestamp,
                 platform = platform,
@@ -238,18 +364,23 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
             // Atualizar quilometragem rodada para todas as peças de desgaste considerando a diferença
             for (part in parts) {
                 val newRunKm = (part.runKmSinceChange + diffKm).coerceAtLeast(0.0)
-                partDao.updatePart(part.copy(runKmSinceChange = newRunKm))
+                val pStatus = if (part.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
+                partDao.updatePart(
+                    part.copy(
+                        runKmSinceChange = newRunKm,
+                        syncStatus = pStatus,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                )
             }
         }
     }
 
-    // Método para sementes de dados ativas (Active Seed Data)
     suspend fun checkAndSeedData() {
         val existingVehicle = vehicleDao.getActiveVehicle()
         if (existingVehicle == null) {
             Log.d("GiroCustoRepository", "Seeding initial data...")
             
-            // 1. Inserir Veículo Padrão (Honda CG 160 Titan)
             val initialVehicle = Vehicle(
                 id = 1L,
                 model = "Honda CG 160 Titan",
@@ -257,49 +388,39 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
                 fuelType = "Gasolina",
                 monthlyFixedCosts = 180.0,
                 plannedWorkDays = 22,
-                currentOdometer = 15350.0, // O odômetro final do último dia de trabalho será 15.350
-                active = true
+                currentOdometer = 15350.0,
+                active = true,
+                remoteId = UUID.randomUUID().toString(),
+                syncStatus = SyncStatus.PENDING_INSERT,
+                updatedAt = System.currentTimeMillis()
             )
             vehicleDao.insertVehicle(initialVehicle)
 
-            // 2. Inserir 6 Peças de Desgaste Monitoradas com uso parcial pré-carregado
             val initialParts = listOf(
-                VehiclePart(name = "Óleo do Motor", price = 45.0, lifespanKm = 1500.0, runKmSinceChange = 1300.0), // 86% de desgaste (Banner de Atenção)
-                VehiclePart(name = "Kit Relação (Coroa/Pinhão/Corrente)", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 4500.0), // 30%
-                VehiclePart(name = "Pneu Traseiro", price = 220.0, lifespanKm = 12000.0, runKmSinceChange = 11000.0), // 91% de desgaste (Banner Crítico)
-                VehiclePart(name = "Pneu Dianteiro", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 3000.0), // 20%
-                VehiclePart(name = "Pastilhas de Freio", price = 40.0, lifespanKm = 6000.0, runKmSinceChange = 1200.0), // 20%
-                VehiclePart(name = "Lona de Freio Traseira", price = 35.0, lifespanKm = 10000.0, runKmSinceChange = 2500.0) // 25%
+                VehiclePart(name = "Óleo do Motor", price = 45.0, lifespanKm = 1500.0, runKmSinceChange = 1300.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                VehiclePart(name = "Kit Relação (Coroa/Pinhão/Corrente)", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 4500.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                VehiclePart(name = "Pneu Traseiro", price = 220.0, lifespanKm = 12000.0, runKmSinceChange = 11000.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                VehiclePart(name = "Pneu Dianteiro", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 3000.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                VehiclePart(name = "Pastilhas de Freio", price = 40.0, lifespanKm = 6000.0, runKmSinceChange = 1200.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                VehiclePart(name = "Lona de Freio Traseira", price = 35.0, lifespanKm = 10000.0, runKmSinceChange = 2500.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT)
             )
             for (part in initialParts) {
                 partDao.insertPart(part)
             }
 
-            // 3. Inserir Histórico de Entregas dos Últimos 7 Dias (Retroativo)
-            val calendar = Calendar.getInstance()
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            
-            // Vamos inserir registros diários realistas do dia 6 para trás (July 5th, 2026 backwards)
-            // Dados calculados para que o hodômetro termine em 15.350 km.
             val history = listOf(
-                // Dia 7 (Hoje): julho 5
                 SeededDay(offset = 0, gross = 220.0, deliveries = 18, startOdo = 15240.0, endOdo = 15350.0, food = 25.0, fuelPrice = 5.80),
-                // Dia 6 (Ontem): julho 4
                 SeededDay(offset = -1, gross = 240.0, deliveries = 20, startOdo = 15110.0, endOdo = 15240.0, food = 20.0, fuelPrice = 5.80),
-                // Dia 5: julho 3
                 SeededDay(offset = -2, gross = 190.0, deliveries = 15, startOdo = 15015.0, endOdo = 15110.0, food = 22.0, fuelPrice = 5.80),
-                // Dia 4: julho 2
                 SeededDay(offset = -3, gross = 260.0, deliveries = 22, startOdo = 14880.0, endOdo = 15015.0, food = 28.0, fuelPrice = 5.85),
-                // Dia 3: julho 1
                 SeededDay(offset = -4, gross = 180.0, deliveries = 14, startOdo = 14795.0, endOdo = 14880.0, food = 15.0, fuelPrice = 5.85),
-                // Dia 2: junho 30
                 SeededDay(offset = -5, gross = 210.0, deliveries = 17, startOdo = 14685.0, endOdo = 14795.0, food = 20.0, fuelPrice = 5.80),
-                // Dia 1: junho 29
                 SeededDay(offset = -6, gross = 205.0, deliveries = 16, startOdo = 14580.0, endOdo = 14685.0, food = 18.0, fuelPrice = 5.80)
             )
 
-            val totalWearCostPerKm = initialParts.sumOf { it.price / it.lifespanKm } // Custo fixado para os históricos
+            val totalWearCostPerKm = initialParts.sumOf { it.price / it.lifespanKm }
             val fixedCostPerDay = 180.0 / 22.0
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
             val platforms = listOf("iFood", "Uber Flash", "Rappi", "iFood", "Uber Flash", "Loggi", "iFood")
             var idx = 0
@@ -317,6 +438,10 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
                 idx++
 
                 val record = DailyRecord(
+                    remoteId = UUID.randomUUID().toString(),
+                    syncStatus = SyncStatus.PENDING_INSERT,
+                    updatedAt = System.currentTimeMillis(),
+                    isDeleted = false,
                     dateString = dateStr,
                     dateTimestamp = timestamp,
                     platform = selectedPlatform,
@@ -338,7 +463,6 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
             }
         }
 
-        // Programmatically seed June 2026 data if not already present
         val allRecords = recordDao.getAllRecords()
         val hasJune2026 = allRecords.any { it.dateString.startsWith("2026-06") }
         if (!hasJune2026) {
@@ -363,7 +487,6 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
             val distance = currFullRefill.odometer - prevFullRefill.odometer
             if (distance <= 0) continue
 
-            // Soma de litros de todos os abastecimentos (parciais inclusive) ocorridos após o prevFullRefill até o currFullRefill
             var litersSum = 0.0
             for (j in (prevFullIdx + 1)..currFullIdx) {
                 litersSum += allRefills[j].liters
@@ -380,16 +503,32 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
 
     suspend fun saveFuelRefill(refill: FuelRefill) {
         db.withTransaction {
-            if (refill.id == 0L) {
-                fuelRefillDao.insertRefill(refill)
+            val isNew = refill.id == 0L
+            val remId = if (refill.remoteId.isNotBlank()) refill.remoteId else UUID.randomUUID().toString()
+            val status = if (isNew || refill.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
+            val toSave = refill.copy(
+                remoteId = remId,
+                syncStatus = status,
+                updatedAt = System.currentTimeMillis(),
+                isDeleted = false
+            )
+            if (isNew) {
+                fuelRefillDao.insertRefill(toSave)
             } else {
-                fuelRefillDao.updateRefill(refill)
+                fuelRefillDao.updateRefill(toSave)
             }
             val realConsumption = calculateRealAverageConsumption(refill.vehicleId)
             if (realConsumption != null) {
                 val vehicle = vehicleDao.getVehicleById(refill.vehicleId)
                 if (vehicle != null) {
-                    vehicleDao.updateVehicle(vehicle.copy(averageConsumption = realConsumption))
+                    val vStatus = if (vehicle.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
+                    vehicleDao.updateVehicle(
+                        vehicle.copy(
+                            averageConsumption = realConsumption,
+                            syncStatus = vStatus,
+                            updatedAt = System.currentTimeMillis()
+                        )
+                    )
                 }
             }
         }
@@ -397,12 +536,24 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
 
     suspend fun deleteFuelRefill(refill: FuelRefill) {
         db.withTransaction {
-            fuelRefillDao.deleteRefill(refill)
+            val toDelete = refill.copy(
+                isDeleted = true,
+                syncStatus = SyncStatus.PENDING_DELETE,
+                updatedAt = System.currentTimeMillis()
+            )
+            fuelRefillDao.updateRefill(toDelete)
             val realConsumption = calculateRealAverageConsumption(refill.vehicleId)
             if (realConsumption != null) {
                 val vehicle = vehicleDao.getVehicleById(refill.vehicleId)
                 if (vehicle != null) {
-                    vehicleDao.updateVehicle(vehicle.copy(averageConsumption = realConsumption))
+                    val vStatus = if (vehicle.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
+                    vehicleDao.updateVehicle(
+                        vehicle.copy(
+                            averageConsumption = realConsumption,
+                            syncStatus = vStatus,
+                            updatedAt = System.currentTimeMillis()
+                        )
+                    )
                 }
             }
         }
@@ -424,15 +575,29 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
         maintenanceRecordDao.getRecordsForVehicleFlow(vehicleId)
 
     suspend fun saveMaintenanceRecord(record: MaintenanceRecord) {
-        if (record.id == 0L) {
-            maintenanceRecordDao.insertRecord(record)
+        val isNew = record.id == 0L
+        val remId = if (record.remoteId.isNotBlank()) record.remoteId else UUID.randomUUID().toString()
+        val status = if (isNew || record.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
+        val toSave = record.copy(
+            remoteId = remId,
+            syncStatus = status,
+            updatedAt = System.currentTimeMillis(),
+            isDeleted = false
+        )
+        if (isNew) {
+            maintenanceRecordDao.insertRecord(toSave)
         } else {
-            maintenanceRecordDao.updateRecord(record)
+            maintenanceRecordDao.updateRecord(toSave)
         }
     }
 
     suspend fun deleteMaintenanceRecord(record: MaintenanceRecord) {
-        maintenanceRecordDao.deleteRecord(record)
+        val toDelete = record.copy(
+            isDeleted = true,
+            syncStatus = SyncStatus.PENDING_DELETE,
+            updatedAt = System.currentTimeMillis()
+        )
+        maintenanceRecordDao.updateRecord(toDelete)
     }
 
     suspend fun renameGasStation(oldName: String, newName: String) {
@@ -441,10 +606,8 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
 
     suspend fun seedJune2026Data() {
         db.withTransaction {
-            // 1. Delete existing June 2026 records to prevent duplication
             recordDao.deleteJune2026Records()
 
-            // 2. Ensure an active vehicle exists
             var vehicle = vehicleDao.getActiveVehicle()
             if (vehicle == null) {
                 vehicle = Vehicle(
@@ -455,21 +618,23 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
                     monthlyFixedCosts = 180.0,
                     plannedWorkDays = 22,
                     currentOdometer = 15350.0,
-                    active = true
+                    active = true,
+                    remoteId = UUID.randomUUID().toString(),
+                    syncStatus = SyncStatus.PENDING_INSERT,
+                    updatedAt = System.currentTimeMillis()
                 )
                 vehicleDao.insertVehicle(vehicle)
             }
 
-            // 3. Ensure parts exist to compute wear costs
             var parts = partDao.getAllParts()
             if (parts.isEmpty()) {
                 val initialParts = listOf(
-                    VehiclePart(name = "Óleo do Motor", price = 45.0, lifespanKm = 1500.0, runKmSinceChange = 1300.0),
-                    VehiclePart(name = "Kit Relação (Coroa/Pinhão/Corrente)", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 4500.0),
-                    VehiclePart(name = "Pneu Traseiro", price = 220.0, lifespanKm = 12000.0, runKmSinceChange = 11000.0),
-                    VehiclePart(name = "Pneu Dianteiro", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 3000.0),
-                    VehiclePart(name = "Pastilhas de Freio", price = 40.0, lifespanKm = 6000.0, runKmSinceChange = 1200.0),
-                    VehiclePart(name = "Lona de Freio Traseira", price = 35.0, lifespanKm = 10000.0, runKmSinceChange = 2500.0)
+                    VehiclePart(name = "Óleo do Motor", price = 45.0, lifespanKm = 1500.0, runKmSinceChange = 1300.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                    VehiclePart(name = "Kit Relação (Coroa/Pinhão/Corrente)", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 4500.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                    VehiclePart(name = "Pneu Traseiro", price = 220.0, lifespanKm = 12000.0, runKmSinceChange = 11000.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                    VehiclePart(name = "Pneu Dianteiro", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 3000.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                    VehiclePart(name = "Pastilhas de Freio", price = 40.0, lifespanKm = 6000.0, runKmSinceChange = 1200.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                    VehiclePart(name = "Lona de Freio Traseira", price = 35.0, lifespanKm = 10000.0, runKmSinceChange = 2500.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT)
                 )
                 for (part in initialParts) {
                     partDao.insertPart(part)
@@ -481,8 +646,6 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
             val fixedCostPerDay = if (vehicle.plannedWorkDays > 0) vehicle.monthlyFixedCosts / vehicle.plannedWorkDays else (180.0 / 22.0)
             val consumption = if (vehicle.averageConsumption > 0) vehicle.averageConsumption else 40.0
 
-            // 4. Generate the 25 working days list
-            val calendar = Calendar.getInstance()
             val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
             val platforms = listOf("iFood", "Uber Flash", "Rappi", "Loggi")
 
@@ -505,10 +668,8 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
                 }
             }
 
-            // Let's pre-calculate total km so we end exactly at 14580.0 (the base end/start odometer for June 29)
-            // or close to it.
             val kmPerDay = List(workDaysList.size) { index ->
-                70.0 + ((index + 1) * 7) % 45 // 70 to 110 km
+                70.0 + ((index + 1) * 7) % 45
             }
             val totalKm = kmPerDay.sum()
             var startOdo = 14580.0 - totalKm
@@ -519,10 +680,10 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
                 val dateStr = dateFormat.format(cal.time)
                 val timestamp = cal.timeInMillis
 
-                val gross = 160.0 + ((index + 1) * 13) % 110 // R$ 160.0 to R$ 270.0
-                val deliveries = 10 + ((index + 1) * 3) % 12 // 10 to 22 deliveries
-                val food = 15.0 + ((index + 1) * 4) % 16 // R$ 15.0 to R$ 31.0
-                val fuelPriceVal = 5.75 + ((index + 1) * 2) % 5 * 0.05 // 5.75 to 5.95
+                val gross = 160.0 + ((index + 1) * 13) % 110
+                val deliveries = 10 + ((index + 1) * 3) % 12
+                val food = 15.0 + ((index + 1) * 4) % 16
+                val fuelPriceVal = 5.75 + ((index + 1) * 2) % 5 * 0.05
 
                 val fuelCost = (km / consumption) * fuelPriceVal
                 val wearCost = km * totalWearCostPerKm
@@ -530,6 +691,10 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
                 val selectedPlatform = platforms[index % platforms.size]
 
                 val record = DailyRecord(
+                    remoteId = UUID.randomUUID().toString(),
+                    syncStatus = SyncStatus.PENDING_INSERT,
+                    updatedAt = System.currentTimeMillis(),
+                    isDeleted = false,
                     dateString = dateStr,
                     dateTimestamp = timestamp,
                     platform = selectedPlatform,
@@ -549,18 +714,52 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
                 )
                 recordDao.insertRecord(record)
 
-                // Accumulate km on parts
                 for (part in parts) {
-                    val updatedPart = part.copy(runKmSinceChange = (part.runKmSinceChange + km).coerceAtMost(part.lifespanKm))
+                    val updatedPart = part.copy(
+                        runKmSinceChange = (part.runKmSinceChange + km).coerceAtMost(part.lifespanKm),
+                        syncStatus = if (part.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE,
+                        updatedAt = System.currentTimeMillis()
+                    )
                     partDao.updatePart(updatedPart)
                 }
 
-                // Setup next day's start odo
                 startOdo = endOdo
             }
 
             recalculateVehicleOdometer()
         }
+    }
+
+    // =========================================================================
+    // MÉTODOS DE SINCRONIZAÇÃO COM SUPABASE
+    // =========================================================================
+
+    suspend fun syncWithSupabase(userId: String, authToken: String): SyncResult {
+        val client = SupabaseClient.getInstance()
+        if (authToken.isNotBlank()) {
+            client.setAuthSession(
+                AuthSession(
+                    accessToken = authToken,
+                    refreshToken = "",
+                    userId = userId,
+                    userEmail = null
+                )
+            )
+        }
+        val syncManager = SupabaseSyncManager(db, client)
+        return syncManager.sync(userId)
+    }
+
+    suspend fun syncWithSupabase(userId: String): SyncResult {
+        val client = SupabaseClient.getInstance()
+        val syncManager = SupabaseSyncManager(db, client)
+        return syncManager.sync(userId)
+    }
+
+    suspend fun syncCurrentSession(): SyncResult {
+        val client = SupabaseClient.getInstance()
+        val userId = client.currentUserId ?: return SyncResult.Error(IllegalStateException("Usuário não autenticado no Supabase"))
+        return syncWithSupabase(userId)
     }
 
     private data class SeededDay(
