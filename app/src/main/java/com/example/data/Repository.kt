@@ -6,9 +6,11 @@ import com.example.network.supabase.AuthSession
 import com.example.network.supabase.SupabaseClient
 import com.example.network.supabase.SupabaseSyncManager
 import com.example.network.supabase.SyncResult
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -377,97 +379,13 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
     }
 
     suspend fun checkAndSeedData() {
-        val existingVehicle = vehicleDao.getActiveVehicle()
-        if (existingVehicle == null) {
-            Log.d("GiroCustoRepository", "Seeding initial data...")
-            
-            val initialVehicle = Vehicle(
-                id = 1L,
-                model = "Honda CG 160 Titan",
-                averageConsumption = 40.0,
-                fuelType = "Gasolina",
-                monthlyFixedCosts = 180.0,
-                plannedWorkDays = 22,
-                currentOdometer = 15350.0,
-                active = true,
-                remoteId = UUID.randomUUID().toString(),
-                syncStatus = SyncStatus.PENDING_INSERT,
-                updatedAt = System.currentTimeMillis()
-            )
-            vehicleDao.insertVehicle(initialVehicle)
+        // Banco de dados deve permanecer limpo quando vazio.
+        // Nenhuma semeadura automática de dados fictícios ou registros diários.
+    }
 
-            val initialParts = listOf(
-                VehiclePart(name = "Óleo do Motor", price = 45.0, lifespanKm = 1500.0, runKmSinceChange = 1300.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                VehiclePart(name = "Kit Relação (Coroa/Pinhão/Corrente)", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 4500.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                VehiclePart(name = "Pneu Traseiro", price = 220.0, lifespanKm = 12000.0, runKmSinceChange = 11000.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                VehiclePart(name = "Pneu Dianteiro", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 3000.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                VehiclePart(name = "Pastilhas de Freio", price = 40.0, lifespanKm = 6000.0, runKmSinceChange = 1200.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                VehiclePart(name = "Lona de Freio Traseira", price = 35.0, lifespanKm = 10000.0, runKmSinceChange = 2500.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT)
-            )
-            for (part in initialParts) {
-                partDao.insertPart(part)
-            }
-
-            val history = listOf(
-                SeededDay(offset = 0, gross = 220.0, deliveries = 18, startOdo = 15240.0, endOdo = 15350.0, food = 25.0, fuelPrice = 5.80),
-                SeededDay(offset = -1, gross = 240.0, deliveries = 20, startOdo = 15110.0, endOdo = 15240.0, food = 20.0, fuelPrice = 5.80),
-                SeededDay(offset = -2, gross = 190.0, deliveries = 15, startOdo = 15015.0, endOdo = 15110.0, food = 22.0, fuelPrice = 5.80),
-                SeededDay(offset = -3, gross = 260.0, deliveries = 22, startOdo = 14880.0, endOdo = 15015.0, food = 28.0, fuelPrice = 5.85),
-                SeededDay(offset = -4, gross = 180.0, deliveries = 14, startOdo = 14795.0, endOdo = 14880.0, food = 15.0, fuelPrice = 5.85),
-                SeededDay(offset = -5, gross = 210.0, deliveries = 17, startOdo = 14685.0, endOdo = 14795.0, food = 20.0, fuelPrice = 5.80),
-                SeededDay(offset = -6, gross = 205.0, deliveries = 16, startOdo = 14580.0, endOdo = 14685.0, food = 18.0, fuelPrice = 5.80)
-            )
-
-            val totalWearCostPerKm = initialParts.sumOf { it.price / it.lifespanKm }
-            val fixedCostPerDay = 180.0 / 22.0
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-
-            val platforms = listOf("iFood", "Uber Flash", "Rappi", "iFood", "Uber Flash", "Loggi", "iFood")
-            var idx = 0
-            for (day in history) {
-                val cal = Calendar.getInstance()
-                cal.add(Calendar.DAY_OF_YEAR, day.offset)
-                val dateStr = dateFormat.format(cal.time)
-                val timestamp = cal.timeInMillis
-
-                val km = day.endOdo - day.startOdo
-                val fuelCost = (km / 40.0) * day.fuelPrice
-                val wearCost = km * totalWearCostPerKm
-                val net = day.gross - fuelCost - wearCost - fixedCostPerDay - day.food
-                val selectedPlatform = platforms.getOrElse(idx % platforms.size) { "iFood" }
-                idx++
-
-                val record = DailyRecord(
-                    remoteId = UUID.randomUUID().toString(),
-                    syncStatus = SyncStatus.PENDING_INSERT,
-                    updatedAt = System.currentTimeMillis(),
-                    isDeleted = false,
-                    dateString = dateStr,
-                    dateTimestamp = timestamp,
-                    platform = selectedPlatform,
-                    grossEarnings = day.gross,
-                    deliveriesCount = day.deliveries,
-                    startOdometer = day.startOdo,
-                    endOdometer = day.endOdo,
-                    fuelPrice = day.fuelPrice,
-                    foodExpense = day.food,
-                    fuelCost = fuelCost,
-                    wearCost = wearCost,
-                    proportionalFixedCost = fixedCostPerDay,
-                    netProfit = net,
-                    startTime = "08:00",
-                    endTime = "17:30",
-                    pauseDuration = "01:00"
-                )
-                recordDao.insertRecord(record)
-            }
-        }
-
-        val allRecords = recordDao.getAllRecords()
-        val hasJune2026 = allRecords.any { it.dateString.startsWith("2026-06") }
-        if (!hasJune2026) {
-            Log.d("GiroCustoRepository", "Seeding June 2026 data programmatically...")
-            seedJune2026Data()
+    suspend fun clearAllData() {
+        withContext(Dispatchers.IO) {
+            db.clearAllTables()
         }
     }
 
@@ -761,14 +679,4 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
         val userId = client.currentUserId ?: return SyncResult.Error(IllegalStateException("Usuário não autenticado no Supabase"))
         return syncWithSupabase(userId)
     }
-
-    private data class SeededDay(
-        val offset: Int,
-        val gross: Double,
-        val deliveries: Int,
-        val startOdo: Double,
-        val endOdo: Double,
-        val food: Double,
-        val fuelPrice: Double
-    )
 }

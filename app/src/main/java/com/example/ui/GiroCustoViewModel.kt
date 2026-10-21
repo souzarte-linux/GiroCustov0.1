@@ -397,13 +397,16 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
         val lastRecord = repository.allRecordsFlow.first().firstOrNull()
         val currentVehicle = repository.getVehicle()
         
-        // Odômetro inicial = último odômetro final ou hodômetro do veículo
-        val defaultStartOdo = lastRecord?.endOdometer ?: currentVehicle?.currentOdometer ?: 15350.0
-        startOdometer.value = String.format(Locale.US, "%.1f", defaultStartOdo)
-        
-        // Último preço de combustível
-        val defaultFuelPrice = lastRecord?.fuelPrice ?: 5.80
-        fuelPrice.value = String.format(Locale.US, "%.2f", defaultFuelPrice)
+        // Odômetro inicial e combustível: preenche se houver histórico ou veículo cadastrado
+        if (lastRecord != null || currentVehicle != null) {
+            val defaultStartOdo = lastRecord?.endOdometer ?: currentVehicle?.currentOdometer ?: 0.0
+            startOdometer.value = String.format(Locale.US, "%.1f", defaultStartOdo)
+            val defaultFuelPrice = lastRecord?.fuelPrice ?: 5.80
+            fuelPrice.value = String.format(Locale.US, "%.2f", defaultFuelPrice)
+        } else {
+            startOdometer.value = ""
+            fuelPrice.value = ""
+        }
         
         // Zerar outros
         endOdometer.value = ""
@@ -730,6 +733,14 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
             } catch (e: Exception) {
                 onError(e.localizedMessage ?: "Erro desconhecido")
             }
+        }
+    }
+
+    fun clearAllData(onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            repository.clearAllData()
+            prefillLaunchFields()
+            onComplete()
         }
     }
 }
