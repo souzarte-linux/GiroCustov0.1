@@ -8,6 +8,7 @@ import com.example.data.*
 import com.example.network.*
 import com.example.network.supabase.*
 import com.example.network.viacep.*
+import com.example.network.fipe.*
 import com.example.ui.navigation.RootNavState
 import com.example.util.BiometricHelper
 import kotlinx.coroutines.flow.*
@@ -143,6 +144,22 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _viaCepState = MutableStateFlow<ViaCepUiState>(ViaCepUiState.Idle)
     val viaCepState: StateFlow<ViaCepUiState> = _viaCepState.asStateFlow()
+
+    // Estados de UI e Seletores para Tabela FIPE (Parallelum)
+    private val _fipeUiState = MutableStateFlow<FipeUiState>(FipeUiState.Idle)
+    val fipeUiState: StateFlow<FipeUiState> = _fipeUiState.asStateFlow()
+
+    private val _fipeMarcas = MutableStateFlow<List<FipeItemDto>>(emptyList())
+    val fipeMarcas: StateFlow<List<FipeItemDto>> = _fipeMarcas.asStateFlow()
+
+    private val _fipeModelos = MutableStateFlow<List<FipeItemDto>>(emptyList())
+    val fipeModelos: StateFlow<List<FipeItemDto>> = _fipeModelos.asStateFlow()
+
+    private val _fipeAnos = MutableStateFlow<List<FipeItemDto>>(emptyList())
+    val fipeAnos: StateFlow<List<FipeItemDto>> = _fipeAnos.asStateFlow()
+
+    private val _fipeDetail = MutableStateFlow<FipeDetailDto?>(null)
+    val fipeDetail: StateFlow<FipeDetailDto?> = _fipeDetail.asStateFlow()
 
     private val _isBiometricAvailable = MutableStateFlow(BiometricHelper.isBiometricHardwareAvailable(application))
     val isBiometricAvailable: StateFlow<Boolean> = _isBiometricAvailable.asStateFlow()
@@ -453,6 +470,7 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
             _syncState.value = SyncState.IDLE
             _syncErrorMessage.value = null
             clearViaCepState()
+            clearFipe()
         }
     }
 
@@ -506,6 +524,131 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun clearViaCepState() {
         _viaCepState.value = ViaCepUiState.Idle
+    }
+
+    // =========================================================================
+    // MÉTODOS TABELA FIPE (Parallelum API)
+    // =========================================================================
+
+    fun loadFipeMarcas(vehicleType: String) {
+        val fipeType = FipeVehicleType.fromString(vehicleType).apiPath
+        viewModelScope.launch {
+            _fipeUiState.value = FipeUiState.Loading
+            _fipeMarcas.value = emptyList()
+            _fipeModelos.value = emptyList()
+            _fipeAnos.value = emptyList()
+            _fipeDetail.value = null
+            try {
+                val response = FipeNetworkClient.api.getMarcas(fipeType)
+                if (response.isSuccessful && response.body() != null) {
+                    _fipeMarcas.value = response.body()!!
+                    _fipeUiState.value = FipeUiState.Success
+                } else {
+                    _fipeUiState.value = FipeUiState.Error("Não foi possível carregar as marcas da Tabela FIPE (${response.code()}).")
+                }
+            } catch (e: java.net.SocketTimeoutException) {
+                _fipeUiState.value = FipeUiState.Error("Tempo limite excedido ao consultar a Tabela FIPE. Verifique sua conexão.")
+            } catch (e: java.io.IOException) {
+                _fipeUiState.value = FipeUiState.Error("Sem conexão com a internet para consultar a Tabela FIPE.")
+            } catch (e: Exception) {
+                _fipeUiState.value = FipeUiState.Error("Erro inesperado ao consultar a Tabela FIPE: ${e.localizedMessage ?: "Falha na comunicação."}")
+            }
+        }
+    }
+
+    fun loadFipeModelos(vehicleType: String, brandCode: String) {
+        if (brandCode.isBlank()) {
+            _fipeModelos.value = emptyList()
+            _fipeAnos.value = emptyList()
+            _fipeDetail.value = null
+            return
+        }
+        val fipeType = FipeVehicleType.fromString(vehicleType).apiPath
+        viewModelScope.launch {
+            _fipeUiState.value = FipeUiState.Loading
+            _fipeModelos.value = emptyList()
+            _fipeAnos.value = emptyList()
+            _fipeDetail.value = null
+            try {
+                val response = FipeNetworkClient.api.getModelos(fipeType, brandCode)
+                if (response.isSuccessful && response.body() != null) {
+                    _fipeModelos.value = response.body()!!.modelos
+                    _fipeUiState.value = FipeUiState.Success
+                } else {
+                    _fipeUiState.value = FipeUiState.Error("Não foi possível carregar os modelos da Tabela FIPE (${response.code()}).")
+                }
+            } catch (e: java.net.SocketTimeoutException) {
+                _fipeUiState.value = FipeUiState.Error("Tempo limite excedido ao consultar os modelos. Tente novamente.")
+            } catch (e: java.io.IOException) {
+                _fipeUiState.value = FipeUiState.Error("Sem conexão com a internet para consultar os modelos.")
+            } catch (e: Exception) {
+                _fipeUiState.value = FipeUiState.Error("Erro inesperado ao consultar modelos: ${e.localizedMessage ?: "Falha na comunicação."}")
+            }
+        }
+    }
+
+    fun loadFipeAnos(vehicleType: String, brandCode: String, modelCode: String) {
+        if (brandCode.isBlank() || modelCode.isBlank()) {
+            _fipeAnos.value = emptyList()
+            _fipeDetail.value = null
+            return
+        }
+        val fipeType = FipeVehicleType.fromString(vehicleType).apiPath
+        viewModelScope.launch {
+            _fipeUiState.value = FipeUiState.Loading
+            _fipeAnos.value = emptyList()
+            _fipeDetail.value = null
+            try {
+                val response = FipeNetworkClient.api.getAnos(fipeType, brandCode, modelCode)
+                if (response.isSuccessful && response.body() != null) {
+                    _fipeAnos.value = response.body()!!
+                    _fipeUiState.value = FipeUiState.Success
+                } else {
+                    _fipeUiState.value = FipeUiState.Error("Não foi possível carregar os anos do veículo (${response.code()}).")
+                }
+            } catch (e: java.net.SocketTimeoutException) {
+                _fipeUiState.value = FipeUiState.Error("Tempo limite excedido ao consultar anos do veículo.")
+            } catch (e: java.io.IOException) {
+                _fipeUiState.value = FipeUiState.Error("Sem conexão com a internet para consultar anos do veículo.")
+            } catch (e: Exception) {
+                _fipeUiState.value = FipeUiState.Error("Erro inesperado ao consultar anos: ${e.localizedMessage ?: "Falha na comunicação."}")
+            }
+        }
+    }
+
+    fun loadFipeDetail(vehicleType: String, brandCode: String, modelCode: String, yearCode: String) {
+        if (brandCode.isBlank() || modelCode.isBlank() || yearCode.isBlank()) {
+            _fipeDetail.value = null
+            return
+        }
+        val fipeType = FipeVehicleType.fromString(vehicleType).apiPath
+        viewModelScope.launch {
+            _fipeUiState.value = FipeUiState.Loading
+            _fipeDetail.value = null
+            try {
+                val response = FipeNetworkClient.api.getDetail(fipeType, brandCode, modelCode, yearCode)
+                if (response.isSuccessful && response.body() != null) {
+                    _fipeDetail.value = response.body()
+                    _fipeUiState.value = FipeUiState.Success
+                } else {
+                    _fipeUiState.value = FipeUiState.Error("Não foi possível carregar a avaliação da Tabela FIPE (${response.code()}).")
+                }
+            } catch (e: java.net.SocketTimeoutException) {
+                _fipeUiState.value = FipeUiState.Error("Tempo limite excedido ao consultar detalhes da Tabela FIPE.")
+            } catch (e: java.io.IOException) {
+                _fipeUiState.value = FipeUiState.Error("Sem conexão com a internet para consultar detalhes da Tabela FIPE.")
+            } catch (e: Exception) {
+                _fipeUiState.value = FipeUiState.Error("Erro inesperado ao consultar detalhes: ${e.localizedMessage ?: "Falha na comunicação."}")
+            }
+        }
+    }
+
+    fun clearFipe() {
+        _fipeUiState.value = FipeUiState.Idle
+        _fipeMarcas.value = emptyList()
+        _fipeModelos.value = emptyList()
+        _fipeAnos.value = emptyList()
+        _fipeDetail.value = null
     }
 
     fun completeOnboarding(
@@ -771,15 +914,23 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
                 addressNumber = addressNumber ?: current.addressNumber,
                 neighborhood = neighborhood ?: current.neighborhood,
                 stateUf = stateUf ?: current.stateUf,
-                onboardingCompleted = onboardingCompleted ?: current.onboardingCompleted
+                onboardingCompleted = onboardingCompleted ?: current.onboardingCompleted,
+                updatedAt = System.currentTimeMillis(),
+                syncStatus = SyncStatus.PENDING_UPDATE
             )
             repository.saveUserProfile(updated)
+            triggerSync()
         }
     }
 
     fun saveUserProfile(userProfile: UserProfile) {
         viewModelScope.launch {
-            repository.saveUserProfile(userProfile)
+            val toSave = userProfile.copy(
+                updatedAt = System.currentTimeMillis(),
+                syncStatus = SyncStatus.PENDING_UPDATE
+            )
+            repository.saveUserProfile(toSave)
+            triggerSync()
         }
     }
 

@@ -35,7 +35,6 @@ import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.HistoryScreen
 import com.example.ui.screens.LaunchScreen
 import com.example.ui.screens.ReportsScreen
-import com.example.ui.screens.VehicleScreen
 import com.example.ui.screens.ProfileScreen
 import com.example.ui.screens.PlatformsScreen
 import com.example.ui.screens.FuelRefillsScreen
@@ -134,8 +133,7 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
                             title = {
                                 Text(
                                     text = when (currentScreen) {
-                                        DrawerDestination.VEICULO -> "Veículo"
-                                        DrawerDestination.PERFIL -> "Perfil"
+                                        DrawerDestination.PERFIL -> "Meu Perfil & Veículos"
                                         DrawerDestination.PLATAFORMAS -> "Plataformas"
                                         DrawerDestination.ABASTECIMENTOS -> "Abastecimentos"
                                         DrawerDestination.MANUTENCAO -> "Manutenção"
@@ -251,7 +249,6 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
                             label = "screen_animation"
                         ) { screen ->
                             when (screen) {
-                                DrawerDestination.VEICULO -> VehicleScreen(viewModel, vehicle, parts)
                                 DrawerDestination.PERFIL -> ProfileScreen(viewModel, onNavigateToPlatforms = { drawerDestination = DrawerDestination.PLATAFORMAS })
                                 DrawerDestination.PLATAFORMAS -> PlatformsScreen(viewModel)
                                 DrawerDestination.ABASTECIMENTOS -> FuelRefillsScreen(viewModel)

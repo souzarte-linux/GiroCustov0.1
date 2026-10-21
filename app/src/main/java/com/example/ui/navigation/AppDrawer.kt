@@ -12,7 +12,6 @@ import androidx.compose.ui.unit.sp
 
 enum class DrawerDestination {
     NONE,
-    VEICULO,
     PERFIL,
     PLATAFORMAS,
     ABASTECIMENTOS,
@@ -46,23 +45,8 @@ fun AppDrawer(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline)
 
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Filled.TwoWheeler, contentDescription = "Veículo") },
-                    label = { Text("Veículo") },
-                    selected = selectedDestination == DrawerDestination.VEICULO,
-                    onClick = { onDestinationSelected(DrawerDestination.VEICULO) },
-                    modifier = Modifier
-                        .padding(NavigationDrawerItemDefaults.ItemPadding)
-                        .testTag("drawer_item_vehicle"),
-                    colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                        selectedTextColor = MaterialTheme.colorScheme.primary
-                    )
-                )
-
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Filled.Person, contentDescription = "Perfil") },
-                    label = { Text("Perfil") },
+                    icon = { Icon(Icons.Filled.Person, contentDescription = "Perfil & Veículos") },
+                    label = { Text("Perfil & Veículos") },
                     selected = selectedDestination == DrawerDestination.PERFIL,
                     onClick = { onDestinationSelected(DrawerDestination.PERFIL) },
                     modifier = Modifier
