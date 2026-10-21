@@ -473,7 +473,14 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
         consumption: Double,
         fuelType: String,
         fixedCosts: Double,
-        workDays: Int
+        workDays: Int,
+        vehicleType: String = "MOTO",
+        brand: String = "",
+        manufacturingYear: String = "",
+        tankCapacity: Double = 16.0,
+        hasTopBox: Boolean = false,
+        hasDeliveryBag: Boolean = false,
+        carBodyType: String = ""
     ) {
         viewModelScope.launch {
             val newVehicle = Vehicle(
@@ -482,6 +489,13 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
                 fuelType = fuelType,
                 monthlyFixedCosts = fixedCosts,
                 plannedWorkDays = workDays,
+                vehicleType = vehicleType,
+                brand = brand,
+                manufacturingYear = manufacturingYear,
+                tankCapacity = tankCapacity,
+                hasTopBox = hasTopBox,
+                hasDeliveryBag = hasDeliveryBag,
+                carBodyType = carBodyType,
                 active = false
             )
             repository.saveVehicle(newVehicle)
@@ -504,16 +518,38 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     fun updateUserProfile(
         name: String,
         phone: String,
-        city: String
+        city: String,
+        email: String? = null,
+        isWhatsapp: Boolean? = null,
+        cep: String? = null,
+        street: String? = null,
+        addressNumber: String? = null,
+        neighborhood: String? = null,
+        stateUf: String? = null,
+        onboardingCompleted: Boolean? = null
     ) {
         viewModelScope.launch {
             val current = repository.getUserProfile() ?: UserProfile()
             val updated = current.copy(
                 name = name,
                 phone = phone,
-                city = city
+                city = city,
+                email = email ?: current.email,
+                isWhatsapp = isWhatsapp ?: current.isWhatsapp,
+                cep = cep ?: current.cep,
+                street = street ?: current.street,
+                addressNumber = addressNumber ?: current.addressNumber,
+                neighborhood = neighborhood ?: current.neighborhood,
+                stateUf = stateUf ?: current.stateUf,
+                onboardingCompleted = onboardingCompleted ?: current.onboardingCompleted
             )
             repository.saveUserProfile(updated)
+        }
+    }
+
+    fun saveUserProfile(userProfile: UserProfile) {
+        viewModelScope.launch {
+            repository.saveUserProfile(userProfile)
         }
     }
 

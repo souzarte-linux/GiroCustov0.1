@@ -433,7 +433,14 @@ class RepositoryAndEstimationTest {
         assertEquals("São Paulo", savedProfile.city)
 
         val updatedProfile = savedProfile.copy(
-            name = "Jane Doe"
+            name = "Jane Doe",
+            email = "jane@example.com",
+            cep = "01001-000",
+            street = "Rua Direita",
+            addressNumber = "50",
+            neighborhood = "Centro",
+            stateUf = "SP",
+            onboardingCompleted = true
         )
         repository.saveUserProfile(updatedProfile)
 
@@ -441,6 +448,13 @@ class RepositoryAndEstimationTest {
         assertNotNull(finalProfile)
         assertEquals("Jane Doe", finalProfile!!.name)
         assertEquals("11999998888", finalProfile.phone)
+        assertEquals("jane@example.com", finalProfile.email)
+        assertEquals("01001-000", finalProfile.cep)
+        assertEquals("Rua Direita", finalProfile.street)
+        assertEquals("50", finalProfile.addressNumber)
+        assertEquals("Centro", finalProfile.neighborhood)
+        assertEquals("SP", finalProfile.stateUf)
+        assertTrue(finalProfile.onboardingCompleted)
     }
 
     @Test
@@ -917,5 +931,237 @@ class RepositoryAndEstimationTest {
         val tagsUnrelated = mapOf("brand" to "Shell")
         val addressUnrelated = com.example.network.GasStationRepository.extractAddress(tagsUnrelated)
         assertNull(addressUnrelated)
+    }
+
+    @Test
+    fun testViewModelUserProfileAndVehicleEvolution() = runTest(testDispatcher) {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val viewModelStore = ViewModelStore()
+        val viewModel = ViewModelProvider(
+            viewModelStore,
+            ViewModelProvider.AndroidViewModelFactory.getInstance(app)
+        )[GiroCustoViewModel::class.java]
+
+        // 1. Testa updateUserProfile com os novos parâmetros opcionais
+        viewModel.updateUserProfile(
+            name = "Lucas Oliveira",
+            phone = "11988889999",
+            city = "São Bernardo do Campo",
+            email = "lucas@girocusto.com",
+            isWhatsapp = true,
+            cep = "09710-000",
+            street = "Rua Marechal Deodoro",
+            addressNumber = "123",
+            neighborhood = "Centro",
+            stateUf = "SP",
+            onboardingCompleted = true
+        )
+        advanceUntilIdle()
+
+        val profile = repository.getUserProfile()
+        assertNotNull(profile)
+        assertEquals("Lucas Oliveira", profile?.name)
+        assertEquals("11988889999", profile?.phone)
+        assertEquals("São Bernardo do Campo", profile?.city)
+        assertEquals("lucas@girocusto.com", profile?.email)
+        assertEquals(true, profile?.isWhatsapp)
+        assertEquals("09710-000", profile?.cep)
+        assertEquals("Rua Marechal Deodoro", profile?.street)
+        assertEquals("123", profile?.addressNumber)
+        assertEquals("Centro", profile?.neighborhood)
+        assertEquals("SP", profile?.stateUf)
+        assertEquals(true, profile?.onboardingCompleted)
+
+        // 2. Testa saveUserProfile diretamente
+        val directProfile = profile!!.copy(
+            email = "lucas.updated@girocusto.com",
+            addressNumber = "456"
+        )
+        viewModel.saveUserProfile(directProfile)
+        advanceUntilIdle()
+
+        val updatedProfile = repository.getUserProfile()
+        assertEquals("lucas.updated@girocusto.com", updatedProfile?.email)
+        assertEquals("456", updatedProfile?.addressNumber)
+
+        // 3. Testa addVehicle com os novos parâmetros técnicos
+        viewModel.addVehicle(
+            model = "Yamaha Crosser 150",
+            consumption = 38.0,
+            fuelType = "Flex",
+            fixedCosts = 210.0,
+            workDays = 24,
+            vehicleType = "MOTO",
+            brand = "Yamaha",
+            manufacturingYear = "2024",
+            tankCapacity = 12.0,
+            hasTopBox = true,
+            hasDeliveryBag = true,
+            carBodyType = ""
+        )
+        advanceUntilIdle()
+
+        val allVehicles = repository.allVehiclesFlow.first()
+        val added = allVehicles.find { it.model == "Yamaha Crosser 150" }
+        assertNotNull(added)
+        assertEquals("Yamaha", added?.brand)
+        assertEquals("2024", added?.manufacturingYear)
+        assertEquals(12.0, added?.tankCapacity ?: 0.0, 0.001)
+        assertEquals(true, added?.hasTopBox)
+        assertEquals(true, added?.hasDeliveryBag)
+        assertEquals("MOTO", added?.vehicleType)
+
+        viewModelStore.clear()
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun testRepositoryAndViewModel_VehicleCarScenarioAndEdgeCases() = runTest(testDispatcher) {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val viewModelStore = ViewModelStore()
+        val viewModel = ViewModelProvider(
+            viewModelStore,
+            ViewModelProvider.AndroidViewModelFactory.getInstance(app)
+        )[GiroCustoViewModel::class.java]
+
+        // 1. Adiciona um Carro via ViewModel
+        viewModel.addVehicle(
+            model = "Chevrolet Onix 1.0",
+            consumption = 14.8,
+            fuelType = "Flex",
+            fixedCosts = 480.0,
+            workDays = 22,
+            vehicleType = "CARRO",
+            brand = "Chevrolet",
+            manufacturingYear = "2023",
+            tankCapacity = 44.0,
+            hasTopBox = false,
+            hasDeliveryBag = false,
+            carBodyType = "Hatch"
+        )
+        advanceUntilIdle()
+
+        val vehicles = repository.allVehiclesFlow.first()
+        val car = vehicles.find { it.model == "Chevrolet Onix 1.0" }
+        assertNotNull(car)
+        assertEquals("CARRO", car?.vehicleType)
+        assertEquals("Chevrolet", car?.brand)
+        assertEquals("2023", car?.manufacturingYear)
+        assertEquals(44.0, car?.tankCapacity ?: 0.0, 0.001)
+        assertFalse(car?.hasTopBox ?: true)
+        assertFalse(car?.hasDeliveryBag ?: true)
+        assertEquals("Hatch", car?.carBodyType)
+
+        // 2. Salva veículo com casos de borda diretamente no repositório (valores zerados e strings vazias)
+        val edgeVehicle = Vehicle(
+            model = "Veículo Teste Borda",
+            averageConsumption = 0.0,
+            fuelType = "Outro",
+            monthlyFixedCosts = 0.0,
+            plannedWorkDays = 0,
+            currentOdometer = 0.0,
+            active = false,
+            vehicleType = "OUTRO",
+            brand = "",
+            manufacturingYear = "",
+            tankCapacity = 0.0,
+            hasTopBox = false,
+            hasDeliveryBag = false,
+            carBodyType = ""
+        )
+        val edgeId = repository.addVehicle(edgeVehicle)
+        assertTrue(edgeId > 0)
+
+        val retrievedEdge = repository.allVehiclesFlow.first().find { it.id == edgeId }
+        assertNotNull(retrievedEdge)
+        assertEquals("OUTRO", retrievedEdge?.vehicleType)
+        assertEquals("", retrievedEdge?.brand)
+        assertEquals(0.0, retrievedEdge?.tankCapacity ?: -1.0, 0.001)
+        assertFalse(retrievedEdge?.hasTopBox ?: true)
+        assertFalse(retrievedEdge?.active ?: true)
+
+        viewModelStore.clear()
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun testViewModelUserProfile_EdgeCasesAndPartialUpdates() = runTest(testDispatcher) {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val viewModelStore = ViewModelStore()
+        val viewModel = ViewModelProvider(
+            viewModelStore,
+            ViewModelProvider.AndroidViewModelFactory.getInstance(app)
+        )[GiroCustoViewModel::class.java]
+
+        // 1. Perfil inicial completo
+        viewModel.updateUserProfile(
+            name = "Mariana Costa",
+            phone = "11911112222",
+            city = "Guarulhos",
+            email = "mariana@girocusto.com",
+            isWhatsapp = true,
+            cep = "07000-000",
+            street = "Avenida Tiradentes",
+            addressNumber = "500",
+            neighborhood = "Centro",
+            stateUf = "SP",
+            onboardingCompleted = true
+        )
+        advanceUntilIdle()
+
+        // 2. Atualização parcial: apenas telefone e cidade são alterados; novos campos passados como null devem ser preservados
+        viewModel.updateUserProfile(
+            name = "Mariana Costa",
+            phone = "11999990000",
+            city = "São Paulo",
+            email = null,
+            isWhatsapp = null,
+            cep = null,
+            street = null,
+            addressNumber = null,
+            neighborhood = null,
+            stateUf = null,
+            onboardingCompleted = null
+        )
+        advanceUntilIdle()
+
+        val preserved = repository.getUserProfile()
+        assertNotNull(preserved)
+        assertEquals("11999990000", preserved?.phone)
+        assertEquals("São Paulo", preserved?.city)
+        assertEquals("mariana@girocusto.com", preserved?.email)
+        assertTrue(preserved?.isWhatsapp == true)
+        assertEquals("07000-000", preserved?.cep)
+        assertEquals("Avenida Tiradentes", preserved?.street)
+        assertEquals("500", preserved?.addressNumber)
+        assertEquals("Centro", preserved?.neighborhood)
+        assertEquals("SP", preserved?.stateUf)
+        assertTrue(preserved?.onboardingCompleted == true)
+
+        // 3. Atualização com booleano false e strings vazias
+        viewModel.updateUserProfile(
+            name = "Mariana Costa",
+            phone = "11999990000",
+            city = "São Paulo",
+            email = "",
+            isWhatsapp = false,
+            cep = "",
+            street = "",
+            addressNumber = "",
+            neighborhood = "",
+            stateUf = "",
+            onboardingCompleted = false
+        )
+        advanceUntilIdle()
+
+        val toggled = repository.getUserProfile()
+        assertNotNull(toggled)
+        assertEquals("", toggled?.email)
+        assertFalse(toggled?.isWhatsapp ?: true)
+        assertEquals("", toggled?.cep)
+        assertFalse(toggled?.onboardingCompleted ?: true)
+
+        viewModelStore.clear()
+        advanceUntilIdle()
     }
 }

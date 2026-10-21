@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Vehicle::class, VehiclePart::class, DailyRecord::class, UserProfile::class, Platform::class, FuelRefill::class, MaintenanceRecord::class],
-    version = 10,
+    version = 11,
     exportSchema = true
 )
 abstract class GiroCustoDatabase : RoomDatabase() {
@@ -156,6 +156,29 @@ abstract class GiroCustoDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // user_profile
+                db.execSQL("ALTER TABLE `user_profile` ADD COLUMN `email` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `user_profile` ADD COLUMN `isWhatsapp` INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE `user_profile` ADD COLUMN `cep` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `user_profile` ADD COLUMN `street` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `user_profile` ADD COLUMN `addressNumber` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `user_profile` ADD COLUMN `neighborhood` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `user_profile` ADD COLUMN `stateUf` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `user_profile` ADD COLUMN `onboardingCompleted` INTEGER NOT NULL DEFAULT 0")
+
+                // vehicle
+                db.execSQL("ALTER TABLE `vehicle` ADD COLUMN `vehicleType` TEXT NOT NULL DEFAULT 'MOTO'")
+                db.execSQL("ALTER TABLE `vehicle` ADD COLUMN `brand` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `vehicle` ADD COLUMN `manufacturingYear` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `vehicle` ADD COLUMN `tankCapacity` REAL NOT NULL DEFAULT 16.0")
+                db.execSQL("ALTER TABLE `vehicle` ADD COLUMN `hasTopBox` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `vehicle` ADD COLUMN `hasDeliveryBag` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `vehicle` ADD COLUMN `carBodyType` TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         fun getDatabase(context: Context): GiroCustoDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -163,7 +186,7 @@ abstract class GiroCustoDatabase : RoomDatabase() {
                     GiroCustoDatabase::class.java,
                     "giro_custo_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
                 .build()
                 INSTANCE = instance
                 instance

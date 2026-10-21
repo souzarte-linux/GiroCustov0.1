@@ -19,6 +19,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import retrofit2.Response
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -378,9 +380,9 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // Abre agora com Room versão 10 executando a MIGRATION_9_10
+        // Abre agora com Room versão 11 executando MIGRATION_9_10 e MIGRATION_10_11
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_9_10)
+            .addMigrations(GiroCustoDatabase.MIGRATION_9_10, GiroCustoDatabase.MIGRATION_10_11)
             .allowMainThreadQueries()
             .build()
 
@@ -391,6 +393,250 @@ class SupabaseSyncAndMigrationTest {
         assertEquals(SyncStatus.SYNCED, activeVehicle?.syncStatus)
         assertEquals(0L, activeVehicle?.updatedAt)
         assertFalse(activeVehicle?.isDeleted ?: true)
+        assertEquals("MOTO", activeVehicle?.vehicleType)
+        assertEquals(16.0, activeVehicle?.tankCapacity ?: 0.0, 0.001)
+
+        roomDb.close()
+    }
+
+    @Test
+    fun testMigration10To11_addsColumnsAndPreservesPreExistingData() {
+        val dbName = "test_migration_10_11_${System.currentTimeMillis()}.db"
+        context.deleteDatabase(dbName)
+
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(dbName)
+                .callback(object : SupportSQLiteOpenHelper.Callback(10) {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        // user_profile v10
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `user_profile` (" +
+                                "`id` INTEGER NOT NULL, " +
+                                "`name` TEXT NOT NULL, " +
+                                "`phone` TEXT NOT NULL, " +
+                                "`city` TEXT NOT NULL, " +
+                                "`remoteId` TEXT NOT NULL, " +
+                                "`syncStatus` TEXT NOT NULL, " +
+                                "`updatedAt` INTEGER NOT NULL, " +
+                                "`isDeleted` INTEGER NOT NULL, " +
+                                "PRIMARY KEY(`id`))"
+                        )
+
+                        // vehicle v10
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `vehicle` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`model` TEXT NOT NULL, " +
+                                "`averageConsumption` REAL NOT NULL, " +
+                                "`fuelType` TEXT NOT NULL, " +
+                                "`monthlyFixedCosts` REAL NOT NULL, " +
+                                "`plannedWorkDays` INTEGER NOT NULL, " +
+                                "`currentOdometer` REAL NOT NULL, " +
+                                "`active` INTEGER NOT NULL, " +
+                                "`remoteId` TEXT NOT NULL, " +
+                                "`syncStatus` TEXT NOT NULL, " +
+                                "`updatedAt` INTEGER NOT NULL, " +
+                                "`isDeleted` INTEGER NOT NULL)"
+                        )
+
+                        // Room master table hash para v10
+                        db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)")
+                        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '94d0f328a35d91e84084f5582a00e07b')")
+                    }
+
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+                })
+                .build()
+        )
+
+        val sqliteDb = helper.writableDatabase
+
+        // Inserir registros existentes na versão 10
+        val pValues = ContentValues().apply {
+            put("id", 1)
+            put("name", "Carlos Entregador")
+            put("phone", "11987654321")
+            put("city", "Osasco")
+            put("remoteId", "remote-prof-10")
+            put("syncStatus", "SYNCED")
+            put("updatedAt", 1761000000000L)
+            put("isDeleted", 0)
+        }
+        sqliteDb.insert("user_profile", 0, pValues)
+
+        val vValues = ContentValues().apply {
+            put("model", "Honda CG 160 Fan")
+            put("averageConsumption", 42.0)
+            put("fuelType", "Gasolina")
+            put("monthlyFixedCosts", 190.0)
+            put("plannedWorkDays", 26)
+            put("currentOdometer", 18500.0)
+            put("active", 1)
+            put("remoteId", "remote-veh-10")
+            put("syncStatus", "SYNCED")
+            put("updatedAt", 1761000000000L)
+            put("isDeleted", 0)
+        }
+        val vehicleId = sqliteDb.insert("vehicle", 0, vValues)
+        assertTrue(vehicleId > 0)
+
+        // Executar MIGRATION_10_11
+        GiroCustoDatabase.MIGRATION_10_11.migrate(sqliteDb)
+
+        // Valida colunas de user_profile
+        val pCursor = sqliteDb.query("SELECT * FROM user_profile WHERE id = 1")
+        assertTrue(pCursor.moveToFirst())
+        assertEquals("Carlos Entregador", pCursor.getString(pCursor.getColumnIndexOrThrow("name")))
+        assertEquals("11987654321", pCursor.getString(pCursor.getColumnIndexOrThrow("phone")))
+        assertEquals("Osasco", pCursor.getString(pCursor.getColumnIndexOrThrow("city")))
+        assertEquals("", pCursor.getString(pCursor.getColumnIndexOrThrow("email")))
+        assertEquals(1, pCursor.getInt(pCursor.getColumnIndexOrThrow("isWhatsapp")))
+        assertEquals("", pCursor.getString(pCursor.getColumnIndexOrThrow("cep")))
+        assertEquals("", pCursor.getString(pCursor.getColumnIndexOrThrow("street")))
+        assertEquals("", pCursor.getString(pCursor.getColumnIndexOrThrow("addressNumber")))
+        assertEquals("", pCursor.getString(pCursor.getColumnIndexOrThrow("neighborhood")))
+        assertEquals("", pCursor.getString(pCursor.getColumnIndexOrThrow("stateUf")))
+        assertEquals(0, pCursor.getInt(pCursor.getColumnIndexOrThrow("onboardingCompleted")))
+        pCursor.close()
+
+        // Valida colunas de vehicle
+        val vCursor = sqliteDb.query("SELECT * FROM vehicle WHERE id = $vehicleId")
+        assertTrue(vCursor.moveToFirst())
+        assertEquals("Honda CG 160 Fan", vCursor.getString(vCursor.getColumnIndexOrThrow("model")))
+        assertEquals(42.0, vCursor.getDouble(vCursor.getColumnIndexOrThrow("averageConsumption")), 0.001)
+        assertEquals("MOTO", vCursor.getString(vCursor.getColumnIndexOrThrow("vehicleType")))
+        assertEquals("", vCursor.getString(vCursor.getColumnIndexOrThrow("brand")))
+        assertEquals("", vCursor.getString(vCursor.getColumnIndexOrThrow("manufacturingYear")))
+        assertEquals(16.0, vCursor.getDouble(vCursor.getColumnIndexOrThrow("tankCapacity")), 0.001)
+        assertEquals(0, vCursor.getInt(vCursor.getColumnIndexOrThrow("hasTopBox")))
+        assertEquals(0, vCursor.getInt(vCursor.getColumnIndexOrThrow("hasDeliveryBag")))
+        assertEquals("", vCursor.getString(vCursor.getColumnIndexOrThrow("carBodyType")))
+        vCursor.close()
+
+        sqliteDb.close()
+        helper.close()
+    }
+
+    @Test
+    fun testMigration10To11_validatesWithRoomVersion11() = runTest {
+        val dbName = "test_room_migrated_v11_${System.currentTimeMillis()}.db"
+        context.deleteDatabase(dbName)
+
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(dbName)
+                .callback(object : SupportSQLiteOpenHelper.Callback(10) {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        // 1. vehicle v10
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `vehicle` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `model` TEXT NOT NULL, `averageConsumption` REAL NOT NULL, `fuelType` TEXT NOT NULL, `monthlyFixedCosts` REAL NOT NULL, `plannedWorkDays` INTEGER NOT NULL, `currentOdometer` REAL NOT NULL, `active` INTEGER NOT NULL, `remoteId` TEXT NOT NULL, `syncStatus` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, `isDeleted` INTEGER NOT NULL)"
+                        )
+                        // 2. vehicle_parts v10
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `vehicle_parts` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `price` REAL NOT NULL, `lifespanKm` REAL NOT NULL, `runKmSinceChange` REAL NOT NULL, `remoteId` TEXT NOT NULL, `syncStatus` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, `isDeleted` INTEGER NOT NULL)"
+                        )
+                        // 3. daily_records v10
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `daily_records` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `dateString` TEXT NOT NULL, `dateTimestamp` INTEGER NOT NULL, `platform` TEXT NOT NULL, `grossEarnings` REAL NOT NULL, `deliveriesCount` INTEGER NOT NULL, `startOdometer` REAL NOT NULL, `endOdometer` REAL NOT NULL, `fuelPrice` REAL NOT NULL, `foodExpense` REAL NOT NULL, `fuelCost` REAL NOT NULL, `wearCost` REAL NOT NULL, `proportionalFixedCost` REAL NOT NULL, `netProfit` REAL NOT NULL, `startTime` TEXT NOT NULL, `endTime` TEXT NOT NULL, `pauseDuration` TEXT NOT NULL, `remoteId` TEXT NOT NULL, `syncStatus` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, `isDeleted` INTEGER NOT NULL)"
+                        )
+                        // 4. user_profile v10
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `user_profile` (`id` INTEGER NOT NULL, `name` TEXT NOT NULL, `phone` TEXT NOT NULL, `city` TEXT NOT NULL, `remoteId` TEXT NOT NULL, `syncStatus` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, `isDeleted` INTEGER NOT NULL, PRIMARY KEY(`id`))"
+                        )
+                        // 5. platforms v10
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `platforms` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `segment` TEXT NOT NULL, `paymentModel` TEXT NOT NULL, `cycle` TEXT NOT NULL, `paymentDay` TEXT NOT NULL, `fixedPayDelay` INTEGER NOT NULL, `cycleEntriesJson` TEXT NOT NULL, `bankName` TEXT NOT NULL, `bankAgency` TEXT NOT NULL, `bankAccount` TEXT NOT NULL, `pixKeyType` TEXT NOT NULL, `pixKey` TEXT NOT NULL, `active` INTEGER NOT NULL, `remoteId` TEXT NOT NULL, `syncStatus` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, `isDeleted` INTEGER NOT NULL)"
+                        )
+                        // 6. fuel_refills v10
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `fuel_refills` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `vehicleId` INTEGER NOT NULL, `dateTimestamp` INTEGER NOT NULL, `dateString` TEXT NOT NULL, `gasStation` TEXT NOT NULL, `fuelType` TEXT NOT NULL, `pricePerLiter` REAL NOT NULL, `liters` REAL NOT NULL, `discount` REAL NOT NULL, `totalPaid` REAL NOT NULL, `odometer` REAL NOT NULL, `isFullTank` INTEGER NOT NULL, `paymentMethod` TEXT NOT NULL, `isInstallment` INTEGER NOT NULL, `installmentsCount` INTEGER NOT NULL, `remoteId` TEXT NOT NULL, `syncStatus` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, `isDeleted` INTEGER NOT NULL)"
+                        )
+                        // 7. maintenance_records v10
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `maintenance_records` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `vehicleId` INTEGER NOT NULL, `dateTimestamp` INTEGER NOT NULL, `dateString` TEXT NOT NULL, `description` TEXT NOT NULL, `location` TEXT NOT NULL, `value` REAL NOT NULL, `odometer` REAL NOT NULL, `remoteId` TEXT NOT NULL, `syncStatus` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, `isDeleted` INTEGER NOT NULL)"
+                        )
+                        // Room master table hash para v10
+                        db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)")
+                        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '94d0f328a35d91e84084f5582a00e07b')")
+                    }
+
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+                })
+                .build()
+        )
+        val rawDb = helper.writableDatabase
+
+        // Inserir registro de veículo v10
+        val cvVehicle = ContentValues().apply {
+            put("model", "Honda CG 160 Start")
+            put("averageConsumption", 41.5)
+            put("fuelType", "Gasolina")
+            put("monthlyFixedCosts", 175.0)
+            put("plannedWorkDays", 22)
+            put("currentOdometer", 12300.0)
+            put("active", 1)
+            put("remoteId", "remote-veh-v10-start")
+            put("syncStatus", "SYNCED")
+            put("updatedAt", 1761000000000L)
+            put("isDeleted", 0)
+        }
+        val insertedVehId = rawDb.insert("vehicle", 0, cvVehicle)
+
+        // Inserir registro de perfil v10
+        val cvProfile = ContentValues().apply {
+            put("id", 1)
+            put("name", "Roberta Silva")
+            put("phone", "11988887777")
+            put("city", "Campinas")
+            put("remoteId", "remote-prof-v10-roberta")
+            put("syncStatus", "SYNCED")
+            put("updatedAt", 1761000000000L)
+            put("isDeleted", 0)
+        }
+        rawDb.insert("user_profile", 0, cvProfile)
+
+        rawDb.close()
+        helper.close()
+
+        // Abre agora com Room versão 11 executando MIGRATION_10_11
+        val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
+            .addMigrations(GiroCustoDatabase.MIGRATION_10_11)
+            .allowMainThreadQueries()
+            .build()
+
+        val activeVehicle = roomDb.vehicleDao().getVehicleById(insertedVehId)
+        assertNotNull(activeVehicle)
+        assertEquals("Honda CG 160 Start", activeVehicle?.model)
+        assertEquals("remote-veh-v10-start", activeVehicle?.remoteId)
+        assertEquals(SyncStatus.SYNCED, activeVehicle?.syncStatus)
+        assertEquals(1761000000000L, activeVehicle?.updatedAt)
+        assertFalse(activeVehicle?.isDeleted ?: true)
+        // Valores default das novas colunas na migração
+        assertEquals("MOTO", activeVehicle?.vehicleType)
+        assertEquals("", activeVehicle?.brand)
+        assertEquals("", activeVehicle?.manufacturingYear)
+        assertEquals(16.0, activeVehicle?.tankCapacity ?: 0.0, 0.001)
+        assertFalse(activeVehicle?.hasTopBox ?: true)
+        assertFalse(activeVehicle?.hasDeliveryBag ?: true)
+        assertEquals("", activeVehicle?.carBodyType)
+
+        val profile = roomDb.userProfileDao().getUserProfile()
+        assertNotNull(profile)
+        assertEquals(1, profile?.id)
+        assertEquals("Roberta Silva", profile?.name)
+        assertEquals("11988887777", profile?.phone)
+        assertEquals("Campinas", profile?.city)
+        assertEquals("remote-prof-v10-roberta", profile?.remoteId)
+        // Novos campos com valores default
+        assertEquals("", profile?.email)
+        assertEquals(true, profile?.isWhatsapp)
+        assertEquals("", profile?.cep)
+        assertEquals("", profile?.street)
+        assertEquals("", profile?.addressNumber)
+        assertEquals("", profile?.neighborhood)
+        assertEquals("", profile?.stateUf)
+        assertEquals(false, profile?.onboardingCompleted)
 
         roomDb.close()
     }
@@ -446,6 +692,56 @@ class SupabaseSyncAndMigrationTest {
 
         val restoredFromDeleted = deletedDto.toEntity(existingId = 10L)
         assertTrue(restoredFromDeleted.isDeleted)
+    }
+
+    @Test
+    fun testVehicleWithTechnicalSpecsBidirectionalMapping() {
+        val userId = "user-specs-123"
+        val vehicle = Vehicle(
+            id = 42L,
+            model = "Fiat Strada",
+            averageConsumption = 12.5,
+            fuelType = "Flex",
+            monthlyFixedCosts = 450.0,
+            plannedWorkDays = 26,
+            currentOdometer = 35000.0,
+            active = true,
+            vehicleType = "CARRO",
+            brand = "Fiat",
+            manufacturingYear = "2023",
+            tankCapacity = 55.0,
+            hasTopBox = false,
+            hasDeliveryBag = true,
+            carBodyType = "Pickup",
+            remoteId = "veh-strada-42",
+            syncStatus = SyncStatus.PENDING_INSERT,
+            updatedAt = 1761000000000L,
+            isDeleted = false
+        )
+
+        val dto = vehicle.toDto(userId)
+        assertEquals("veh-strada-42", dto.id)
+        assertEquals(userId, dto.userId)
+        assertEquals("Fiat Strada", dto.model)
+        assertEquals("CARRO", dto.vehicleType)
+        assertEquals("Fiat", dto.brand)
+        assertEquals("2023", dto.manufacturingYear)
+        assertEquals(55.0, dto.tankCapacity, 0.001)
+        assertFalse(dto.hasTopBox)
+        assertTrue(dto.hasDeliveryBag)
+        assertEquals("Pickup", dto.carBodyType)
+
+        val reconstructed = dto.toEntity(existingId = 42L)
+        assertEquals(42L, reconstructed.id)
+        assertEquals("veh-strada-42", reconstructed.remoteId)
+        assertEquals("CARRO", reconstructed.vehicleType)
+        assertEquals("Fiat", reconstructed.brand)
+        assertEquals("2023", reconstructed.manufacturingYear)
+        assertEquals(55.0, reconstructed.tankCapacity, 0.001)
+        assertFalse(reconstructed.hasTopBox)
+        assertTrue(reconstructed.hasDeliveryBag)
+        assertEquals("Pickup", reconstructed.carBodyType)
+        assertEquals(SyncStatus.SYNCED, reconstructed.syncStatus)
     }
 
     @Test
@@ -558,6 +854,57 @@ class SupabaseSyncAndMigrationTest {
         assertEquals("11988887777", entity.phone)
         assertEquals("Campinas", entity.city)
         assertEquals(SyncStatus.SYNCED, entity.syncStatus)
+    }
+
+    @Test
+    fun testUserProfileWithAddressAndOnboardingBidirectionalMapping() {
+        val userId = "user-address-99"
+        val profile = UserProfile(
+            id = 1,
+            name = "Fernando Entregador",
+            phone = "11977776666",
+            city = "São Paulo",
+            email = "fernando@girocusto.com",
+            isWhatsapp = true,
+            cep = "01310-100",
+            street = "Avenida Paulista",
+            addressNumber = "1578",
+            neighborhood = "Bela Vista",
+            stateUf = "SP",
+            onboardingCompleted = true,
+            remoteId = "prof-fernando-99",
+            syncStatus = SyncStatus.PENDING_INSERT,
+            updatedAt = 1761000000000L,
+            isDeleted = false
+        )
+
+        val dto = profile.toDto(userId)
+        assertEquals("prof-fernando-99", dto.id)
+        assertEquals(userId, dto.userId)
+        assertEquals("Fernando Entregador", dto.name)
+        assertEquals("11977776666", dto.phone)
+        assertEquals("São Paulo", dto.city)
+        assertEquals("fernando@girocusto.com", dto.email)
+        assertTrue(dto.isWhatsapp)
+        assertEquals("01310-100", dto.cep)
+        assertEquals("Avenida Paulista", dto.street)
+        assertEquals("1578", dto.addressNumber)
+        assertEquals("Bela Vista", dto.neighborhood)
+        assertEquals("SP", dto.stateUf)
+        assertTrue(dto.onboardingCompleted)
+
+        val reconstructed = dto.toEntity(existingId = 1)
+        assertEquals(1, reconstructed.id)
+        assertEquals("prof-fernando-99", reconstructed.remoteId)
+        assertEquals("fernando@girocusto.com", reconstructed.email)
+        assertTrue(reconstructed.isWhatsapp)
+        assertEquals("01310-100", reconstructed.cep)
+        assertEquals("Avenida Paulista", reconstructed.street)
+        assertEquals("1578", reconstructed.addressNumber)
+        assertEquals("Bela Vista", reconstructed.neighborhood)
+        assertEquals("SP", reconstructed.stateUf)
+        assertTrue(reconstructed.onboardingCompleted)
+        assertEquals(SyncStatus.SYNCED, reconstructed.syncStatus)
     }
 
     @Test
@@ -686,6 +1033,238 @@ class SupabaseSyncAndMigrationTest {
         val now = System.currentTimeMillis()
         val parsedNull = SupabaseMappers.parseIsoTimestamp(null)
         assertTrue(parsedNull in (now - 2000)..(now + 2000))
+    }
+
+    // =========================================================================
+    // 2.1 TESTES DE SERIALIZAÇÃO E DESSERIALIZAÇÃO JSON COM MOSHI (SUPABASE DTOS)
+    // =========================================================================
+
+    private val moshi: Moshi = Moshi.Builder()
+        .addLast(KotlinJsonAdapterFactory())
+        .build()
+
+    @Test
+    fun testVehicleDtoSerializationAndDeserialization_MotoAndCarScenarios() {
+        val vehicleAdapter = moshi.adapter(VehicleDto::class.java)
+
+        // 1. Cenário Moto completa
+        val motoDto = VehicleDto(
+            id = "veh-moto-01",
+            userId = "usr-100",
+            model = "Honda CG 160 Fan",
+            averageConsumption = 42.0,
+            fuelType = "Gasolina",
+            monthlyFixedCosts = 190.0,
+            plannedWorkDays = 26,
+            currentOdometer = 18500.0,
+            active = true,
+            vehicleType = "MOTO",
+            brand = "Honda",
+            manufacturingYear = "2023",
+            tankCapacity = 16.1,
+            hasTopBox = true,
+            hasDeliveryBag = true,
+            carBodyType = "",
+            createdAt = "2026-10-21T00:00:00Z",
+            updatedAt = "2026-10-21T10:00:00Z",
+            deletedAt = null
+        )
+
+        val motoJson = vehicleAdapter.toJson(motoDto)
+        assertTrue(motoJson.contains("\"vehicle_type\":\"MOTO\""))
+        assertTrue(motoJson.contains("\"brand\":\"Honda\""))
+        assertTrue(motoJson.contains("\"manufacturing_year\":\"2023\""))
+        assertTrue(motoJson.contains("\"tank_capacity\":16.1"))
+        assertTrue(motoJson.contains("\"has_top_box\":true"))
+        assertTrue(motoJson.contains("\"has_delivery_bag\":true"))
+
+        val deserializedMoto = vehicleAdapter.fromJson(motoJson)
+        assertNotNull(deserializedMoto)
+        assertEquals(motoDto, deserializedMoto)
+
+        // 2. Cenário Carro completo
+        val carDto = VehicleDto(
+            id = "veh-car-02",
+            userId = "usr-100",
+            model = "Fiat Argo 1.0",
+            averageConsumption = 14.2,
+            fuelType = "Flex",
+            monthlyFixedCosts = 520.0,
+            plannedWorkDays = 24,
+            currentOdometer = 42000.0,
+            active = true,
+            vehicleType = "CARRO",
+            brand = "Fiat",
+            manufacturingYear = "2022",
+            tankCapacity = 47.0,
+            hasTopBox = false,
+            hasDeliveryBag = false,
+            carBodyType = "Hatch",
+            createdAt = "2026-10-21T00:00:00Z",
+            updatedAt = "2026-10-21T10:00:00Z",
+            deletedAt = null
+        )
+
+        val carJson = vehicleAdapter.toJson(carDto)
+        assertTrue(carJson.contains("\"vehicle_type\":\"CARRO\""))
+        assertTrue(carJson.contains("\"brand\":\"Fiat\""))
+        assertTrue(carJson.contains("\"car_body_type\":\"Hatch\""))
+        assertTrue(carJson.contains("\"tank_capacity\":47.0"))
+        assertTrue(carJson.contains("\"has_top_box\":false"))
+        assertTrue(carJson.contains("\"has_delivery_bag\":false"))
+
+        val deserializedCar = vehicleAdapter.fromJson(carJson)
+        assertNotNull(deserializedCar)
+        assertEquals(carDto, deserializedCar)
+    }
+
+    @Test
+    fun testUserProfileDtoSerializationAndDeserialization() {
+        val profileAdapter = moshi.adapter(UserProfileDto::class.java)
+
+        val profileDto = UserProfileDto(
+            id = "prof-999",
+            userId = "usr-100",
+            name = "Fernando QA",
+            phone = "11987654321",
+            city = "São Paulo",
+            email = "qa@girocusto.com",
+            isWhatsapp = true,
+            cep = "01310-200",
+            street = "Avenida Paulista",
+            addressNumber = "1000",
+            neighborhood = "Bela Vista",
+            stateUf = "SP",
+            onboardingCompleted = true,
+            platforms = "iFood, Uber Eats",
+            createdAt = "2026-10-21T00:00:00Z",
+            updatedAt = "2026-10-21T10:00:00Z",
+            deletedAt = null
+        )
+
+        val json = profileAdapter.toJson(profileDto)
+        assertTrue(json.contains("\"email\":\"qa@girocusto.com\""))
+        assertTrue(json.contains("\"is_whatsapp\":true"))
+        assertTrue(json.contains("\"cep\":\"01310-200\""))
+        assertTrue(json.contains("\"street\":\"Avenida Paulista\""))
+        assertTrue(json.contains("\"address_number\":\"1000\""))
+        assertTrue(json.contains("\"neighborhood\":\"Bela Vista\""))
+        assertTrue(json.contains("\"state_uf\":\"SP\""))
+        assertTrue(json.contains("\"onboarding_completed\":true"))
+
+        val deserialized = profileAdapter.fromJson(json)
+        assertNotNull(deserialized)
+        assertEquals(profileDto, deserialized)
+    }
+
+    @Test
+    fun testVehicleDtoAndUserProfileDto_DeserializationDefaultsAndEdgeCases() {
+        val vehicleAdapter = moshi.adapter(VehicleDto::class.java)
+        val profileAdapter = moshi.adapter(UserProfileDto::class.java)
+
+        // 1. JSON legado sem os novos campos técnicos de Vehicle (deve usar defaults da classe Kotlin)
+        val legacyVehicleJson = """
+            {
+                "id": "legacy-veh-1",
+                "user_id": "usr-1",
+                "model": "Honda CG 125",
+                "average_consumption": 35.0,
+                "fuel_type": "Gasolina",
+                "monthly_fixed_costs": 150.0,
+                "planned_work_days": 20,
+                "current_odometer": 80000.0,
+                "active": true
+            }
+        """.trimIndent()
+
+        val parsedLegacyVeh = vehicleAdapter.fromJson(legacyVehicleJson)
+        assertNotNull(parsedLegacyVeh)
+        assertEquals("MOTO", parsedLegacyVeh?.vehicleType)
+        assertEquals("", parsedLegacyVeh?.brand)
+        assertEquals("", parsedLegacyVeh?.manufacturingYear)
+        assertEquals(16.0, parsedLegacyVeh?.tankCapacity ?: 0.0, 0.001)
+        assertEquals(false, parsedLegacyVeh?.hasTopBox)
+        assertEquals(false, parsedLegacyVeh?.hasDeliveryBag)
+        assertEquals("", parsedLegacyVeh?.carBodyType)
+        assertNull(parsedLegacyVeh?.createdAt)
+        assertNull(parsedLegacyVeh?.updatedAt)
+        assertNull(parsedLegacyVeh?.deletedAt)
+
+        // 2. JSON legado sem os novos campos de endereço e onboarding de UserProfile
+        val legacyProfileJson = """
+            {
+                "id": "legacy-prof-1",
+                "user_id": "usr-1",
+                "name": "Maria Silva",
+                "phone": "11988887777",
+                "city": "Santo André"
+            }
+        """.trimIndent()
+
+        val parsedLegacyProf = profileAdapter.fromJson(legacyProfileJson)
+        assertNotNull(parsedLegacyProf)
+        assertEquals("", parsedLegacyProf?.email)
+        assertEquals(true, parsedLegacyProf?.isWhatsapp)
+        assertEquals("", parsedLegacyProf?.cep)
+        assertEquals("", parsedLegacyProf?.street)
+        assertEquals("", parsedLegacyProf?.addressNumber)
+        assertEquals("", parsedLegacyProf?.neighborhood)
+        assertEquals("", parsedLegacyProf?.stateUf)
+        assertEquals(false, parsedLegacyProf?.onboardingCompleted)
+        assertNull(parsedLegacyProf?.platforms)
+
+        // 3. Casos de borda: booleans invertidos (is_whatsapp = false, onboarding_completed = true)
+        val customProfileJson = """
+            {
+                "user_id": "usr-2",
+                "name": "",
+                "phone": "",
+                "city": "",
+                "email": "",
+                "is_whatsapp": false,
+                "cep": "",
+                "street": "",
+                "address_number": "",
+                "neighborhood": "",
+                "state_uf": "",
+                "onboarding_completed": true
+            }
+        """.trimIndent()
+
+        val parsedCustomProf = profileAdapter.fromJson(customProfileJson)
+        assertNotNull(parsedCustomProf)
+        assertEquals(false, parsedCustomProf?.isWhatsapp)
+        assertEquals(true, parsedCustomProf?.onboardingCompleted)
+        assertEquals("", parsedCustomProf?.name)
+        assertEquals("", parsedCustomProf?.email)
+
+        // 4. Casos de borda em Vehicle: active = false, strings vazias, tankCapacity = 0.0
+        val edgeVehicleJson = """
+            {
+                "user_id": "usr-3",
+                "model": "",
+                "average_consumption": 0.0,
+                "fuel_type": "",
+                "monthly_fixed_costs": 0.0,
+                "planned_work_days": 0,
+                "current_odometer": 0.0,
+                "active": false,
+                "vehicle_type": "OUTRO",
+                "brand": "",
+                "manufacturing_year": "",
+                "tank_capacity": 0.0,
+                "has_top_box": false,
+                "has_delivery_bag": false,
+                "car_body_type": ""
+            }
+        """.trimIndent()
+
+        val parsedEdgeVeh = vehicleAdapter.fromJson(edgeVehicleJson)
+        assertNotNull(parsedEdgeVeh)
+        assertFalse(parsedEdgeVeh?.active ?: true)
+        assertEquals("OUTRO", parsedEdgeVeh?.vehicleType)
+        assertEquals(0.0, parsedEdgeVeh?.tankCapacity ?: 1.0, 0.001)
+        assertEquals("", parsedEdgeVeh?.brand)
     }
 
     // =========================================================================
