@@ -40,6 +40,15 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
     }
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val latestRefillForActiveVehicleFlow: Flow<FuelRefill?> = vehicleFlow.flatMapLatest { vehicle ->
+        if (vehicle != null) {
+            fuelRefillDao.getLatestRefillForVehicleFlow(vehicle.id)
+        } else {
+            flowOf(null)
+        }
+    }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val partsForActiveVehicleFlow: Flow<List<VehiclePart>> = vehicleFlow.flatMapLatest { vehicle ->
         if (vehicle != null) {
             partDao.getPartsForVehicleFlow(vehicle.id)
@@ -262,8 +271,14 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
             val wearCost = kmRodados * totalWearCostPerKm
 
             // 2. Calcular custos restantes
-            val fuelCost = if (vehicle.averageConsumption > 0) {
-                (kmRodados / vehicle.averageConsumption) * fuelPrice
+            val realAvgConsumption = calculateRealAverageConsumption(vehicle.id)
+            val effectiveConsumption = if (realAvgConsumption != null && realAvgConsumption > 0) {
+                realAvgConsumption
+            } else {
+                vehicle.averageConsumption
+            }
+            val fuelCost = if (effectiveConsumption > 0) {
+                (kmRodados / effectiveConsumption) * fuelPrice
             } else {
                 0.0
             }
@@ -347,8 +362,14 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
             val wearCost = kmRodados * totalWearCostPerKm
 
             // 2. Calcular custos restantes
-            val fuelCost = if (vehicle.averageConsumption > 0) {
-                (kmRodados / vehicle.averageConsumption) * fuelPrice
+            val realAvgConsumption = calculateRealAverageConsumption(vehicle.id)
+            val effectiveConsumption = if (realAvgConsumption != null && realAvgConsumption > 0) {
+                realAvgConsumption
+            } else {
+                vehicle.averageConsumption
+            }
+            val fuelCost = if (effectiveConsumption > 0) {
+                (kmRodados / effectiveConsumption) * fuelPrice
             } else {
                 0.0
             }
@@ -448,62 +469,59 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
         return if (segmentConsumptions.isEmpty()) null else segmentConsumptions.average()
     }
 
+    suspend fun calculateLatestRealConsumption(vehicleId: Long): Double? {
+        val allRefills = fuelRefillDao.getAllRefillsOrderedByOdometer(vehicleId)
+        val fullTankIndices = allRefills.indices.filter { allRefills[it].isFullTank }
+        if (fullTankIndices.size < 2) return null
+
+        val prevFullIdx = fullTankIndices[fullTankIndices.size - 2]
+        val currFullIdx = fullTankIndices.last()
+
+        val prevFullRefill = allRefills[prevFullIdx]
+        val currFullRefill = allRefills[currFullIdx]
+
+        val distance = currFullRefill.odometer - prevFullRefill.odometer
+        if (distance <= 0) return null
+
+        var litersSum = 0.0
+        for (j in (prevFullIdx + 1)..currFullIdx) {
+            litersSum += allRefills[j].liters
+        }
+
+        if (litersSum <= 0) return null
+        return distance / litersSum
+    }
+
+    suspend fun getLatestFuelRefill(vehicleId: Long): FuelRefill? =
+        fuelRefillDao.getLatestRefillForVehicle(vehicleId)
+
+    fun getLatestRefillForVehicleFlow(vehicleId: Long): Flow<FuelRefill?> =
+        fuelRefillDao.getLatestRefillForVehicleFlow(vehicleId)
+
     suspend fun saveFuelRefill(refill: FuelRefill) {
-        db.withTransaction {
-            val isNew = refill.id == 0L
-            val remId = if (refill.remoteId.isNotBlank()) refill.remoteId else UUID.randomUUID().toString()
-            val status = if (isNew || refill.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
-            val toSave = refill.copy(
-                remoteId = remId,
-                syncStatus = status,
-                updatedAt = System.currentTimeMillis(),
-                isDeleted = false
-            )
-            if (isNew) {
-                fuelRefillDao.insertRefill(toSave)
-            } else {
-                fuelRefillDao.updateRefill(toSave)
-            }
-            val realConsumption = calculateRealAverageConsumption(refill.vehicleId)
-            if (realConsumption != null) {
-                val vehicle = vehicleDao.getVehicleById(refill.vehicleId)
-                if (vehicle != null) {
-                    val vStatus = if (vehicle.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
-                    vehicleDao.updateVehicle(
-                        vehicle.copy(
-                            averageConsumption = realConsumption,
-                            syncStatus = vStatus,
-                            updatedAt = System.currentTimeMillis()
-                        )
-                    )
-                }
-            }
+        val isNew = refill.id == 0L
+        val remId = if (refill.remoteId.isNotBlank()) refill.remoteId else UUID.randomUUID().toString()
+        val status = if (isNew || refill.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
+        val toSave = refill.copy(
+            remoteId = remId,
+            syncStatus = status,
+            updatedAt = System.currentTimeMillis(),
+            isDeleted = false
+        )
+        if (isNew) {
+            fuelRefillDao.insertRefill(toSave)
+        } else {
+            fuelRefillDao.updateRefill(toSave)
         }
     }
 
     suspend fun deleteFuelRefill(refill: FuelRefill) {
-        db.withTransaction {
-            val toDelete = refill.copy(
-                isDeleted = true,
-                syncStatus = SyncStatus.PENDING_DELETE,
-                updatedAt = System.currentTimeMillis()
-            )
-            fuelRefillDao.updateRefill(toDelete)
-            val realConsumption = calculateRealAverageConsumption(refill.vehicleId)
-            if (realConsumption != null) {
-                val vehicle = vehicleDao.getVehicleById(refill.vehicleId)
-                if (vehicle != null) {
-                    val vStatus = if (vehicle.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
-                    vehicleDao.updateVehicle(
-                        vehicle.copy(
-                            averageConsumption = realConsumption,
-                            syncStatus = vStatus,
-                            updatedAt = System.currentTimeMillis()
-                        )
-                    )
-                }
-            }
-        }
+        val toDelete = refill.copy(
+            isDeleted = true,
+            syncStatus = SyncStatus.PENDING_DELETE,
+            updatedAt = System.currentTimeMillis()
+        )
+        fuelRefillDao.updateRefill(toDelete)
     }
 
     suspend fun averageFuelPrice(vehicleId: Long): Double {

@@ -32,6 +32,34 @@ enum class SyncState {
     OFFLINE
 }
 
+enum class ConsumptionAlertLevel {
+    GREEN,
+    AMBER,
+    RED,
+    GRAY;
+
+    val isEfficient: Boolean get() = this == GREEN
+}
+
+data class FuelConsumptionComparisonState(
+    val theoreticalConsumption: Double = 0.0,
+    val realConsumption: Double? = null,
+    val differencePercentage: Double? = null,
+    val alertLevel: ConsumptionAlertLevel = ConsumptionAlertLevel.GRAY,
+    val message: String = "",
+    val hasSufficientData: Boolean = false
+)
+
+data class FuelCostEstimationInfo(
+    val vehicleModel: String = "",
+    val distanceKm: Double = 0.0,
+    val effectiveConsumption: Double = 0.0,
+    val isUsingRealConsumption: Boolean = false,
+    val estimatedFuelCost: Double = 0.0,
+    val fuelPriceUsed: Double = 0.0,
+    val displayText: String = ""
+)
+
 class GiroCustoViewModel(application: Application) : AndroidViewModel(application) {
     private val db = GiroCustoDatabase.getDatabase(application)
     private val repository = GiroCustoRepository(db)
@@ -191,16 +219,52 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val realAverageConsumption: StateFlow<Double?> = fuelRefills
-        .map { _ ->
-            val activeVehicleId = vehicle.value?.id ?: 0L
-            if (activeVehicleId != 0L) {
-                repository.calculateRealAverageConsumption(activeVehicleId)
-            } else {
-                null
-            }
+    val realAverageConsumption: StateFlow<Double?> = combine(vehicle, fuelRefills) { v, _ ->
+        val activeVehicleId = v?.id ?: 0L
+        if (activeVehicleId != 0L) {
+            repository.calculateRealAverageConsumption(activeVehicleId)
+        } else {
+            null
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val fuelComparisonState: StateFlow<FuelConsumptionComparisonState> = combine(
+        vehicle,
+        realAverageConsumption
+    ) { currentVehicle, real ->
+        val theoretical = currentVehicle?.averageConsumption ?: 0.0
+        if (currentVehicle != null && real != null && real > 0.0 && theoretical > 0.0) {
+            val diff = ((real - theoretical) / theoretical) * 100.0
+            val alertLevel = when {
+                real >= theoretical * 0.95 -> ConsumptionAlertLevel.GREEN
+                real >= theoretical * 0.80 -> ConsumptionAlertLevel.AMBER
+                else -> ConsumptionAlertLevel.RED
+            }
+            val message = when (alertLevel) {
+                ConsumptionAlertLevel.GREEN -> "Excelente! Seu veículo está operando com ótima eficiência em relação à média de fábrica."
+                ConsumptionAlertLevel.AMBER -> "Atenção: Consumo moderado. Ligeiramente abaixo da média cadastrada."
+                ConsumptionAlertLevel.RED -> "Alerta: Consumo elevado! Vale revisar calibragem de pneus, filtros ou manutenção."
+                ConsumptionAlertLevel.GRAY -> ""
+            }
+            FuelConsumptionComparisonState(
+                theoreticalConsumption = theoretical,
+                realConsumption = real,
+                differencePercentage = diff,
+                alertLevel = alertLevel,
+                message = message,
+                hasSufficientData = true
+            )
+        } else {
+            FuelConsumptionComparisonState(
+                theoreticalConsumption = theoretical,
+                realConsumption = real,
+                differencePercentage = null,
+                alertLevel = ConsumptionAlertLevel.GRAY,
+                message = "Abasteça com tanque cheio pelo menos 2 vezes para calcular e comparar seu consumo real.",
+                hasSufficientData = false
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FuelConsumptionComparisonState())
 
     val averageFuelPrice: StateFlow<Double> = fuelRefills
         .map { _ ->
@@ -769,18 +833,25 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     suspend fun prefillLaunchFields() {
         val lastRecord = repository.allRecordsFlow.first().firstOrNull()
         val currentVehicle = repository.getVehicle()
-        
+        val latestRefill = if (currentVehicle != null) {
+            repository.getLatestFuelRefill(currentVehicle.id)
+        } else {
+            null
+        }
+
         // Odômetro inicial e combustível: preenche se houver histórico ou veículo cadastrado
         if (lastRecord != null || currentVehicle != null) {
             val defaultStartOdo = lastRecord?.endOdometer ?: currentVehicle?.currentOdometer ?: 0.0
             startOdometer.value = String.format(Locale.US, "%.1f", defaultStartOdo)
-            val defaultFuelPrice = lastRecord?.fuelPrice ?: 5.80
+            val defaultFuelPrice = latestRefill?.pricePerLiter?.takeIf { it > 0.0 }
+                ?: lastRecord?.fuelPrice?.takeIf { it > 0.0 }
+                ?: 5.80
             fuelPrice.value = String.format(Locale.US, "%.2f", defaultFuelPrice)
         } else {
             startOdometer.value = ""
-            fuelPrice.value = ""
+            fuelPrice.value = "5.80"
         }
-        
+
         // Zerar outros
         endOdometer.value = ""
         grossEarnings.value = ""
@@ -1100,20 +1171,27 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     val realTimeEstimation: Flow<EstimationDetail> = combine(
         formStateFlow,
         parts,
-        vehicle
-    ) { form, partsList, v ->
-        val startVal = form.startOdo.toDoubleOrNull() ?: 0.0
-        val endVal = form.endOdo.toDoubleOrNull() ?: 0.0
-        val grossVal = form.gross.toDoubleOrNull() ?: 0.0
-        val foodVal = form.food.toDoubleOrNull() ?: 0.0
-        val fPrice = form.fuelPrice.toDoubleOrNull() ?: 0.0
+        vehicle,
+        realAverageConsumption
+    ) { form, partsList, v, realAvg ->
+        val startVal = form.startOdo.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val endVal = form.endOdo.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val grossVal = form.gross.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val foodVal = form.food.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val fPrice = form.fuelPrice.replace(",", ".").toDoubleOrNull() ?: 0.0
         val activeVehicle = v ?: Vehicle()
 
         val distance = (endVal - startVal).coerceAtLeast(0.0)
 
-        // Combustível
-        val fuelCost = if (activeVehicle.averageConsumption > 0) {
-            (distance / activeVehicle.averageConsumption) * fPrice
+        // Combustível com prioridade: realAverageConsumption (se disponível e > 0), senão vehicle.averageConsumption
+        val effectiveConsumption = if (realAvg != null && realAvg > 0.0) {
+            realAvg
+        } else {
+            activeVehicle.averageConsumption
+        }
+
+        val fuelCost = if (effectiveConsumption > 0) {
+            (distance / effectiveConsumption) * fPrice
         } else {
             0.0
         }
@@ -1142,6 +1220,46 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
             netProfit = netProfit
         )
     }
+
+    val fuelCostEstimationInfo: StateFlow<FuelCostEstimationInfo> = combine(
+        vehicle,
+        realAverageConsumption,
+        startOdometer,
+        endOdometer,
+        fuelPrice
+    ) { currentVehicle, realAvg, startStr, endStr, priceStr ->
+        val v = currentVehicle ?: Vehicle()
+        val startVal = startStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val endVal = endStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val fPrice = priceStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val distance = (endVal - startVal).coerceAtLeast(0.0)
+
+        val isUsingReal = realAvg != null && realAvg > 0.0
+        val effectiveConsumption = if (isUsingReal) realAvg!! else v.averageConsumption
+        val estimatedFuelCost = if (effectiveConsumption > 0.0) {
+            (distance / effectiveConsumption) * fPrice
+        } else {
+            0.0
+        }
+
+        val vehicleName = v.model.ifBlank { "Veículo Ativo" }
+        val displayDist = String.format(Locale.GERMAN, "%.1f", distance)
+        val displayText = "Custo de combustível estimado para $displayDist km rodados com base no consumo do $vehicleName"
+
+        FuelCostEstimationInfo(
+            vehicleModel = vehicleName,
+            distanceKm = distance,
+            effectiveConsumption = effectiveConsumption,
+            isUsingRealConsumption = isUsingReal,
+            estimatedFuelCost = estimatedFuelCost,
+            fuelPriceUsed = fPrice,
+            displayText = displayText
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = FuelCostEstimationInfo()
+    )
 
     fun seedJune2026Data(onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
         viewModelScope.launch {

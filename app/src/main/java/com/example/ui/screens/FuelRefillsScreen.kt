@@ -34,6 +34,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.FuelRefill
+import com.example.ui.ConsumptionAlertLevel
+import com.example.ui.FuelConsumptionComparisonState
 import com.example.ui.GiroCustoViewModel
 import com.example.network.GasStationResult
 import com.example.ui.components.NearbyStationsMapView
@@ -52,6 +54,7 @@ fun FuelRefillsScreen(viewModel: GiroCustoViewModel) {
     val avgFuelPrice by viewModel.averageFuelPrice.collectAsStateWithLifecycle()
     val avgLiters by viewModel.averageLitersPerRefill.collectAsStateWithLifecycle()
     val activeVehicle by viewModel.vehicle.collectAsStateWithLifecycle()
+    val fuelComparison by viewModel.fuelComparisonState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     // null -> listing, -1L -> adding, value -> editing
@@ -109,6 +112,7 @@ fun FuelRefillsScreen(viewModel: GiroCustoViewModel) {
                 realConsumption = realConsumption,
                 avgFuelPrice = avgFuelPrice,
                 avgLiters = avgLiters,
+                fuelComparison = fuelComparison,
                 onAddClick = { editingRefillId = -1L },
                 onEditClick = { id -> editingRefillId = id }
             )
@@ -182,6 +186,7 @@ fun RefillsListSection(
     realConsumption: Double?,
     avgFuelPrice: Double,
     avgLiters: Double,
+    fuelComparison: FuelConsumptionComparisonState,
     onAddClick: () -> Unit,
     onEditClick: (Long) -> Unit
 ) {
@@ -266,6 +271,9 @@ fun RefillsListSection(
                     }
                 }
             }
+
+            // Card comparativo: Consumo Cadastrado (Teórico) vs Seu Consumo Real com alertas de eficiência
+            FuelComparisonCard(fuelComparison = fuelComparison)
 
             if (refills.isEmpty()) {
                 Box(
@@ -353,6 +361,227 @@ fun RefillsListSection(
     }
 }
 
+@Composable
+fun FuelComparisonCard(
+    fuelComparison: FuelConsumptionComparisonState,
+    modifier: Modifier = Modifier
+) {
+    val (statusColor, containerBg, badgeBg, badgeTextColor, statusLabel, icon) = when (fuelComparison.alertLevel) {
+        ConsumptionAlertLevel.GREEN -> StatusStyle(
+            borderColor = Color(0xFF10B981),
+            containerColor = Color(0xFF064E3B).copy(alpha = 0.15f),
+            badgeColor = Color(0xFF064E3B),
+            badgeTextColor = Color(0xFF34D399),
+            label = "Excelente Eficiência",
+            icon = Icons.Filled.CheckCircle
+        )
+        ConsumptionAlertLevel.AMBER -> StatusStyle(
+            borderColor = Color(0xFFF59E0B),
+            containerColor = Color(0xFF78350F).copy(alpha = 0.15f),
+            badgeColor = Color(0xFF78350F),
+            badgeTextColor = Color(0xFFFBBF24),
+            label = "Consumo Moderado",
+            icon = Icons.Filled.Warning
+        )
+        ConsumptionAlertLevel.RED -> StatusStyle(
+            borderColor = Color(0xFFEF4444),
+            containerColor = Color(0xFF7F1D1D).copy(alpha = 0.15f),
+            badgeColor = Color(0xFF7F1D1D),
+            badgeTextColor = Color(0xFFFCA5A5),
+            label = "Consumo Elevado",
+            icon = Icons.Filled.Error
+        )
+        ConsumptionAlertLevel.GRAY -> StatusStyle(
+            borderColor = MaterialTheme.colorScheme.outlineVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            badgeColor = MaterialTheme.colorScheme.surfaceVariant,
+            badgeTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            label = "Coletando Dados",
+            icon = Icons.Filled.Info
+        )
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("fuel_consumption_comparison_card"),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = containerBg),
+        border = BorderStroke(1.dp, statusColor.copy(alpha = 0.6f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Speed,
+                        contentDescription = null,
+                        tint = statusColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "Consumo: Teórico vs Real",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Surface(
+                    color = badgeBg,
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, statusColor.copy(alpha = 0.5f)),
+                    modifier = Modifier.testTag("efficiency_badge")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = badgeTextColor,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = statusLabel,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = badgeTextColor
+                        )
+                    }
+                }
+            }
+
+            // Comparison row with two boxes
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Cadastrado (Teórico)
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Cadastrado (Teórico)",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "${String.format(Locale.getDefault(), "%.1f", fuelComparison.theoreticalConsumption)} km/L",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.testTag("theoretical_consumption_text")
+                        )
+                    }
+                }
+
+                // Consumo Real
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, statusColor.copy(alpha = 0.3f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Seu Consumo Real",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val realText = if (fuelComparison.hasSufficientData && fuelComparison.realConsumption != null) {
+                            "${String.format(Locale.getDefault(), "%.1f", fuelComparison.realConsumption)} km/L"
+                        } else {
+                            "-- km/L"
+                        }
+                        Text(
+                            text = realText,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (fuelComparison.hasSufficientData) statusColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag("real_consumption_text")
+                        )
+                    }
+                }
+            }
+
+            // Footer explanation & percentage difference
+            if (fuelComparison.hasSufficientData && fuelComparison.differencePercentage != null) {
+                val diff = fuelComparison.differencePercentage
+                val diffFormatted = String.format(Locale.getDefault(), "%.1f", Math.abs(diff))
+                val diffText = if (diff >= 0) {
+                    "+$diffFormatted% mais eficiente"
+                } else {
+                    "-$diffFormatted% vs cadastrado"
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = fuelComparison.message,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = diffText,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = statusColor,
+                        modifier = Modifier.testTag("consumption_diff_text")
+                    )
+                }
+            } else {
+                Text(
+                    text = fuelComparison.message,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+private data class StatusStyle(
+    val borderColor: Color,
+    val containerColor: Color,
+    val badgeColor: Color,
+    val badgeTextColor: Color,
+    val label: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RefillFormSection(
@@ -382,6 +611,14 @@ fun RefillFormSection(
     var isDropdownExpanded by remember { mutableStateOf(false) }
     val fuelTypes = listOf("Gasolina Comum", "Gasolina Aditivada", "Etanol Comum", "Etanol Aditivado", "Diesel", "GNV")
     val paymentMethods = listOf("PIX", "Cartão", "Dinheiro")
+
+    val activeVehicle by viewModel.vehicle.collectAsStateWithLifecycle()
+    val tankCapacity = activeVehicle?.tankCapacity ?: 0.0
+    val currentLiters = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+    val exceedsTankCapacity = tankCapacity > 0.0 && currentLiters > tankCapacity
+
+    var showTankCapacityConfirmDialog by remember { mutableStateOf(false) }
+    var pendingRefillToSave by remember { mutableStateOf<FuelRefill?>(null) }
 
     val nearbyStations by viewModel.nearbyGasStations.collectAsStateWithLifecycle()
     val isSearchingStations by viewModel.isSearchingStations.collectAsStateWithLifecycle()
@@ -1088,6 +1325,34 @@ fun RefillFormSection(
             )
         }
 
+        if (exceedsTankCapacity) {
+            Surface(
+                color = Color(0xFFFEF3C7),
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, Color(0xFFF59E0B)),
+                modifier = Modifier.fillMaxWidth().testTag("tank_capacity_alert")
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = "Alerta Tanque",
+                        tint = Color(0xFFD97706),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "Atenção: A quantidade informada (${String.format(Locale.getDefault(), "%.1f", currentLiters)} L) ultrapassa a capacidade máxima do tanque (${String.format(Locale.getDefault(), "%.1f", tankCapacity)} L) cadastrada para o ${activeVehicle?.model ?: "veículo"}.",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF92400E)
+                    )
+                }
+            }
+        }
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             // Desconto
             TextField(
@@ -1279,7 +1544,13 @@ fun RefillFormSection(
                         isInstallment = isInstallment,
                         installmentsCount = installmentsCountStr.toIntOrNull() ?: 1
                     )
-                    onSave(newRefill)
+
+                    if (exceedsTankCapacity) {
+                        pendingRefillToSave = newRefill
+                        showTankCapacityConfirmDialog = true
+                    } else {
+                        onSave(newRefill)
+                    }
                 },
                 modifier = Modifier.weight(1f).height(50.dp).testTag("save_refill_btn"),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
@@ -1289,6 +1560,52 @@ fun RefillFormSection(
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("Salvar")
             }
+        }
+
+        if (showTankCapacityConfirmDialog && pendingRefillToSave != null) {
+            AlertDialog(
+                onDismissRequest = {
+                    showTankCapacityConfirmDialog = false
+                    pendingRefillToSave = null
+                },
+                icon = {
+                    Icon(Icons.Filled.Warning, contentDescription = null, tint = Color(0xFFF59E0B))
+                },
+                title = {
+                    Text("Capacidade do Tanque Excedida", fontWeight = FontWeight.Bold)
+                },
+                text = {
+                    Text(
+                        "A quantidade informada (${String.format(Locale.getDefault(), "%.1f", pendingRefillToSave!!.liters)} L) ultrapassa a capacidade cadastrada para o tanque deste veículo (${String.format(Locale.getDefault(), "%.1f", tankCapacity)} L).\n\nDeseja confirmar e registrar este abastecimento mesmo assim?"
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val toSave = pendingRefillToSave!!
+                            showTankCapacityConfirmDialog = false
+                            pendingRefillToSave = null
+                            onSave(toSave)
+                        },
+                        modifier = Modifier.testTag("confirm_exceeded_tank_btn"),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text("Confirmar e Salvar")
+                    }
+                },
+                dismissButton = {
+                    OutlinedButton(
+                        onClick = {
+                            showTankCapacityConfirmDialog = false
+                            pendingRefillToSave = null
+                        },
+                        modifier = Modifier.testTag("dismiss_exceeded_tank_btn")
+                    ) {
+                        Text("Revisar")
+                    }
+                },
+                modifier = Modifier.testTag("tank_capacity_confirm_dialog")
+            )
         }
     }
 }

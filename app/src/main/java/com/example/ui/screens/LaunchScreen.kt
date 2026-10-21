@@ -38,6 +38,7 @@ import com.example.data.Vehicle
 import com.example.data.VehiclePart
 import com.example.data.Platform
 import com.example.ui.EstimationDetail
+import com.example.ui.FuelCostEstimationInfo
 import com.example.ui.GiroCustoViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -376,6 +377,78 @@ fun LaunchScreen(
                     )
                 }
 
+                // Exibição Dinâmica de Distância Calculada (KM rodados no dia)
+                val startVal = startOdo.replace(",", ".").toDoubleOrNull()
+                val endVal = endOdo.replace(",", ".").toDoubleOrNull()
+                if (startVal != null && endVal != null) {
+                    val diffKm = endVal - startVal
+                    if (diffKm >= 0.0) {
+                        Surface(
+                            color = if (isDark) Color(0xFF064E3B).copy(alpha = 0.4f) else Color(0xFFD1FAE5),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.5f)),
+                            modifier = Modifier.fillMaxWidth().testTag("dynamic_distance_badge")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.DirectionsCar,
+                                        contentDescription = "Distância Percorrida",
+                                        tint = Color(0xFF10B981),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = "Distância calculada no dia:",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = if (isDark) Color(0xFFE2E8F0) else Color(0xFF0F172A)
+                                    )
+                                }
+                                Text(
+                                    text = "${String.format(Locale.GERMAN, "%.1f", diffKm)} KM",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = Color(0xFF10B981)
+                                )
+                            }
+                        }
+                    } else {
+                        Surface(
+                            color = if (isDark) Color(0xFF7F1D1D).copy(alpha = 0.3f) else Color(0xFFFEE2E2),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f)),
+                            modifier = Modifier.fillMaxWidth().testTag("dynamic_distance_badge_error")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Warning,
+                                    contentDescription = "Erro Hodômetro",
+                                    tint = Color(0xFFEF4444),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Hodômetro final não pode ser menor que o inicial.",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFFEF4444)
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     TextField(
                         value = gross,
@@ -668,6 +741,116 @@ fun LaunchScreen(
             }
         }
 
+        // Card Informativo de Estimativa de Combustível (Consumo Real vs Teórico Cadastrado)
+        val fuelEstimationInfo by viewModel.fuelCostEstimationInfo.collectAsStateWithLifecycle()
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("fuel_cost_estimation_info_card"),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isDark) Color(0xFF1E1E22) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            ),
+            border = BorderStroke(
+                1.dp,
+                if (fuelEstimationInfo.isUsingRealConsumption) Color(0xFF10B981).copy(alpha = 0.5f) else Color(0xFF3B82F6).copy(alpha = 0.4f)
+            ),
+            elevation = CardDefaults.cardElevation(1.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.LocalGasStation,
+                            contentDescription = null,
+                            tint = if (fuelEstimationInfo.isUsingRealConsumption) Color(0xFF10B981) else Color(0xFF3B82F6),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = "Estimativa de Combustível",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    Surface(
+                        color = if (fuelEstimationInfo.isUsingRealConsumption) Color(0xFF064E3B) else Color(0xFF1E3A8A),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(
+                            1.dp,
+                            if (fuelEstimationInfo.isUsingRealConsumption) Color(0xFF10B981) else Color(0xFF60A5FA)
+                        ),
+                        modifier = Modifier.testTag("consumption_basis_badge")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (fuelEstimationInfo.isUsingRealConsumption) Icons.Filled.CheckCircle else Icons.Filled.Info,
+                                contentDescription = null,
+                                tint = if (fuelEstimationInfo.isUsingRealConsumption) Color(0xFF34D399) else Color(0xFF93C5FD),
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = if (fuelEstimationInfo.isUsingRealConsumption) {
+                                    "Consumo Real (${String.format(Locale.getDefault(), "%.1f", fuelEstimationInfo.effectiveConsumption)} km/L)"
+                                } else {
+                                    "Consumo Cadastrado (${String.format(Locale.getDefault(), "%.1f", fuelEstimationInfo.effectiveConsumption)} km/L)"
+                                },
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (fuelEstimationInfo.isUsingRealConsumption) Color(0xFF34D399) else Color(0xFF93C5FD)
+                            )
+                        }
+                    }
+                }
+
+                Text(
+                    text = "Custo de combustível estimado para ${String.format(Locale.GERMAN, "%.1f", fuelEstimationInfo.distanceKm)} km rodados com base no consumo do ${fuelEstimationInfo.vehicleModel.ifBlank { "veículo ativo" }}.",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("fuel_cost_estimation_message")
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (fuelEstimationInfo.isUsingRealConsumption) "Base: Histórico real de abastecimentos" else "Base: Média teórica cadastrada",
+                        fontSize = 11.sp,
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
+                    Text(
+                        text = String.format(Locale.GERMAN, "R$ %.2f", fuelEstimationInfo.estimatedFuelCost),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace,
+                        color = if (fuelEstimationInfo.isUsingRealConsumption) Color(0xFF10B981) else Color(0xFFFBBF24),
+                        modifier = Modifier.testTag("fuel_cost_estimation_value")
+                    )
+                }
+            }
+        }
+
         // ESTIMADOR EM TEMPO REAL (Painel de Alta Tecnologia em tons de Slate e Verde Esmeralda)
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -730,7 +913,15 @@ fun LaunchScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Combustível
-                EstimationRow(label = "Combustível (Gasolina/Álcool)", value = estimate.fuelCost)
+                EstimationRow(
+                    label = "Combustível (Gasolina/Álcool)",
+                    value = estimate.fuelCost,
+                    tooltip = if (fuelEstimationInfo.isUsingRealConsumption) {
+                        "Calculado com base no seu consumo real (${String.format(Locale.getDefault(), "%.1f", fuelEstimationInfo.effectiveConsumption)} km/L)"
+                    } else {
+                        "Calculado com base no consumo cadastrado (${String.format(Locale.getDefault(), "%.1f", fuelEstimationInfo.effectiveConsumption)} km/L)"
+                    }
+                )
                 // Desgaste oculto
                 EstimationRow(
                     label = "Desgaste Oculto (Manutenção/Peças)", 

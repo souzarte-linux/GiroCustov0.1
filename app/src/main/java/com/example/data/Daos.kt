@@ -194,6 +194,12 @@ interface FuelRefillDao {
     @Query("SELECT * FROM fuel_refills WHERE vehicleId = :vehicleId AND isDeleted = 0 ORDER BY odometer ASC")
     suspend fun getAllRefillsOrderedByOdometer(vehicleId: Long): List<FuelRefill>
 
+    @Query("SELECT * FROM fuel_refills WHERE vehicleId = :vehicleId AND isDeleted = 0 ORDER BY odometer DESC, dateTimestamp DESC LIMIT 1")
+    suspend fun getLatestRefillForVehicle(vehicleId: Long): FuelRefill?
+
+    @Query("SELECT * FROM fuel_refills WHERE vehicleId = :vehicleId AND isDeleted = 0 ORDER BY odometer DESC, dateTimestamp DESC LIMIT 1")
+    fun getLatestRefillForVehicleFlow(vehicleId: Long): Flow<FuelRefill?>
+
     @Query("SELECT * FROM fuel_refills WHERE id = :id LIMIT 1")
     suspend fun getRefillById(id: Long): FuelRefill?
 

@@ -587,10 +587,10 @@ class RepositoryAndEstimationTest {
         assertNotNull(consumptionAfterTwo)
         assertEquals(40.0, consumptionAfterTwo!!, 0.001)
 
-        // Que vehicle.averageConsumption é atualizado automaticamente após salvar um abastecimento que gera novo cálculo válido
+        // Que vehicle.averageConsumption NÃO é sobrescrito, preservando o consumo cadastrado do veículo
         val updatedVehicleAfterTwo = db.vehicleDao().getVehicleById(1001L)
         assertNotNull(updatedVehicleAfterTwo)
-        assertEquals(40.0, updatedVehicleAfterTwo!!.averageConsumption, 0.001)
+        assertEquals(35.0, updatedVehicleAfterTwo!!.averageConsumption, 0.001)
 
         // 3. Adicione um teste específico simulando um parcial no meio de dois tanques cheios, confirmando que o litros do parcial entra na soma do trecho (e não é ignorado)
         db.vehicleDao().insertVehicle(vehicle.copy(id = 1002L, averageConsumption = 30.0))
@@ -653,6 +653,277 @@ class RepositoryAndEstimationTest {
         val updatedVehicleWithPartial = db.vehicleDao().getVehicleById(1002L)
         assertNotNull(updatedVehicleWithPartial)
         assertEquals(30.0, updatedVehicleWithPartial!!.averageConsumption, 0.001)
+    }
+
+    @Test
+    fun testFuelRefillCalculations_ComprehensiveEdgeCases() = runTest(testDispatcher) {
+        val edgeVehicleId = 9901L
+        val vehicle = Vehicle(id = edgeVehicleId, model = "Factor Edge", averageConsumption = 32.0, active = true)
+        db.vehicleDao().insertVehicle(vehicle)
+
+        // 1. Caso de borda: 0 abastecimentos
+        assertNull(repository.calculateRealAverageConsumption(edgeVehicleId))
+        assertNull(repository.calculateLatestRealConsumption(edgeVehicleId))
+
+        // 2. Caso de borda: Múltiplos parciais sem nenhum tanque cheio
+        for (i in 1..3) {
+            repository.saveFuelRefill(FuelRefill(
+                id = 0L,
+                vehicleId = edgeVehicleId,
+                dateTimestamp = 1000L * i,
+                dateString = "0$i/08/2026",
+                gasStation = "Posto Partial",
+                fuelType = "Gasolina",
+                pricePerLiter = 5.50,
+                liters = 5.0,
+                totalPaid = 27.50,
+                odometer = 10000.0 + (i * 100.0),
+                isFullTank = false,
+                paymentMethod = "PIX"
+            ))
+        }
+        assertNull(repository.calculateRealAverageConsumption(edgeVehicleId))
+        assertNull(repository.calculateLatestRealConsumption(edgeVehicleId))
+
+        // 3. Caso de borda: 1 tanque cheio após múltiplos parciais
+        repository.saveFuelRefill(FuelRefill(
+            id = 0L,
+            vehicleId = edgeVehicleId,
+            dateTimestamp = 4000L,
+            dateString = "04/08/2026",
+            gasStation = "Posto Cheio",
+            fuelType = "Gasolina",
+            pricePerLiter = 5.50,
+            liters = 10.0,
+            totalPaid = 55.0,
+            odometer = 10400.0,
+            isFullTank = true,
+            paymentMethod = "PIX"
+        ))
+        assertNull(repository.calculateRealAverageConsumption(edgeVehicleId))
+        assertNull(repository.calculateLatestRealConsumption(edgeVehicleId))
+
+        // 4. Caso de borda: 2 cheios com odômetro IDÊNTICO (distância = 0)
+        val identicalVehicleId = 9902L
+        db.vehicleDao().insertVehicle(Vehicle(id = identicalVehicleId, model = "Zero Dist", averageConsumption = 30.0))
+        repository.saveFuelRefill(FuelRefill(id = 0L, vehicleId = identicalVehicleId, dateTimestamp = 1000L, dateString = "01/08/2026", gasStation = "P1", fuelType = "Gasolina", pricePerLiter = 5.0, liters = 10.0, totalPaid = 50.0, odometer = 5000.0, isFullTank = true, paymentMethod = "PIX"))
+        repository.saveFuelRefill(FuelRefill(id = 0L, vehicleId = identicalVehicleId, dateTimestamp = 2000L, dateString = "02/08/2026", gasStation = "P2", fuelType = "Gasolina", pricePerLiter = 5.0, liters = 10.0, totalPaid = 50.0, odometer = 5000.0, isFullTank = true, paymentMethod = "PIX"))
+        assertNull(repository.calculateRealAverageConsumption(identicalVehicleId))
+        assertNull(repository.calculateLatestRealConsumption(identicalVehicleId))
+
+        // 5. Caso de borda: Tanque cheio com 0 litros
+        val zeroLitersVehicleId = 9903L
+        db.vehicleDao().insertVehicle(Vehicle(id = zeroLitersVehicleId, model = "Zero Liters", averageConsumption = 30.0))
+        repository.saveFuelRefill(FuelRefill(id = 0L, vehicleId = zeroLitersVehicleId, dateTimestamp = 1000L, dateString = "01/08/2026", gasStation = "P1", fuelType = "Gasolina", pricePerLiter = 5.0, liters = 0.0, totalPaid = 0.0, odometer = 1000.0, isFullTank = true, paymentMethod = "PIX"))
+        repository.saveFuelRefill(FuelRefill(id = 0L, vehicleId = zeroLitersVehicleId, dateTimestamp = 2000L, dateString = "02/08/2026", gasStation = "P2", fuelType = "Gasolina", pricePerLiter = 5.0, liters = 0.0, totalPaid = 0.0, odometer = 1200.0, isFullTank = true, paymentMethod = "PIX"))
+        assertNull(repository.calculateRealAverageConsumption(zeroLitersVehicleId))
+        assertNull(repository.calculateLatestRealConsumption(zeroLitersVehicleId))
+
+        // 6. Caso de borda: Múltiplos parciais intercalados em trecho válido (Full -> Part 1 -> Part 2 -> Full)
+        val multiPartVehicleId = 9904L
+        db.vehicleDao().insertVehicle(Vehicle(id = multiPartVehicleId, model = "Multi Part", averageConsumption = 30.0))
+        // Full (odometer 10000, 10L)
+        repository.saveFuelRefill(FuelRefill(id = 0L, vehicleId = multiPartVehicleId, dateTimestamp = 1000L, dateString = "01/08/2026", gasStation = "P1", fuelType = "Gasolina", pricePerLiter = 5.0, liters = 10.0, totalPaid = 50.0, odometer = 10000.0, isFullTank = true, paymentMethod = "PIX"))
+        // Part 1 (odometer 10100, 3L)
+        repository.saveFuelRefill(FuelRefill(id = 0L, vehicleId = multiPartVehicleId, dateTimestamp = 2000L, dateString = "02/08/2026", gasStation = "P2", fuelType = "Gasolina", pricePerLiter = 5.0, liters = 3.0, totalPaid = 15.0, odometer = 10100.0, isFullTank = false, paymentMethod = "PIX"))
+        // Part 2 (odometer 10250, 4L)
+        repository.saveFuelRefill(FuelRefill(id = 0L, vehicleId = multiPartVehicleId, dateTimestamp = 3000L, dateString = "03/08/2026", gasStation = "P3", fuelType = "Gasolina", pricePerLiter = 5.0, liters = 4.0, totalPaid = 20.0, odometer = 10250.0, isFullTank = false, paymentMethod = "PIX"))
+        // Full 2 (odometer 10400, 5L)
+        // Distância: 10400 - 10000 = 400 km. Litros: 3.0 + 4.0 + 5.0 = 12.0 L => 400 / 12 = 33.333 km/L
+        repository.saveFuelRefill(FuelRefill(id = 0L, vehicleId = multiPartVehicleId, dateTimestamp = 4000L, dateString = "04/08/2026", gasStation = "P4", fuelType = "Gasolina", pricePerLiter = 5.0, liters = 5.0, totalPaid = 25.0, odometer = 10400.0, isFullTank = true, paymentMethod = "PIX"))
+
+        val multiPartAvg = repository.calculateRealAverageConsumption(multiPartVehicleId)
+        val multiPartLatest = repository.calculateLatestRealConsumption(multiPartVehicleId)
+        assertNotNull(multiPartAvg)
+        assertNotNull(multiPartLatest)
+        assertEquals(33.333, multiPartAvg!!, 0.001)
+        assertEquals(33.333, multiPartLatest!!, 0.001)
+
+        // Consumo cadastrado de fábrica permanece rigorosamente intacto
+        val v4 = db.vehicleDao().getVehicleById(multiPartVehicleId)
+        assertEquals(30.0, v4!!.averageConsumption, 0.001)
+    }
+
+    @Test
+    fun testLatestRefillAndRealConsumptionRules() = runTest(testDispatcher) {
+        val testVehicleId = 5001L
+        val vehicle = Vehicle(
+            id = testVehicleId,
+            model = "Fazer 250",
+            averageConsumption = 30.0, // Consumo cadastrado (teórico)
+            monthlyFixedCosts = 300.0,
+            plannedWorkDays = 20,
+            active = true
+        )
+        db.vehicleDao().insertVehicle(vehicle)
+        repository.setActiveVehicle(testVehicleId)
+
+        // 1. Sem abastecimentos: getLatestFuelRefill e consumos reais retornam null
+        assertNull(repository.getLatestFuelRefill(testVehicleId))
+        assertNull(db.fuelRefillDao().getLatestRefillForVehicle(testVehicleId))
+        assertNull(repository.calculateLatestRealConsumption(testVehicleId))
+        assertNull(repository.calculateRealAverageConsumption(testVehicleId))
+
+        // 2. Primeiro abastecimento (tanque cheio em 10.000 km)
+        val refill1 = FuelRefill(
+            id = 0L,
+            vehicleId = testVehicleId,
+            dateTimestamp = 1000L,
+            dateString = "01/08/2026",
+            gasStation = "Posto Shell",
+            fuelType = "Gasolina",
+            pricePerLiter = 5.50,
+            liters = 12.0,
+            totalPaid = 66.0,
+            odometer = 10000.0,
+            isFullTank = true,
+            paymentMethod = "PIX"
+        )
+        repository.saveFuelRefill(refill1)
+
+        val latest1 = repository.getLatestFuelRefill(testVehicleId)
+        assertNotNull(latest1)
+        assertEquals(10000.0, latest1!!.odometer, 0.001)
+        assertEquals(5.50, latest1.pricePerLiter, 0.001)
+
+        // Com apenas 1 tanque cheio, consumo real ainda é null
+        assertNull(repository.calculateLatestRealConsumption(testVehicleId))
+        assertNull(repository.calculateRealAverageConsumption(testVehicleId))
+
+        // Verifica que o consumo cadastrado do veículo NÃO foi sobrescrito
+        val vehicleAfterRefill1 = repository.getVehicle()
+        assertEquals(30.0, vehicleAfterRefill1!!.averageConsumption, 0.001)
+
+        // 3. Segundo abastecimento (parcial em 10.150 km, 4L)
+        val refill2 = FuelRefill(
+            id = 0L,
+            vehicleId = testVehicleId,
+            dateTimestamp = 2000L,
+            dateString = "03/08/2026",
+            gasStation = "Posto Ipiranga",
+            fuelType = "Gasolina",
+            pricePerLiter = 5.60,
+            liters = 4.0,
+            totalPaid = 22.40,
+            odometer = 10150.0,
+            isFullTank = false,
+            paymentMethod = "PIX"
+        )
+        repository.saveFuelRefill(refill2)
+
+        val latest2 = repository.getLatestFuelRefill(testVehicleId)
+        assertNotNull(latest2)
+        assertEquals(10150.0, latest2!!.odometer, 0.001)
+        // Ainda apenas 1 tanque cheio -> consumos reais permanecem null
+        assertNull(repository.calculateLatestRealConsumption(testVehicleId))
+        assertNull(repository.calculateRealAverageConsumption(testVehicleId))
+
+        // 4. Terceiro abastecimento (tanque cheio em 10.350 km, 6L)
+        // Trecho 1: 10.350 - 10.000 = 350 km com 4.0 + 6.0 = 10.0 L => 35.0 km/L
+        val refill3 = FuelRefill(
+            id = 0L,
+            vehicleId = testVehicleId,
+            dateTimestamp = 3000L,
+            dateString = "05/08/2026",
+            gasStation = "Posto BR",
+            fuelType = "Gasolina",
+            pricePerLiter = 5.80,
+            liters = 6.0,
+            totalPaid = 34.80,
+            odometer = 10350.0,
+            isFullTank = true,
+            paymentMethod = "PIX"
+        )
+        repository.saveFuelRefill(refill3)
+
+        val latestReal1 = repository.calculateLatestRealConsumption(testVehicleId)
+        assertNotNull(latestReal1)
+        assertEquals(35.0, latestReal1!!, 0.001)
+
+        val avgReal1 = repository.calculateRealAverageConsumption(testVehicleId)
+        assertNotNull(avgReal1)
+        assertEquals(35.0, avgReal1!!, 0.001)
+
+        // Consumo cadastrado original do veículo (30.0) continua preservado!
+        val vehicleAfterRefill3 = repository.getVehicle()
+        assertEquals(30.0, vehicleAfterRefill3!!.averageConsumption, 0.001)
+
+        // 5. Quarto abastecimento (tanque cheio em 10.600 km, 5L)
+        // Trecho 2: 10.600 - 10.350 = 250 km com 5.0 L => 50.0 km/L
+        val refill4 = FuelRefill(
+            id = 0L,
+            vehicleId = testVehicleId,
+            dateTimestamp = 4000L,
+            dateString = "08/08/2026",
+            gasStation = "Posto Shell",
+            fuelType = "Gasolina",
+            pricePerLiter = 6.00,
+            liters = 5.0,
+            totalPaid = 30.00,
+            odometer = 10600.0,
+            isFullTank = true,
+            paymentMethod = "PIX"
+        )
+        repository.saveFuelRefill(refill4)
+
+        // Último abastecimento:
+        val latest4 = repository.getLatestFuelRefill(testVehicleId)
+        assertEquals(10600.0, latest4!!.odometer, 0.001)
+        assertEquals(6.00, latest4.pricePerLiter, 0.001)
+
+        // latestReal deve ser 50.0 km/L (último trecho de 250km / 5L)
+        val latestReal2 = repository.calculateLatestRealConsumption(testVehicleId)
+        assertNotNull(latestReal2)
+        assertEquals(50.0, latestReal2!!, 0.001)
+
+        // avgReal deve ser a média dos trechos: (35.0 + 50.0) / 2 = 42.5 km/L
+        val avgReal2 = repository.calculateRealAverageConsumption(testVehicleId)
+        assertNotNull(avgReal2)
+        assertEquals(42.5, avgReal2!!, 0.001)
+
+        // 6. Testar cálculo de fuelCost em insertDailyRecord usando consumo real médio
+        // 85 km rodados @ R$ 5,00/L com consumo médio real de 42.5 km/L:
+        // Litros consumidos = 85 / 42.5 = 2.0 L -> fuelCost = 2.0 * 5.00 = 10.00
+        // (Se usasse o consumo cadastrado de 30.0, seria 85 / 30.0 * 5.00 = 14.166)
+        repository.insertDailyRecord(
+            dateString = "09/08/2026",
+            dateTimestamp = 5000L,
+            platform = "iFood",
+            grossEarnings = 100.0,
+            deliveriesCount = 5,
+            startOdometer = 10600.0,
+            endOdometer = 10685.0, // 85 km
+            fuelPrice = 5.00,
+            foodExpense = 0.0
+        )
+
+        val records = repository.allRecordsFlow.first()
+        val record = records.first { it.dateTimestamp == 5000L }
+        assertEquals(10.00, record.fuelCost, 0.001)
+
+        // 7. Testar updateDailyRecord também usando consumo real médio
+        // Atualiza para 170 km rodados: 170 / 42.5 * 5.00 = 20.00
+        repository.updateDailyRecord(
+            recordId = record.id,
+            dateString = "09/08/2026",
+            dateTimestamp = 5000L,
+            platform = "iFood",
+            grossEarnings = 200.0,
+            deliveriesCount = 10,
+            startOdometer = 10600.0,
+            endOdometer = 10770.0, // 170 km
+            fuelPrice = 5.00,
+            foodExpense = 0.0
+        )
+
+        val updatedRecord = db.dailyRecordDao().getRecordById(record.id)
+        assertNotNull(updatedRecord)
+        assertEquals(20.00, updatedRecord!!.fuelCost, 0.001)
+
+        // 8. Testar deleteFuelRefill preservando averageConsumption
+        repository.deleteFuelRefill(latest4)
+        val vehicleAfterDeleteRefill = repository.getVehicle()
+        assertEquals(30.0, vehicleAfterDeleteRefill!!.averageConsumption, 0.001)
     }
 
     @Test
