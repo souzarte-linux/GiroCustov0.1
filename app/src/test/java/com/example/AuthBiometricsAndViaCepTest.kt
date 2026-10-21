@@ -1166,5 +1166,68 @@ class AuthBiometricsAndViaCepTest {
         assertTrue(emptyResult.isFailure)
         assertTrue(emptyResult.exceptionOrNull() is IllegalStateException)
     }
+
+    @Test
+    fun testTC_AUTH_googleSignInAndSignUpMockOrOAuth() = runTest(testDispatcher) {
+        var signInSuccess: Boolean? = null
+        var signInErrorMsg: String? = null
+        viewModel.signInWithGoogleMockOrOAuth { success, msg ->
+            signInSuccess = success
+            signInErrorMsg = msg
+        }
+        advanceUntilIdle()
+        assertFalse(signInSuccess == true)
+        assertEquals("Login com Google em homologação.", signInErrorMsg)
+        assertTrue(viewModel.authUiState.value is AuthUiState.Error)
+        assertEquals("Login com Google em homologação.", (viewModel.authUiState.value as AuthUiState.Error).message)
+
+        var signUpSuccess: Boolean? = null
+        var signUpErrorMsg: String? = null
+        viewModel.signUpWithGoogleMockOrOAuth { success, msg ->
+            signUpSuccess = success
+            signUpErrorMsg = msg
+        }
+        advanceUntilIdle()
+        assertFalse(signUpSuccess == true)
+        assertEquals("Cadastro com Google em homologação.", signUpErrorMsg)
+        assertTrue(viewModel.authUiState.value is AuthUiState.Error)
+        assertEquals("Cadastro com Google em homologação.", (viewModel.authUiState.value as AuthUiState.Error).message)
+    }
+
+    @Test
+    fun testTC_AUTH_googleSignInAndSignUpWithTokenAndDefaultCallback() = runTest(testDispatcher) {
+        // Test Google Sign-In with idToken and default callback
+        viewModel.signInWithGoogleMockOrOAuth(idToken = "sample-google-id-token-123")
+        advanceUntilIdle()
+        assertTrue(viewModel.authUiState.value is AuthUiState.Error)
+        assertEquals("Login com Google em homologação.", (viewModel.authUiState.value as AuthUiState.Error).message)
+
+        // Test Google Sign-Up with idToken and default callback
+        viewModel.signUpWithGoogleMockOrOAuth(idToken = "sample-google-id-token-456")
+        advanceUntilIdle()
+        assertTrue(viewModel.authUiState.value is AuthUiState.Error)
+        assertEquals("Cadastro com Google em homologação.", (viewModel.authUiState.value as AuthUiState.Error).message)
+    }
+
+    @Test
+    fun testTC_AUTH_signInWithPhone() = runTest(testDispatcher) {
+        var phoneSuccess: Boolean? = null
+        var phoneErrorMsg: String? = null
+        viewModel.signInWithPhone(phone = "+5511999999999", otpCode = "123456") { success, msg ->
+            phoneSuccess = success
+            phoneErrorMsg = msg
+        }
+        advanceUntilIdle()
+        assertFalse(phoneSuccess == true)
+        assertEquals("Login por SMS em homologação.", phoneErrorMsg)
+        assertTrue(viewModel.authUiState.value is AuthUiState.Error)
+        assertEquals("Login por SMS em homologação.", (viewModel.authUiState.value as AuthUiState.Error).message)
+
+        // Default callback
+        viewModel.signInWithPhone(phone = "+5511988888888")
+        advanceUntilIdle()
+        assertTrue(viewModel.authUiState.value is AuthUiState.Error)
+        assertEquals("Login por SMS em homologação.", (viewModel.authUiState.value as AuthUiState.Error).message)
+    }
 }
 

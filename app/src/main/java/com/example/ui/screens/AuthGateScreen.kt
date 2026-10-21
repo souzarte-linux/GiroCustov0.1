@@ -62,7 +62,8 @@ fun AuthGateScreen(
     isBiometricLocked: Boolean = false,
     isBiometricSupported: Boolean = false,
     onTriggerBiometric: ((onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit)? = null,
-    onGoogleSignInClick: () -> Unit = {}
+    onGoogleSignInClick: () -> Unit = {},
+    onGoogleSignUpClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
@@ -697,7 +698,7 @@ fun AuthGateScreen(
                     color = ColorBorder
                 )
                 Text(
-                    text = "ou continue com",
+                    text = if (isRegisterMode) "ou cadastre-se com" else "ou continue com",
                     fontSize = 12.sp,
                     color = ColorTextMuted,
                     modifier = Modifier.padding(horizontal = 12.dp)
@@ -709,20 +710,27 @@ fun AuthGateScreen(
             }
 
             // ==========================================
-            // BOTÃO GOOGLE SIGN-IN
+            // BOTÃO GOOGLE SIGN-IN / SIGN-UP
             // ==========================================
             OutlinedButton(
                 onClick = {
-                    onGoogleSignInClick()
-                    viewModel.signInWithGoogleMockOrOAuth { ok, _ ->
-                        if (ok) onAuthSuccess()
+                    if (isRegisterMode) {
+                        onGoogleSignUpClick()
+                        viewModel.signUpWithGoogleMockOrOAuth { ok, _ ->
+                            if (ok) onAuthSuccess()
+                        }
+                    } else {
+                        onGoogleSignInClick()
+                        viewModel.signInWithGoogleMockOrOAuth { ok, _ ->
+                            if (ok) onAuthSuccess()
+                        }
                     }
                 },
                 enabled = !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp)
-                    .testTag("auth_google_signin_btn"),
+                    .testTag(if (isRegisterMode) "auth_google_signup_btn" else "auth_google_signin_btn"),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.outlinedButtonColors(
                     containerColor = ColorSurfaceCard,
@@ -742,7 +750,7 @@ fun AuthGateScreen(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Continuar com o Google",
+                        text = if (isRegisterMode) "Cadastrar com o Google" else "Continuar com o Google",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         color = ColorTextPrimary

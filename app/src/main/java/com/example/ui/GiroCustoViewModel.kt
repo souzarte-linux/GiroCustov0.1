@@ -495,6 +495,14 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun signUpWithGoogleMockOrOAuth(idToken: String? = null, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            _authUiState.value = AuthUiState.Loading
+            _authUiState.value = AuthUiState.Error("Cadastro com Google em homologação.")
+            onResult(false, "Cadastro com Google em homologação.")
+        }
+    }
+
     fun unlockWithBiometrics(onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
         viewModelScope.launch {
             _authUiState.value = AuthUiState.Loading

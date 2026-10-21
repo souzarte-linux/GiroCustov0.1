@@ -49,7 +49,9 @@ enum class AuthTab {
 @Composable
 fun CloudSyncScreen(
     viewModel: GiroCustoViewModel,
-    onNavigateBack: () -> Unit = {}
+    onNavigateBack: () -> Unit = {},
+    onGoogleSignInClick: () -> Unit = {},
+    onGoogleSignUpClick: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
@@ -123,7 +125,9 @@ fun CloudSyncScreen(
                 viewModel = viewModel,
                 syncState = syncState,
                 syncError = syncError,
-                isDark = isDark
+                isDark = isDark,
+                onGoogleSignInClick = onGoogleSignInClick,
+                onGoogleSignUpClick = onGoogleSignUpClick
             )
         } else {
             // =================================================================
@@ -199,7 +203,9 @@ private fun LoggedOutCloudSection(
     viewModel: GiroCustoViewModel,
     syncState: SyncState,
     syncError: String?,
-    isDark: Boolean
+    isDark: Boolean,
+    onGoogleSignInClick: () -> Unit = {},
+    onGoogleSignUpClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
@@ -458,7 +464,7 @@ private fun LoggedOutCloudSection(
 
             // FEEDBACK DE ERRO
             val currentErrorMessage = localError ?: syncError
-            if (!currentErrorMessage.isNullOrBlank() && syncState == SyncState.ERROR) {
+            if (!currentErrorMessage.isNullOrBlank() && (localError != null || syncState == SyncState.ERROR)) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.12f)),
@@ -582,6 +588,87 @@ private fun LoggedOutCloudSection(
                         text = if (selectedTab == AuthTab.LOGIN) "Entrar na Conta" else "Criar Minha Conta",
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
+                    )
+                }
+            }
+
+            // DIVISOR HORIZONTAL
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HorizontalDivider(
+                    modifier = Modifier.weight(1f),
+                    color = if (isDark) Color(0xFF2D2D34) else Color(0xFFE2E8F0)
+                )
+                Text(
+                    text = if (selectedTab == AuthTab.LOGIN) "ou continue com" else "ou cadastre-se com",
+                    fontSize = 12.sp,
+                    color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+                HorizontalDivider(
+                    modifier = Modifier.weight(1f),
+                    color = if (isDark) Color(0xFF2D2D34) else Color(0xFFE2E8F0)
+                )
+            }
+
+            // BOTÃO GOOGLE
+            OutlinedButton(
+                onClick = {
+                    focusManager.clearFocus()
+                    localError = null
+                    successNotice = null
+                    if (selectedTab == AuthTab.LOGIN) {
+                        onGoogleSignInClick()
+                        viewModel.signInWithGoogleMockOrOAuth { ok, msg ->
+                            if (ok) {
+                                Toast.makeText(context, "Login realizado com sucesso!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                localError = msg ?: "Falha ao autenticar com Google."
+                            }
+                        }
+                    } else {
+                        onGoogleSignUpClick()
+                        viewModel.signUpWithGoogleMockOrOAuth { ok, msg ->
+                            if (ok) {
+                                Toast.makeText(context, "Conta criada com sucesso!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                localError = msg ?: "Falha ao cadastrar com Google."
+                            }
+                        }
+                    }
+                },
+                enabled = !isLoading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+                    .testTag(if (selectedTab == AuthTab.REGISTER) "auth_google_signup_btn" else "auth_google_signin_btn"),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = if (isDark) Color(0xFF1E1E22) else Color.White,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                ),
+                border = BorderStroke(1.dp, if (isDark) Color(0xFF2D2D34) else Color(0xFFE2E8F0))
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "G",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF3B82F6)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = if (selectedTab == AuthTab.LOGIN) "Continuar com o Google" else "Cadastrar com o Google",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
