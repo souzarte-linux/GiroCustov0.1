@@ -194,6 +194,35 @@ class SupabaseClient private constructor(context: Context? = null) {
         }
     }
 
+    suspend fun signInWithGoogleIdToken(idToken: String, nonce: String? = null): Result<AuthSession> {
+        return try {
+            val response = authApi.signInWithIdToken(
+                grantType = "id_token",
+                request = IdTokenRequest(
+                    provider = "google",
+                    idToken = idToken,
+                    nonce = nonce
+                )
+            )
+            if (response.isSuccessful && response.body() != null) {
+                val body = response.body()!!
+                val session = AuthSession(
+                    accessToken = body.accessToken,
+                    refreshToken = body.refreshToken,
+                    userId = body.user?.id ?: "",
+                    userEmail = body.user?.email
+                )
+                setAuthSession(session)
+                Result.success(session)
+            } else {
+                val errorMsg = response.errorBody()?.string() ?: "Erro na autenticação com Google (${response.code()})"
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun refreshCurrentSession(): Result<AuthSession> {
         val current = _sessionState.value ?: getSavedSession()
         if (current == null || current.refreshToken.isBlank()) {

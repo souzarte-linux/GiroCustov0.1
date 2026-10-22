@@ -22,6 +22,13 @@ data class RefreshTokenRequest(
 )
 
 @JsonClass(generateAdapter = true)
+data class IdTokenRequest(
+    @Json(name = "provider") val provider: String = "google",
+    @Json(name = "id_token") val idToken: String,
+    @Json(name = "nonce") val nonce: String? = null
+)
+
+@JsonClass(generateAdapter = true)
 data class AuthResponse(
     @Json(name = "access_token") val accessToken: String = "",
     @Json(name = "token_type") val tokenType: String = "",

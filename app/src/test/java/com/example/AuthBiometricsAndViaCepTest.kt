@@ -15,10 +15,19 @@ import com.example.network.viacep.ViaCepNetworkClient
 import com.example.network.viacep.ViaCepResponse
 import com.example.ui.AuthUiState
 import com.example.ui.GiroCustoViewModel
+import com.example.ui.SyncState
 import com.example.ui.ViaCepUiState
 import com.example.ui.navigation.RootNavState
+import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import org.json.JSONObject
+import retrofit2.Retrofit
+import retrofit2.converter.moshi.MoshiConverterFactory
 import com.example.util.BiometricAvailability
 import com.example.util.BiometricHelper
+import com.example.util.GoogleAuthHelper
+import com.example.util.GoogleAuthResult
 import com.example.util.BrazilianCepVisualTransformation
 import com.example.util.BrazilianPhoneVisualTransformation
 import com.squareup.moshi.Moshi
@@ -87,6 +96,13 @@ class AuthBiometricsAndViaCepTest {
             override suspend fun signInWithPassword(grantType: String, request: com.example.network.supabase.AuthRequest): Response<com.example.network.supabase.AuthResponse> =
                 Response.success(com.example.network.supabase.AuthResponse(accessToken = "token-test", refreshToken = "refresh-test"))
 
+            override suspend fun signInWithIdToken(grantType: String, request: com.example.network.supabase.IdTokenRequest): Response<com.example.network.supabase.AuthResponse> =
+                Response.success(com.example.network.supabase.AuthResponse(
+                    accessToken = "token-test",
+                    refreshToken = "refresh-test",
+                    user = com.example.network.supabase.SupabaseUser("usr-test", "user@test.com")
+                ))
+
             override suspend fun refreshToken(grantType: String, request: com.example.network.supabase.RefreshTokenRequest): Response<com.example.network.supabase.AuthResponse> =
                 Response.success(com.example.network.supabase.AuthResponse(accessToken = "token-refreshed", refreshToken = "refresh-refreshed"))
 
@@ -94,6 +110,35 @@ class AuthBiometricsAndViaCepTest {
 
             override suspend fun getUser(): Response<com.example.network.supabase.SupabaseUser> =
                 Response.success(com.example.network.supabase.SupabaseUser("usr-test", "user@test.com"))
+        }
+
+        supabaseClient.testRestApi = object : com.example.network.supabase.SupabaseRestApi {
+            override suspend fun getVehicles(select: String, updatedAtFilter: String?) = emptyList<com.example.network.supabase.VehicleDto>()
+            override suspend fun upsertVehicles(vehicles: List<com.example.network.supabase.VehicleDto>) = vehicles
+            override suspend fun deleteVehicle(idFilter: String): retrofit2.Response<Unit> = retrofit2.Response.success(Unit)
+
+            override suspend fun getVehicleParts(select: String, updatedAtFilter: String?) = emptyList<com.example.network.supabase.VehiclePartDto>()
+            override suspend fun upsertVehicleParts(parts: List<com.example.network.supabase.VehiclePartDto>) = parts
+            override suspend fun deleteVehiclePart(idFilter: String): retrofit2.Response<Unit> = retrofit2.Response.success(Unit)
+
+            override suspend fun getDailyRecords(select: String, updatedAtFilter: String?) = emptyList<com.example.network.supabase.DailyRecordDto>()
+            override suspend fun upsertDailyRecords(records: List<com.example.network.supabase.DailyRecordDto>) = records
+            override suspend fun deleteDailyRecord(idFilter: String): retrofit2.Response<Unit> = retrofit2.Response.success(Unit)
+
+            override suspend fun getUserProfiles(select: String, updatedAtFilter: String?) = emptyList<com.example.network.supabase.UserProfileDto>()
+            override suspend fun upsertUserProfiles(profiles: List<com.example.network.supabase.UserProfileDto>) = profiles
+
+            override suspend fun getPlatforms(select: String, updatedAtFilter: String?) = emptyList<com.example.network.supabase.PlatformDto>()
+            override suspend fun upsertPlatforms(platforms: List<com.example.network.supabase.PlatformDto>) = platforms
+            override suspend fun deletePlatform(idFilter: String): retrofit2.Response<Unit> = retrofit2.Response.success(Unit)
+
+            override suspend fun getFuelRefills(select: String, updatedAtFilter: String?) = emptyList<com.example.network.supabase.FuelRefillDto>()
+            override suspend fun upsertFuelRefills(refills: List<com.example.network.supabase.FuelRefillDto>) = refills
+            override suspend fun deleteFuelRefill(idFilter: String): retrofit2.Response<Unit> = retrofit2.Response.success(Unit)
+
+            override suspend fun getMaintenanceRecords(select: String, updatedAtFilter: String?) = emptyList<com.example.network.supabase.MaintenanceRecordDto>()
+            override suspend fun upsertMaintenanceRecords(records: List<com.example.network.supabase.MaintenanceRecordDto>) = records
+            override suspend fun deleteMaintenanceRecord(idFilter: String): retrofit2.Response<Unit> = retrofit2.Response.success(Unit)
         }
         BiometricHelper.clearBiometrics(context)
         BiometricHelper.testHardwareAvailable = null
@@ -108,6 +153,7 @@ class AuthBiometricsAndViaCepTest {
     @After
     fun tearDown() {
         ViaCepNetworkClient.testApi = null
+        GoogleAuthHelper.testAuthHandler = null
         supabaseClient.testAuthApi = null
         supabaseClient.testRestApi = null
         supabaseClient.setAuthSession(null)
@@ -912,6 +958,7 @@ class AuthBiometricsAndViaCepTest {
         supabaseClient.testAuthApi = object : com.example.network.supabase.SupabaseAuthApi {
             override suspend fun signUp(request: com.example.network.supabase.AuthRequest) = throw NotImplementedError()
             override suspend fun signInWithPassword(grantType: String, request: com.example.network.supabase.AuthRequest) = throw NotImplementedError()
+            override suspend fun signInWithIdToken(grantType: String, request: com.example.network.supabase.IdTokenRequest) = throw NotImplementedError()
             override suspend fun refreshToken(grantType: String, request: com.example.network.supabase.RefreshTokenRequest): Response<com.example.network.supabase.AuthResponse> {
                 capturedRefreshToken = request.refreshToken
                 return Response.success(com.example.network.supabase.AuthResponse(
@@ -994,6 +1041,7 @@ class AuthBiometricsAndViaCepTest {
                     refreshToken = expectedRefreshToken,
                     user = com.example.network.supabase.SupabaseUser(expectedUserId, expectedEmail)
                 ))
+            override suspend fun signInWithIdToken(grantType: String, request: com.example.network.supabase.IdTokenRequest) = Response.error<com.example.network.supabase.AuthResponse>(400, "error".toResponseBody())
             override suspend fun refreshToken(grantType: String, request: com.example.network.supabase.RefreshTokenRequest) = Response.error<com.example.network.supabase.AuthResponse>(400, "error".toResponseBody())
             override suspend fun logout() = Response.success(Unit)
             override suspend fun getUser() = Response.success(com.example.network.supabase.SupabaseUser(expectedUserId, expectedEmail))
@@ -1116,6 +1164,7 @@ class AuthBiometricsAndViaCepTest {
         supabaseClient.testAuthApi = object : com.example.network.supabase.SupabaseAuthApi {
             override suspend fun signUp(request: com.example.network.supabase.AuthRequest) = throw NotImplementedError()
             override suspend fun signInWithPassword(grantType: String, request: com.example.network.supabase.AuthRequest) = throw NotImplementedError()
+            override suspend fun signInWithIdToken(grantType: String, request: com.example.network.supabase.IdTokenRequest) = throw NotImplementedError()
             override suspend fun refreshToken(grantType: String, request: com.example.network.supabase.RefreshTokenRequest): Response<com.example.network.supabase.AuthResponse> {
                 assertEquals("refresh-token-v1", request.refreshToken)
                 return Response.success(com.example.network.supabase.AuthResponse(
@@ -1141,6 +1190,7 @@ class AuthBiometricsAndViaCepTest {
         supabaseClient.testAuthApi = object : com.example.network.supabase.SupabaseAuthApi {
             override suspend fun signUp(request: com.example.network.supabase.AuthRequest) = throw NotImplementedError()
             override suspend fun signInWithPassword(grantType: String, request: com.example.network.supabase.AuthRequest) = throw NotImplementedError()
+            override suspend fun signInWithIdToken(grantType: String, request: com.example.network.supabase.IdTokenRequest) = throw NotImplementedError()
             override suspend fun refreshToken(grantType: String, request: com.example.network.supabase.RefreshTokenRequest): Response<com.example.network.supabase.AuthResponse> {
                 return Response.error(500, "Server Error".toResponseBody("text/plain".toMediaTypeOrNull()))
             }
@@ -1168,66 +1218,299 @@ class AuthBiometricsAndViaCepTest {
     }
 
     @Test
-    fun testTC_AUTH_googleSignInAndSignUpMockOrOAuth() = runTest(testDispatcher) {
-        var signInSuccess: Boolean? = null
-        var signInErrorMsg: String? = null
-        viewModel.signInWithGoogleMockOrOAuth { success, msg ->
-            signInSuccess = success
-            signInErrorMsg = msg
+    fun testTC_AUTH_googleSignIn_success() = runTest(testDispatcher) {
+        GoogleAuthHelper.testAuthHandler = {
+            Result.success(GoogleAuthResult(idToken = "mock-google-id-token", rawNonce = "mock-raw-nonce"))
         }
-        advanceUntilIdle()
-        assertFalse(signInSuccess == true)
-        assertEquals("Login com Google em homologação.", signInErrorMsg)
-        assertTrue(viewModel.authUiState.value is AuthUiState.Error)
-        assertEquals("Login com Google em homologação.", (viewModel.authUiState.value as AuthUiState.Error).message)
 
-        var signUpSuccess: Boolean? = null
-        var signUpErrorMsg: String? = null
-        viewModel.signUpWithGoogleMockOrOAuth { success, msg ->
-            signUpSuccess = success
-            signUpErrorMsg = msg
+        var callbackSuccess: Boolean? = null
+        var callbackError: String? = null
+
+        viewModel.signInWithGoogle(context) { success, msg ->
+            callbackSuccess = success
+            callbackError = msg
         }
         advanceUntilIdle()
-        assertFalse(signUpSuccess == true)
-        assertEquals("Cadastro com Google em homologação.", signUpErrorMsg)
-        assertTrue(viewModel.authUiState.value is AuthUiState.Error)
-        assertEquals("Cadastro com Google em homologação.", (viewModel.authUiState.value as AuthUiState.Error).message)
+
+        assertTrue(callbackSuccess == true)
+        assertNull(callbackError)
+        assertTrue(viewModel.authUiState.value is AuthUiState.Success)
+        assertFalse(viewModel.isBiometricLocked.value)
+        assertTrue(BiometricHelper.isBiometricEnabled(context))
+        assertEquals("user@test.com", BiometricHelper.getBiometricEmail(context))
+        // Valida que o triggerSync foi disparado (syncState em SYNCING ou SUCCESS)
+        assertTrue(
+            "triggerSync deve ser disparado no sucesso",
+            viewModel.syncState.value == SyncState.SYNCING || viewModel.syncState.value == SyncState.SUCCESS
+        )
+        assertNull(viewModel.syncErrorMessage.value)
+        assertTrue(supabaseClient.isAuthenticated)
+        assertEquals("token-test", supabaseClient.currentAccessToken)
     }
 
     @Test
-    fun testTC_AUTH_googleSignInAndSignUpWithTokenAndDefaultCallback() = runTest(testDispatcher) {
-        // Test Google Sign-In with idToken and default callback
-        viewModel.signInWithGoogleMockOrOAuth(idToken = "sample-google-id-token-123")
-        advanceUntilIdle()
-        assertTrue(viewModel.authUiState.value is AuthUiState.Error)
-        assertEquals("Login com Google em homologação.", (viewModel.authUiState.value as AuthUiState.Error).message)
+    fun testTC_AUTH_googleSignIn_googleHelperFailure() = runTest(testDispatcher) {
+        GoogleAuthHelper.testAuthHandler = {
+            Result.failure(Exception("Nenhuma conta Google encontrada no dispositivo."))
+        }
 
-        // Test Google Sign-Up with idToken and default callback
-        viewModel.signUpWithGoogleMockOrOAuth(idToken = "sample-google-id-token-456")
+        var callbackSuccess: Boolean? = null
+        var callbackError: String? = null
+
+        viewModel.signInWithGoogle(context) { success, msg ->
+            callbackSuccess = success
+            callbackError = msg
+        }
         advanceUntilIdle()
+
+        assertFalse(callbackSuccess == true)
+        assertEquals("Nenhuma conta Google encontrada no dispositivo.", callbackError)
         assertTrue(viewModel.authUiState.value is AuthUiState.Error)
-        assertEquals("Cadastro com Google em homologação.", (viewModel.authUiState.value as AuthUiState.Error).message)
+        assertEquals("Nenhuma conta Google encontrada no dispositivo.", (viewModel.authUiState.value as AuthUiState.Error).message)
+        assertEquals(SyncState.ERROR, viewModel.syncState.value)
+        assertEquals("Nenhuma conta Google encontrada no dispositivo.", viewModel.syncErrorMessage.value)
     }
 
     @Test
-    fun testTC_AUTH_signInWithPhone() = runTest(testDispatcher) {
-        var phoneSuccess: Boolean? = null
-        var phoneErrorMsg: String? = null
-        viewModel.signInWithPhone(phone = "+5511999999999", otpCode = "123456") { success, msg ->
-            phoneSuccess = success
-            phoneErrorMsg = msg
+    fun testTC_AUTH_googleSignIn_googleHelperCancelled() = runTest(testDispatcher) {
+        GoogleAuthHelper.testAuthHandler = {
+            Result.failure(Exception("Login com o Google cancelado."))
+        }
+
+        var callbackSuccess: Boolean? = null
+        var callbackError: String? = null
+
+        viewModel.signInWithGoogle(context) { success, msg ->
+            callbackSuccess = success
+            callbackError = msg
         }
         advanceUntilIdle()
-        assertFalse(phoneSuccess == true)
-        assertEquals("Login por SMS em homologação.", phoneErrorMsg)
-        assertTrue(viewModel.authUiState.value is AuthUiState.Error)
-        assertEquals("Login por SMS em homologação.", (viewModel.authUiState.value as AuthUiState.Error).message)
 
-        // Default callback
-        viewModel.signInWithPhone(phone = "+5511988888888")
-        advanceUntilIdle()
+        assertFalse(callbackSuccess == true)
+        assertEquals("Login com o Google cancelado.", callbackError)
         assertTrue(viewModel.authUiState.value is AuthUiState.Error)
-        assertEquals("Login por SMS em homologação.", (viewModel.authUiState.value as AuthUiState.Error).message)
+        assertEquals("Login com o Google cancelado.", (viewModel.authUiState.value as AuthUiState.Error).message)
+        assertEquals(SyncState.ERROR, viewModel.syncState.value)
+        assertEquals("Login com o Google cancelado.", viewModel.syncErrorMessage.value)
+    }
+
+    @Test
+    fun testTC_AUTH_googleSignIn_supabaseFailure() = runTest(testDispatcher) {
+        GoogleAuthHelper.testAuthHandler = {
+            Result.success(GoogleAuthResult(idToken = "invalid-token", rawNonce = "mock-raw-nonce"))
+        }
+
+        val originalAuthApi = supabaseClient.testAuthApi!!
+        supabaseClient.testAuthApi = object : com.example.network.supabase.SupabaseAuthApi by originalAuthApi {
+            override suspend fun signInWithIdToken(
+                grantType: String,
+                request: com.example.network.supabase.IdTokenRequest
+            ): Response<com.example.network.supabase.AuthResponse> =
+                Response.error(401, "{\"message\":\"Token do Google expirado ou inválido\"}".toResponseBody("application/json".toMediaTypeOrNull()))
+        }
+
+        var callbackSuccess: Boolean? = null
+        var callbackError: String? = null
+
+        viewModel.signInWithGoogle(context) { success, msg ->
+            callbackSuccess = success
+            callbackError = msg
+        }
+        advanceUntilIdle()
+
+        assertFalse(callbackSuccess == true)
+        assertNotNull(callbackError)
+        assertTrue(callbackError?.contains("Token do Google expirado ou inválido") == true)
+        assertTrue(viewModel.authUiState.value is AuthUiState.Error)
+        assertEquals(SyncState.ERROR, viewModel.syncState.value)
+        assertTrue(viewModel.syncErrorMessage.value?.contains("Token do Google expirado ou inválido") == true)
+    }
+
+    @Test
+    fun testTC_AUTH_googleSignIn_defaultCallback() = runTest(testDispatcher) {
+        GoogleAuthHelper.testAuthHandler = {
+            Result.success(GoogleAuthResult(idToken = "mock-google-id-token", rawNonce = "mock-raw-nonce"))
+        }
+
+        // Sem fornecer lambda no onResult
+        viewModel.signInWithGoogle(context)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.authUiState.value is AuthUiState.Success)
+        assertFalse(viewModel.isBiometricLocked.value)
+    }
+
+    @Test
+    fun testTC_AUTH_googleAuthHelper_nonceGenerationAndHashing() {
+        val nonce1 = GoogleAuthHelper.generateNonce()
+        val nonce2 = GoogleAuthHelper.generateNonce()
+        assertNotNull(nonce1)
+        assertNotNull(nonce2)
+        assertNotEquals(nonce1, nonce2)
+
+        val hash1 = GoogleAuthHelper.hashNonce(nonce1)
+        val hash2 = GoogleAuthHelper.hashNonce(nonce1)
+        assertEquals(hash1, hash2)
+        assertEquals(64, hash1.length) // SHA-256 produz 32 bytes = 64 chars hexadecimais
+    }
+
+    @Test
+    fun testSupabaseClient_signInWithGoogleIdToken_mockWebServer_success() = runTest(testDispatcher) {
+        val mockServer = MockWebServer()
+        mockServer.start()
+
+        val retrofit = Retrofit.Builder()
+            .baseUrl(mockServer.url("/"))
+            .client(OkHttpClient.Builder().build())
+            .addConverterFactory(MoshiConverterFactory.create(supabaseClient.moshi))
+            .build()
+
+        supabaseClient.testAuthApi = retrofit.create(com.example.network.supabase.SupabaseAuthApi::class.java)
+
+        val expectedAccessToken = "google-mock-access-token-123"
+        val expectedRefreshToken = "google-mock-refresh-token-456"
+        val expectedUserId = "google-mock-user-uuid-789"
+        val expectedEmail = "google.driver@example.com"
+
+        val jsonResponse = """
+            {
+              "access_token": "$expectedAccessToken",
+              "token_type": "bearer",
+              "expires_in": 3600,
+              "refresh_token": "$expectedRefreshToken",
+              "user": {
+                "id": "$expectedUserId",
+                "email": "$expectedEmail",
+                "created_at": "2026-10-22T10:00:00Z"
+              }
+            }
+        """.trimIndent()
+
+        mockServer.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json; charset=utf-8")
+                .setBody(jsonResponse)
+        )
+
+        try {
+            val result = supabaseClient.signInWithGoogleIdToken(idToken = "raw-id-token-abc", nonce = "nonce-xyz")
+            assertTrue("Deve ser sucesso", result.isSuccess)
+            val session = result.getOrNull()
+            assertNotNull("Sessão não pode ser nula", session)
+            assertEquals(expectedAccessToken, session?.accessToken)
+            assertEquals(expectedRefreshToken, session?.refreshToken)
+            assertEquals(expectedUserId, session?.userId)
+            assertEquals(expectedEmail, session?.userEmail)
+            assertTrue(supabaseClient.isAuthenticated)
+            assertEquals(expectedAccessToken, supabaseClient.currentAccessToken)
+            assertEquals(expectedUserId, supabaseClient.currentUserId)
+            assertEquals(session, supabaseClient.getSavedSession())
+
+            val recordedRequest = mockServer.takeRequest()
+            assertEquals("POST", recordedRequest.method)
+            assertEquals("/auth/v1/token?grant_type=id_token", recordedRequest.path)
+            val json = JSONObject(recordedRequest.body.readUtf8())
+            assertEquals("google", json.getString("provider"))
+            assertEquals("raw-id-token-abc", json.getString("id_token"))
+            assertEquals("nonce-xyz", json.getString("nonce"))
+        } finally {
+            mockServer.shutdown()
+        }
+    }
+
+    @Test
+    fun testSupabaseClient_signInWithGoogleIdToken_mockWebServer_http400_failure() = runTest(testDispatcher) {
+        val mockServer = MockWebServer()
+        mockServer.start()
+
+        val retrofit = Retrofit.Builder()
+            .baseUrl(mockServer.url("/"))
+            .client(OkHttpClient.Builder().build())
+            .addConverterFactory(MoshiConverterFactory.create(supabaseClient.moshi))
+            .build()
+
+        supabaseClient.testAuthApi = retrofit.create(com.example.network.supabase.SupabaseAuthApi::class.java)
+
+        val errorJson = """
+            {
+              "error": "invalid_request",
+              "error_description": "Invalid Google ID Token"
+            }
+        """.trimIndent()
+
+        mockServer.enqueue(
+            MockResponse()
+                .setResponseCode(400)
+                .setHeader("Content-Type", "application/json; charset=utf-8")
+                .setBody(errorJson)
+        )
+
+        try {
+            val result = supabaseClient.signInWithGoogleIdToken(idToken = "bad-token", nonce = "bad-nonce")
+            assertTrue("Deve ser falha", result.isFailure)
+            val exception = result.exceptionOrNull()
+            assertNotNull("Exceção não pode ser nula", exception)
+            val errorMsg = exception?.message.orEmpty()
+            assertTrue(
+                "Mensagem deve conter o erro da API ou 400",
+                errorMsg.contains("Invalid Google ID Token") || errorMsg.contains("invalid_request") || errorMsg.contains("400")
+            )
+            assertFalse(supabaseClient.isAuthenticated)
+
+            val recordedRequest = mockServer.takeRequest()
+            assertEquals("POST", recordedRequest.method)
+            assertEquals("/auth/v1/token?grant_type=id_token", recordedRequest.path)
+            val json = JSONObject(recordedRequest.body.readUtf8())
+            assertEquals("google", json.getString("provider"))
+            assertEquals("bad-token", json.getString("id_token"))
+            assertEquals("bad-nonce", json.getString("nonce"))
+        } finally {
+            mockServer.shutdown()
+        }
+    }
+
+    @Test
+    fun testSupabaseClient_signInWithGoogleIdToken_mockWebServer_http401_failure() = runTest(testDispatcher) {
+        val mockServer = MockWebServer()
+        mockServer.start()
+
+        val retrofit = Retrofit.Builder()
+            .baseUrl(mockServer.url("/"))
+            .client(OkHttpClient.Builder().build())
+            .addConverterFactory(MoshiConverterFactory.create(supabaseClient.moshi))
+            .build()
+
+        supabaseClient.testAuthApi = retrofit.create(com.example.network.supabase.SupabaseAuthApi::class.java)
+
+        val errorJson = """
+            {
+              "message": "Token do Google inválido ou expirado",
+              "status": 401
+            }
+        """.trimIndent()
+
+        mockServer.enqueue(
+            MockResponse()
+                .setResponseCode(401)
+                .setHeader("Content-Type", "application/json; charset=utf-8")
+                .setBody(errorJson)
+        )
+
+        try {
+            val result = supabaseClient.signInWithGoogleIdToken(idToken = "expired-token", nonce = null)
+            assertTrue("Deve ser falha", result.isFailure)
+            val exception = result.exceptionOrNull()
+            assertNotNull("Exceção não pode ser nula", exception)
+            val errorMsg = exception?.message.orEmpty()
+            assertTrue(
+                "Mensagem deve conter o erro da API ou 401",
+                errorMsg.contains("Token do Google inválido ou expirado") || errorMsg.contains("401")
+            )
+            assertFalse(supabaseClient.isAuthenticated)
+        } finally {
+            mockServer.shutdown()
+        }
     }
 }
 

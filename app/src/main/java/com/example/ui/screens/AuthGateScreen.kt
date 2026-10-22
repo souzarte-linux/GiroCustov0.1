@@ -716,14 +716,11 @@ fun AuthGateScreen(
                 onClick = {
                     if (isRegisterMode) {
                         onGoogleSignUpClick()
-                        viewModel.signUpWithGoogleMockOrOAuth { ok, _ ->
-                            if (ok) onAuthSuccess()
-                        }
                     } else {
                         onGoogleSignInClick()
-                        viewModel.signInWithGoogleMockOrOAuth { ok, _ ->
-                            if (ok) onAuthSuccess()
-                        }
+                    }
+                    viewModel.signInWithGoogle(context) { ok, _ ->
+                        if (ok) onAuthSuccess()
                     }
                 },
                 enabled = !isLoading,

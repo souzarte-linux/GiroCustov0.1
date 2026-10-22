@@ -623,7 +623,7 @@ private fun LoggedOutCloudSection(
                     successNotice = null
                     if (selectedTab == AuthTab.LOGIN) {
                         onGoogleSignInClick()
-                        viewModel.signInWithGoogleMockOrOAuth { ok, msg ->
+                        viewModel.signInWithGoogle(context) { ok, msg ->
                             if (ok) {
                                 Toast.makeText(context, "Login realizado com sucesso!", Toast.LENGTH_SHORT).show()
                             } else {
@@ -632,7 +632,7 @@ private fun LoggedOutCloudSection(
                         }
                     } else {
                         onGoogleSignUpClick()
-                        viewModel.signUpWithGoogleMockOrOAuth { ok, msg ->
+                        viewModel.signInWithGoogle(context) { ok, msg ->
                             if (ok) {
                                 Toast.makeText(context, "Conta criada com sucesso!", Toast.LENGTH_SHORT).show()
                             } else {

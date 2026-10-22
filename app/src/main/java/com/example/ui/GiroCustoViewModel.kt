@@ -11,6 +11,7 @@ import com.example.network.viacep.*
 import com.example.network.fipe.*
 import com.example.ui.navigation.RootNavState
 import com.example.util.BiometricHelper
+import com.example.util.GoogleAuthHelper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -487,19 +488,40 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun signInWithGoogleMockOrOAuth(idToken: String? = null, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
+    fun signInWithGoogle(context: Context, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
         viewModelScope.launch {
             _authUiState.value = AuthUiState.Loading
-            _authUiState.value = AuthUiState.Error("Login com Google em homologação.")
-            onResult(false, "Login com Google em homologação.")
-        }
-    }
+            _syncState.value = SyncState.SYNCING
+            _syncErrorMessage.value = null
 
-    fun signUpWithGoogleMockOrOAuth(idToken: String? = null, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
-        viewModelScope.launch {
-            _authUiState.value = AuthUiState.Loading
-            _authUiState.value = AuthUiState.Error("Cadastro com Google em homologação.")
-            onResult(false, "Cadastro com Google em homologação.")
+            val authResult = GoogleAuthHelper.getGoogleIdToken(context)
+            if (authResult.isFailure) {
+                _syncState.value = SyncState.ERROR
+                val err = authResult.exceptionOrNull()?.message ?: "Falha ao autenticar com o Google"
+                _syncErrorMessage.value = err
+                _authUiState.value = AuthUiState.Error(err)
+                onResult(false, err)
+                return@launch
+            }
+
+            val authData = authResult.getOrNull()!!
+            val result = supabaseClient.signInWithGoogleIdToken(authData.idToken, authData.rawNonce)
+            if (result.isSuccess) {
+                _isBiometricLocked.value = false
+                _authUiState.value = AuthUiState.Success()
+                _syncState.value = SyncState.IDLE
+                val session = result.getOrNull()
+                val email = session?.userEmail?.takeIf { it.isNotBlank() } ?: "google_user"
+                BiometricHelper.setBiometricEnabled(getApplication(), true, email)
+                triggerSync()
+                onResult(true, null)
+            } else {
+                _syncState.value = SyncState.ERROR
+                val err = result.exceptionOrNull()?.message ?: "Falha ao autenticar com o Google"
+                _syncErrorMessage.value = err
+                _authUiState.value = AuthUiState.Error(err)
+                onResult(false, err)
+            }
         }
     }
 
