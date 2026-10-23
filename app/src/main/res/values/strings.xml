@@ -31,4 +31,7 @@
     <string name="auth_biometric_switch_method">Entrar com Google, e-mail ou senha</string>
     <string name="auth_biometric_decrypt_failed">Falha na verificação criptográfica da biometria. Desbloqueio não autorizado.</string>
     <string name="auth_biometric_key_invalidated">Nova biometria detectada no dispositivo. Por segurança, autentique-se com sua conta Google ou e-mail e senha.</string>
+    <string name="profile_biometric_switch_title">Bloqueio por Biometria</string>
+    <string name="profile_biometric_switch_desc">Exigir digital ao abrir o GiroCusto</string>
+    <string name="cd_profile_biometric_switch">Ativar ou desativar bloqueio por biometria</string>
 </resources>

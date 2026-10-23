@@ -48,6 +48,7 @@ import com.example.network.fipe.FipeItemDto
 import com.example.ui.FipeUiState
 import com.example.ui.GiroCustoViewModel
 import com.example.ui.ViaCepUiState
+import com.example.util.BiometricHelper
 import com.example.util.BrazilianCepVisualTransformation
 import com.example.util.BrazilianPhoneVisualTransformation
 import kotlinx.coroutines.delay
@@ -603,6 +604,68 @@ private fun CadastralDataCard(
                             uncheckedTrackColor = ColorSurfaceInput
                         )
                     )
+                }
+            }
+
+            // Switch Bloqueio por Biometria
+            if (BiometricHelper.isBiometricHardwareAvailable(context)) {
+                var isBiometricActive by remember(context) {
+                    mutableStateOf(BiometricHelper.isBiometricEnabled(context))
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = ColorSurfaceElevated,
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, ColorBorder)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Fingerprint,
+                                contentDescription = stringResource(R.string.cd_profile_biometric_switch),
+                                tint = ColorBrandEmerald,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.profile_biometric_switch_title),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = ColorTextPrimary
+                                )
+                                Text(
+                                    text = stringResource(R.string.profile_biometric_switch_desc),
+                                    fontSize = 11.sp,
+                                    color = ColorTextMuted
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = isBiometricActive,
+                            onCheckedChange = { checked ->
+                                isBiometricActive = checked
+                                val email = viewModel.currentUser.value?.userEmail
+                                BiometricHelper.setBiometricEnabled(context, checked, email)
+                            },
+                            modifier = Modifier.testTag("profile_biometric_switch"),
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = ColorBrandEmerald,
+                                uncheckedThumbColor = ColorTextMuted,
+                                uncheckedTrackColor = ColorSurfaceInput
+                            )
+                        )
+                    }
                 }
             }
 

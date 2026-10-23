@@ -548,6 +548,7 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun handleBiometricKeyInvalidated() {
         _isBiometricLocked.value = false
+        supabaseClient.clearSavedSession()
         BiometricHelper.clearBiometrics(getApplication())
         val msg = getApplication<Application>().getString(com.example.R.string.auth_session_revalidation_notice)
         _authUiState.value = AuthUiState.Error(msg)
@@ -555,6 +556,8 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun dismissBiometricLockForFallback() {
         _isBiometricLocked.value = false
+        supabaseClient.clearSavedSession()
+        _authUiState.value = AuthUiState.Idle
     }
 
     fun signInWithBiometrics(onResult: (Boolean, String?) -> Unit = { _, _ -> }) {

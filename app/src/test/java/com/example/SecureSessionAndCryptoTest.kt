@@ -239,6 +239,7 @@ class SecureSessionAndCryptoTest {
         // Motorista clica em "Entrar com Google, e-mail ou senha"
         viewModel.dismissBiometricLockForFallback()
         assertFalse(viewModel.isBiometricLocked.value)
+        assertEquals(com.example.ui.navigation.RootNavState.Unauthenticated, viewModel.rootNavState.value)
     }
 
     // =========================================================================
