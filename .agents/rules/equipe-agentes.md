@@ -19,6 +19,7 @@ Arquivos complementares (leia todos antes de agir): `equipe-especialistas.md`, `
 5. **Dúvida real, pergunta objetiva.** Se faltar informação que muda o resultado, perguntar ao usuário (uma pergunta por vez). Não inventar requisito e não fingir que implementou.
 6. **Serviço externo exige prova no aparelho.** Funcionalidades que dependem de Google, Supabase, GPS, FIPE, ViaCEP ou qualquer API externa só podem ser marcadas como funcionando após verificação manual em aparelho real, descrita no relatório.
 7. **Segredos nunca entram no código nem no commit** (chaves, senhas, tokens, `.env`, keystores).
+8. **Relatórios nunca contêm dados secretos ou pessoais.** É proibido escrever em relatórios, logs colados, commits ou documentos: senhas, tokens, chaves, e-mails ou telefones reais do usuário. Ao mostrar evidências, mascare os dados (ex.: "e-mail: c***@h***.com", "senha: [OCULTA]"). Se um dado secreto aparecer em uma saída de comando, substitua por [OCULTO] antes de colar no relatório.
 
 ## 1. Agente Orquestrador (PO + Scrum Master)
 
