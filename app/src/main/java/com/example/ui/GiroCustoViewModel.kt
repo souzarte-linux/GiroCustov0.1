@@ -538,11 +538,23 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
                     triggerSync()
                 }
             } else {
-                val err = "Nenhuma sessão persistente encontrada para biometria."
+                _isBiometricLocked.value = false
+                val err = getApplication<Application>().getString(com.example.R.string.auth_session_revalidation_notice)
                 _authUiState.value = AuthUiState.Error(err)
                 onResult(false, err)
             }
         }
+    }
+
+    fun handleBiometricKeyInvalidated() {
+        _isBiometricLocked.value = false
+        BiometricHelper.clearBiometrics(getApplication())
+        val msg = getApplication<Application>().getString(com.example.R.string.auth_session_revalidation_notice)
+        _authUiState.value = AuthUiState.Error(msg)
+    }
+
+    fun dismissBiometricLockForFallback() {
+        _isBiometricLocked.value = false
     }
 
     fun signInWithBiometrics(onResult: (Boolean, String?) -> Unit = { _, _ -> }) {

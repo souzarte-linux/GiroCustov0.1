@@ -15,9 +15,16 @@ import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import java.util.concurrent.TimeUnit
 
-class SupabaseClient private constructor(context: Context? = null) {
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import com.example.util.AndroidKeyStoreHelper
 
-    private var prefs: SharedPreferences? = context?.getSharedPreferences("giro_custo_supabase_auth", Context.MODE_PRIVATE)
+class SupabaseClient private constructor(
+    context: Context? = null,
+    internal var storage: SecureSessionStorage = createDefaultStorage(context)
+) {
+
+    private val refreshMutex = Mutex()
 
     private val _sessionState = MutableStateFlow<AuthSession?>(null)
     val sessionState: StateFlow<AuthSession?> = _sessionState.asStateFlow()
@@ -30,30 +37,19 @@ class SupabaseClient private constructor(context: Context? = null) {
     }
 
     fun hasSavedSession(): Boolean {
-        val token = prefs?.getString(KEY_ACCESS_TOKEN, null)
-        val userId = prefs?.getString(KEY_USER_ID, null)
-        return !token.isNullOrBlank() && !userId.isNullOrBlank()
+        return storage.hasSavedSession()
     }
 
     fun getSavedSession(): AuthSession? {
-        val token = prefs?.getString(KEY_ACCESS_TOKEN, null) ?: return null
-        val userId = prefs?.getString(KEY_USER_ID, null) ?: return null
-        val refresh = prefs?.getString(KEY_REFRESH_TOKEN, null) ?: ""
-        val email = prefs?.getString(KEY_EMAIL, null)
-        return AuthSession(
-            accessToken = token,
-            refreshToken = refresh,
-            userId = userId,
-            userEmail = email
-        )
+        return storage.getSavedSession()
     }
 
     fun getSavedUserEmail(): String? {
-        return prefs?.getString(KEY_EMAIL, null) ?: _sessionState.value?.userEmail
+        return storage.getSavedUserEmail() ?: _sessionState.value?.userEmail
     }
 
     fun restoreSavedSession(): Boolean {
-        val session = getSavedSession() ?: return false
+        val session = storage.getSavedSession() ?: return false
         setAuthSession(session)
         return true
     }
@@ -65,19 +61,10 @@ class SupabaseClient private constructor(context: Context? = null) {
     fun setAuthSession(session: AuthSession?) {
         activeToken = session?.accessToken
         _sessionState.value = session
-        prefs?.edit()?.apply {
-            if (session != null) {
-                putString(KEY_ACCESS_TOKEN, session.accessToken)
-                putString(KEY_REFRESH_TOKEN, session.refreshToken)
-                putString(KEY_USER_ID, session.userId)
-                putString(KEY_EMAIL, session.userEmail)
-            } else {
-                remove(KEY_ACCESS_TOKEN)
-                remove(KEY_REFRESH_TOKEN)
-                remove(KEY_USER_ID)
-                remove(KEY_EMAIL)
-            }
-            commit()
+        if (session != null) {
+            storage.saveSession(session)
+        } else {
+            storage.clearSession()
         }
     }
 
@@ -225,7 +212,7 @@ class SupabaseClient private constructor(context: Context? = null) {
         }
     }
 
-    suspend fun refreshCurrentSession(): Result<AuthSession> {
+    suspend fun refreshCurrentSession(): Result<AuthSession> = refreshMutex.withLock {
         val current = _sessionState.value ?: getSavedSession()
         if (current == null || current.refreshToken.isBlank()) {
             return Result.failure(IllegalStateException("Nenhum refresh token disponível"))
@@ -263,31 +250,53 @@ class SupabaseClient private constructor(context: Context? = null) {
     }
 
     companion object {
-        private const val KEY_ACCESS_TOKEN = "sp_access_token"
-        private const val KEY_REFRESH_TOKEN = "sp_refresh_token"
-        private const val KEY_USER_ID = "sp_user_id"
-        private const val KEY_EMAIL = "sp_user_email"
+        @Volatile
+        var testStorage: SecureSessionStorage? = null
 
         @Volatile
         private var INSTANCE: SupabaseClient? = null
 
+        fun createDefaultStorage(context: Context?): SecureSessionStorage {
+            testStorage?.let { return it }
+            if (context != null) {
+                try {
+                    if (AndroidKeyStoreHelper.isKeyStoreAvailable()) {
+                        val sec = EncryptedSharedPreferencesStorage(context)
+                        sec.migrateLegacySessionIfPresent()
+                        return sec
+                    }
+                } catch (_: Throwable) {}
+            }
+            return InMemorySessionStorage()
+        }
+
         fun getInstance(context: Context? = null): SupabaseClient {
             val existing = INSTANCE
             if (existing != null) {
-                if (existing.prefs == null && context != null) {
-                    existing.prefs = context.applicationContext.getSharedPreferences("giro_custo_supabase_auth", Context.MODE_PRIVATE)
-                    existing.restoreSavedSession()
+                if (existing.storage is InMemorySessionStorage && context != null && testStorage == null) {
+                    try {
+                        if (AndroidKeyStoreHelper.isKeyStoreAvailable()) {
+                            val sec = EncryptedSharedPreferencesStorage(context)
+                            sec.migrateLegacySessionIfPresent()
+                            existing.storage = sec
+                            existing.restoreSavedSession()
+                        }
+                    } catch (_: Throwable) {}
                 }
                 return existing
             }
             return synchronized(this) {
-                INSTANCE ?: SupabaseClient(context?.applicationContext).also { INSTANCE = it }
+                INSTANCE ?: SupabaseClient(
+                    context = context?.applicationContext,
+                    storage = createDefaultStorage(context?.applicationContext)
+                ).also { INSTANCE = it }
             }
         }
 
         fun resetForTesting(context: Context? = null): SupabaseClient {
             return synchronized(this) {
-                SupabaseClient(context?.applicationContext).also { INSTANCE = it }
+                val memStorage = testStorage ?: InMemorySessionStorage()
+                SupabaseClient(context?.applicationContext, storage = memStorage).also { INSTANCE = it }
             }
         }
     }

@@ -24,4 +24,11 @@
     <string name="profile_cep_search_correios_action">Consultar CEP nos Correios</string>
     <string name="cd_profile_cep_manual">Ativar preenchimento manual de endereço</string>
     <string name="cd_profile_search_correios">Abrir busca de CEP no site dos Correios</string>
+
+    <!-- Sessão segura e autenticação biométrica (T-06 [SEC-01 e SEC-04]) -->
+    <string name="auth_session_revalidation_notice">Por segurança, sua sessão precisa ser revalidada. Entre novamente com sua conta Google ou com seu e-mail e senha.</string>
+    <string name="auth_biometric_weak_notice">Proteção biométrica padrão do aparelho ativa.</string>
+    <string name="auth_biometric_switch_method">Entrar com Google, e-mail ou senha</string>
+    <string name="auth_biometric_decrypt_failed">Falha na verificação criptográfica da biometria. Desbloqueio não autorizado.</string>
+    <string name="auth_biometric_key_invalidated">Nova biometria detectada no dispositivo. Por segurança, autentique-se com sua conta Google ou e-mail e senha.</string>
 </resources>

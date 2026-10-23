@@ -100,17 +100,22 @@ fun AuthGateScreen(
         } else {
             val activity = context as? FragmentActivity
             if (activity != null) {
+                val switchMethodText = context.getString(R.string.auth_biometric_switch_method)
                 BiometricHelper.showBiometricPrompt(
                     activity = activity,
                     title = "Desbloqueio GiroCusto",
                     subtitle = "Confirme sua digital ou reconhecimento facial",
-                    negativeButtonText = "Usar Senha",
+                    negativeButtonText = switchMethodText,
                     onSuccess = {
                         viewModel.unlockWithBiometrics { ok, _ ->
                             if (ok) onAuthSuccess()
                         }
                     },
-                    onError = { _, _ -> },
+                    onError = { errorCode, _ ->
+                        if (errorCode == BiometricHelper.ERROR_KEY_INVALIDATED) {
+                            viewModel.handleBiometricKeyInvalidated()
+                        }
+                    },
                     onFailed = { }
                 )
             } else {
@@ -280,6 +285,15 @@ fun AuthGateScreen(
                             lineHeight = 18.sp
                         )
 
+                        if (BiometricHelper.getProtectionLevel(context) == com.example.util.BiometricProtectionLevel.WEAK) {
+                            Text(
+                                text = stringResource(R.string.auth_biometric_weak_notice),
+                                fontSize = 12.sp,
+                                color = ColorBrandEmerald,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+
                         Spacer(modifier = Modifier.height(8.dp))
 
                         // Botão largo de digital "Desbloquear com Biometria"
@@ -326,17 +340,17 @@ fun AuthGateScreen(
                             }
                         }
 
-                        // Botão secundário "Entrar com outra conta"
+                        // Botão secundário "Entrar com Google, e-mail ou senha"
                         TextButton(
-                            onClick = { viewModel.logout() },
+                            onClick = { viewModel.dismissBiometricLockForFallback() },
                             enabled = !isLoading,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("auth_switch_account_btn")
                         ) {
                             Text(
-                                text = "Entrar com outra conta",
-                                color = ColorTextMuted,
+                                text = stringResource(R.string.auth_biometric_switch_method),
+                                color = ColorBrandEmerald,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium
                             )
