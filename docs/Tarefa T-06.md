@@ -113,7 +113,7 @@ O novo aplicativo com a correção já foi instalado no seu celular conectado. S
 ---
 
 ## 8. Commit e sincronização
-- **Hash do commit:** `c34685084ce57422f16ef062b1029c78fe292437`
-- **Hash curto:** `c346850`
+- **Hash do commit:** `78f88d2444aca857840ef5bab60e3210dec03db0`
+- **Hash curto:** `78f88d2`
 - **Mensagem:** `UI/Acessibilidade: corrige layout vertical do botão Consultar Correios em Meus Dados (T-06)`
 - **Status do push:** Sincronizado com sucesso com o repositório remoto (`main -> origin/main`).
