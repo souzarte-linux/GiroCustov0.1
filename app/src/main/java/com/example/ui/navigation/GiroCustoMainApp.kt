@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.GiroCustoViewModel
 import com.example.ui.components.CloudSyncTopBarIcon
-import com.example.ui.components.SmartphoneSimulator
 import com.example.ui.screens.CloudSyncScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.HistoryScreen
@@ -115,17 +114,16 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
     }
 
     MaterialTheme(colorScheme = customColorScheme) {
-        SmartphoneSimulator(isDark = isDark) {
-            AppDrawer(
-                drawerState = drawerState,
-                selectedDestination = drawerDestination,
-                onDestinationSelected = { dest ->
-                    drawerDestination = dest
-                    coroutineScope.launch {
-                        drawerState.close()
-                    }
+        AppDrawer(
+            drawerState = drawerState,
+            selectedDestination = drawerDestination,
+            onDestinationSelected = { dest ->
+                drawerDestination = dest
+                coroutineScope.launch {
+                    drawerState.close()
                 }
-            ) {
+            }
+        ) {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     topBar = {
@@ -265,4 +263,3 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
             }
         }
     }
-}
