@@ -13,9 +13,12 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
+import com.example.R
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -411,7 +414,7 @@ fun AuthGateScreen(
                                     tint = if (selectedTabIndex == 1) ColorOnPrimary else ColorTextMuted
                                 )
                                 Text(
-                                    text = "Celular",
+                                    text = stringResource(R.string.auth_tab_phone),
                                     fontSize = 14.sp,
                                     fontWeight = if (selectedTabIndex == 1) FontWeight.Bold else FontWeight.Normal,
                                     color = if (selectedTabIndex == 1) ColorOnPrimary else ColorTextMuted
@@ -606,25 +609,26 @@ fun AuthGateScreen(
                             },
                             visualTransformation = BrazilianPhoneVisualTransformation(),
                             singleLine = true,
-                            enabled = !isLoading,
+                            enabled = false,
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Number,
                                 imeAction = ImeAction.Done
                             ),
-                            keyboardActions = KeyboardActions(
-                                onDone = {
-                                    viewModel.signInWithPhone(phone) { ok, _ -> if (ok) onAuthSuccess() }
-                                }
-                            ),
+                            keyboardActions = KeyboardActions.Default,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = ColorSurfaceInput,
                                 unfocusedContainerColor = ColorSurfaceInput,
+                                disabledContainerColor = ColorSurfaceInput,
                                 focusedBorderColor = ColorBrandEmerald,
                                 unfocusedBorderColor = ColorBorder,
+                                disabledBorderColor = ColorBorder,
                                 focusedTextColor = ColorTextPrimary,
                                 unfocusedTextColor = ColorTextPrimary,
+                                disabledTextColor = ColorTextMuted,
                                 focusedLabelColor = ColorBrandEmerald,
-                                unfocusedLabelColor = ColorTextMuted
+                                unfocusedLabelColor = ColorTextMuted,
+                                disabledLabelColor = ColorTextMuted,
+                                disabledLeadingIconColor = ColorTextMuted
                             ),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
@@ -633,17 +637,15 @@ fun AuthGateScreen(
                         )
 
                         Text(
-                            text = "Enviaremos um código SMS de 6 dígitos para validar o seu acesso com total segurança.",
+                            text = stringResource(R.string.auth_sms_coming_soon_notice),
                             fontSize = 12.sp,
                             color = ColorTextMuted,
                             lineHeight = 16.sp
                         )
 
                         Button(
-                            onClick = {
-                                viewModel.signInWithPhone(phone) { ok, _ -> if (ok) onAuthSuccess() }
-                            },
-                            enabled = !isLoading && phone.length >= 10,
+                            onClick = {},
+                            enabled = false,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(54.dp)
@@ -651,33 +653,25 @@ fun AuthGateScreen(
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = ColorBrandEmerald,
-                                contentColor = ColorOnPrimary
+                                contentColor = ColorOnPrimary,
+                                disabledContainerColor = ColorSurfaceInput,
+                                disabledContentColor = ColorTextMuted
                             )
                         ) {
-                            if (isLoading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .testTag("auth_loading_indicator"),
-                                    color = ColorOnPrimary,
-                                    strokeWidth = 2.5.dp
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Send,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
                                 )
-                            } else {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Send,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Text(
-                                        text = "Receber Código por SMS",
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
+                                Text(
+                                    text = stringResource(R.string.auth_btn_sms_coming_soon),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                     }

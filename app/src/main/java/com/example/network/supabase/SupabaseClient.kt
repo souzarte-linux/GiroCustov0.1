@@ -103,7 +103,9 @@ class SupabaseClient private constructor(context: Context? = null) {
     }
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
+        level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC else HttpLoggingInterceptor.Level.NONE
+        redactHeader("Authorization")
+        redactHeader("apikey")
     }
 
     private val okHttpClient: OkHttpClient = OkHttpClient.Builder()
