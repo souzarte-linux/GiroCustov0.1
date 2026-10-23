@@ -1,19 +1,25 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Configuração de regras de extração de dados para Android 12 (API 31) ou superior.
+   Protege dados sensíveis (tokens, biometria e sessão criptografada) tanto em
+   backup em nuvem (Google Drive Auto Backup) quanto em transferência entre dispositivos (D2D / adb backup).
+   
+   Nota de arquitetura:
+   - giro_custo_supabase_auth.xml: tokens de autenticação Supabase
+   - giro_custo_biometrics.xml: preferências e estado biométrico
+   - giro_custo_secure_session.xml: sessão criptografada gerenciada pelo Keystore (T-06)
+   - O banco de dados Room (giro_custo_database) e demais preferências NÃO são excluídos
+     para manter o backup funcional para o usuário.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="sharedpref" path="giro_custo_supabase_auth.xml" />
+        <exclude domain="sharedpref" path="giro_custo_biometrics.xml" />
+        <exclude domain="sharedpref" path="giro_custo_secure_session.xml" />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="sharedpref" path="giro_custo_supabase_auth.xml" />
+        <exclude domain="sharedpref" path="giro_custo_biometrics.xml" />
+        <exclude domain="sharedpref" path="giro_custo_secure_session.xml" />
     </device-transfer>
-    -->
 </data-extraction-rules>

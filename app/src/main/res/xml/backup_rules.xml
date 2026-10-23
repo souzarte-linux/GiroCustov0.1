@@ -1,13 +1,17 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Configuração de regras de backup para dispositivos legados (Android 11 / API 30 e anteriores).
+   Protege dados sensíveis (tokens, biometria e sessão criptografada) do backup completo.
+   
+   Nota de arquitetura:
+   - giro_custo_supabase_auth.xml: tokens de autenticação Supabase
+   - giro_custo_biometrics.xml: preferências e estado biométrico
+   - giro_custo_secure_session.xml: sessão criptografada gerenciada pelo Keystore (T-06)
+   - O banco de dados Room (giro_custo_database) e demais preferências NÃO são excluídos
+     para manter o backup funcional para o usuário.
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <exclude domain="sharedpref" path="giro_custo_supabase_auth.xml" />
+    <exclude domain="sharedpref" path="giro_custo_biometrics.xml" />
+    <exclude domain="sharedpref" path="giro_custo_secure_session.xml" />
 </full-backup-content>
