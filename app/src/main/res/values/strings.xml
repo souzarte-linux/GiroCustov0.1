@@ -18,4 +18,10 @@
     <string name="toast_part_restored">Peça restaurada com sucesso!</string>
     <string name="cd_delete_vehicle">Excluir veículo</string>
     <string name="cd_delete_part">Excluir peça</string>
+
+    <!-- Ações e acessibilidade de CEP em Meus Dados Cadastrais (T-06) -->
+    <string name="profile_cep_manual_action">Não sei meu CEP / Preencher manual</string>
+    <string name="profile_cep_search_correios_action">Consultar CEP nos Correios</string>
+    <string name="cd_profile_cep_manual">Ativar preenchimento manual de endereço</string>
+    <string name="cd_profile_search_correios">Abrir busca de CEP no site dos Correios</string>
 </resources>

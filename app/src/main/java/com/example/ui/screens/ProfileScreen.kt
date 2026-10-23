@@ -679,10 +679,9 @@ private fun CadastralDataCard(
             )
 
             // Links/Ações de CEP: Preenchimento manual e Consulta nos Correios
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 TextButton(
                     onClick = {
@@ -696,20 +695,29 @@ private fun CadastralDataCard(
                             } catch (_: Exception) {}
                         }
                     },
-                    modifier = Modifier.testTag("profile_manual_cep_toggle")
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 48.dp)
+                        .testTag("profile_manual_cep_toggle"),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.EditNote,
-                        contentDescription = null,
-                        tint = ColorBrandEmerald,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Não sei meu CEP / Preencher manual",
-                        fontSize = 12.sp,
-                        color = ColorBrandEmerald
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.EditNote,
+                            contentDescription = stringResource(R.string.cd_profile_cep_manual),
+                            tint = ColorBrandEmerald,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.profile_cep_manual_action),
+                            fontSize = 12.sp,
+                            color = ColorBrandEmerald
+                        )
+                    }
                 }
 
                 TextButton(
@@ -720,20 +728,29 @@ private fun CadastralDataCard(
                         )
                         context.startActivity(intent)
                     },
-                    modifier = Modifier.testTag("profile_search_cep_web_btn")
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 48.dp)
+                        .testTag("profile_search_cep_web_btn"),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                        contentDescription = null,
-                        tint = ColorTextMuted,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Consultar Correios",
-                        fontSize = 12.sp,
-                        color = ColorTextMuted
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                            contentDescription = stringResource(R.string.cd_profile_search_correios),
+                            tint = ColorTextMuted,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.profile_cep_search_correios_action),
+                            fontSize = 12.sp,
+                            color = ColorTextMuted
+                        )
+                    }
                 }
             }
 
