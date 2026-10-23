@@ -3,4 +3,19 @@
     <string name="auth_tab_phone">Celular</string>
     <string name="auth_btn_sms_coming_soon">Receber Código por SMS (Em breve)</string>
     <string name="auth_sms_coming_soon_notice">O login por SMS estará disponível em breve. Por favor, utilize o login por E-mail ou Conta Google.</string>
+
+    <!-- Dialogs e ações de exclusão / desfazer (T-05 [UX-01]) -->
+    <string name="dialog_delete_vehicle_title">Excluir veículo?</string>
+    <string name="dialog_delete_vehicle_message">Tem certeza que deseja excluir o veículo \"%1$s\"? Ele não aparecerá mais nos cálculos e diárias ativas.</string>
+    <string name="dialog_delete_part_title">Excluir peça?</string>
+    <string name="dialog_delete_part_message">Tem certeza que deseja remover \"%1$s\" do monitoramento de desgaste?</string>
+    <string name="btn_delete_confirm">Excluir</string>
+    <string name="btn_cancel">Cancelar</string>
+    <string name="snackbar_vehicle_deleted">Veículo \"%1$s\" excluído.</string>
+    <string name="snackbar_part_deleted">Peça \"%1$s\" excluída.</string>
+    <string name="snackbar_action_undo">Desfazer</string>
+    <string name="toast_vehicle_restored">Veículo restaurado com sucesso!</string>
+    <string name="toast_part_restored">Peça restaurada com sucesso!</string>
+    <string name="cd_delete_vehicle">Excluir veículo</string>
+    <string name="cd_delete_part">Excluir peça</string>
 </resources>

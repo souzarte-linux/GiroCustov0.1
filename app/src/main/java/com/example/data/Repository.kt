@@ -100,6 +100,15 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
         vehicleDao.updateVehicle(toDelete)
     }
 
+    suspend fun restoreVehicle(vehicle: Vehicle) {
+        val toRestore = vehicle.copy(
+            isDeleted = false,
+            syncStatus = SyncStatus.PENDING_UPDATE,
+            updatedAt = System.currentTimeMillis()
+        )
+        vehicleDao.updateVehicle(toRestore)
+    }
+
     suspend fun getUserProfile(): UserProfile? = userProfileDao.getUserProfile()
 
     suspend fun saveUserProfile(userProfile: UserProfile) {
@@ -183,6 +192,15 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
             updatedAt = System.currentTimeMillis()
         )
         partDao.updatePart(toDelete)
+    }
+
+    suspend fun restorePart(part: VehiclePart) {
+        val toRestore = part.copy(
+            isDeleted = false,
+            syncStatus = SyncStatus.PENDING_UPDATE,
+            updatedAt = System.currentTimeMillis()
+        )
+        partDao.updatePart(toRestore)
     }
 
     suspend fun resetPartWear(partId: Long) {

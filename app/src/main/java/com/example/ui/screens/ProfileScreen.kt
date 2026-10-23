@@ -28,6 +28,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.R
 import com.example.data.Platform
 import com.example.data.UserProfile
 import com.example.data.Vehicle
@@ -49,6 +51,7 @@ import com.example.ui.ViaCepUiState
 import com.example.util.BrazilianCepVisualTransformation
 import com.example.util.BrazilianPhoneVisualTransformation
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 // Design Tokens Dark Theme Pro
@@ -82,58 +85,184 @@ fun ProfileScreen(
     val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
     val viaCepState by viewModel.viaCepState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Estado do formulário de veículo (null: lista / seções, -1L: novo veículo, >0L: edição de veículo)
     var editingVehicleId by remember { mutableStateOf<Long?>(null) }
+    var vehicleToDelete by remember { mutableStateOf<Vehicle?>(null) }
+    var partToDelete by remember { mutableStateOf<VehiclePart?>(null) }
 
-    AnimatedContent(
-        targetState = editingVehicleId,
-        transitionSpec = { fadeIn() togetherWith fadeOut() },
-        label = "profile_vehicle_transition"
-    ) { currentVehicleId ->
-        if (currentVehicleId == null) {
-            ProfileSectionsContent(
-                viewModel = viewModel,
-                userProfile = userProfileState ?: UserProfile(),
-                allPlatforms = allPlatforms,
-                allVehicles = allVehicles,
-                activeVehicle = activeVehicle,
-                parts = parts,
-                viaCepState = viaCepState,
-                isDark = isDark,
-                onNavigateToPlatforms = onNavigateToPlatforms,
-                onAddVehicleClick = { editingVehicleId = -1L },
-                onEditVehicleClick = { id -> editingVehicleId = id }
-            )
-        } else {
-            val isEdit = currentVehicleId != -1L
-            val vehicleToEdit = if (isEdit) {
-                allVehicles.find { it.id == currentVehicleId } ?: Vehicle(id = 0L)
+    Box(modifier = Modifier.fillMaxSize()) {
+        AnimatedContent(
+            targetState = editingVehicleId,
+            transitionSpec = { fadeIn() togetherWith fadeOut() },
+            label = "profile_vehicle_transition"
+        ) { currentVehicleId ->
+            if (currentVehicleId == null) {
+                ProfileSectionsContent(
+                    viewModel = viewModel,
+                    userProfile = userProfileState ?: UserProfile(),
+                    allPlatforms = allPlatforms,
+                    allVehicles = allVehicles,
+                    activeVehicle = activeVehicle,
+                    parts = parts,
+                    viaCepState = viaCepState,
+                    isDark = isDark,
+                    onNavigateToPlatforms = onNavigateToPlatforms,
+                    onAddVehicleClick = { editingVehicleId = -1L },
+                    onEditVehicleClick = { id -> editingVehicleId = id },
+                    onDeleteVehicle = { vehicle -> vehicleToDelete = vehicle },
+                    onDeletePart = { part -> partToDelete = part }
+                )
             } else {
-                Vehicle(id = 0L)
-            }
-
-            VehicleFormSection(
-                vehicle = vehicleToEdit,
-                isEdit = isEdit,
-                viewModel = viewModel,
-                onBack = { editingVehicleId = null },
-                onSave = { updatedVehicle ->
-                    viewModel.updateVehicle(updatedVehicle)
-                    Toast.makeText(
-                        context,
-                        if (isEdit) "Veículo atualizado com sucesso!" else "Veículo cadastrado com sucesso!",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    editingVehicleId = null
-                },
-                onDelete = {
-                    viewModel.deleteVehicle(vehicleToEdit)
-                    Toast.makeText(context, "Veículo excluído com sucesso.", Toast.LENGTH_SHORT).show()
-                    editingVehicleId = null
+                val isEdit = currentVehicleId != -1L
+                val vehicleToEdit = if (isEdit) {
+                    allVehicles.find { it.id == currentVehicleId } ?: Vehicle(id = 0L)
+                } else {
+                    Vehicle(id = 0L)
                 }
-            )
+
+                VehicleFormSection(
+                    vehicle = vehicleToEdit,
+                    isEdit = isEdit,
+                    viewModel = viewModel,
+                    onBack = { editingVehicleId = null },
+                    onSave = { updatedVehicle ->
+                        viewModel.updateVehicle(updatedVehicle)
+                        Toast.makeText(
+                            context,
+                            if (isEdit) "Veículo atualizado com sucesso!" else "Veículo cadastrado com sucesso!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        editingVehicleId = null
+                    },
+                    onDelete = {
+                        vehicleToDelete = vehicleToEdit
+                    }
+                )
+            }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 16.dp)
+        )
+    }
+
+    // Diálogo de confirmação de exclusão de veículo
+    vehicleToDelete?.let { toDelete ->
+        AlertDialog(
+            onDismissRequest = { vehicleToDelete = null },
+            title = {
+                Text(
+                    text = stringResource(R.string.dialog_delete_vehicle_title),
+                    fontWeight = FontWeight.Bold,
+                    color = ColorTextPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.dialog_delete_vehicle_message, toDelete.model),
+                    color = ColorTextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        vehicleToDelete = null
+                        viewModel.deleteVehicle(toDelete)
+                        if (editingVehicleId == toDelete.id) {
+                            editingVehicleId = null
+                        }
+                        coroutineScope.launch {
+                            val result = snackbarHostState.showSnackbar(
+                                message = context.getString(R.string.snackbar_vehicle_deleted, toDelete.model),
+                                actionLabel = context.getString(R.string.snackbar_action_undo),
+                                duration = SnackbarDuration.Short
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                viewModel.restoreVehicle(toDelete)
+                                Toast.makeText(context, context.getString(R.string.toast_vehicle_restored), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ColorRose,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(stringResource(R.string.btn_delete_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { vehicleToDelete = null }
+                ) {
+                    Text(stringResource(R.string.btn_cancel), color = ColorTextSecondary)
+                }
+            },
+            containerColor = ColorSurfaceElevated,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    // Diálogo de confirmação de exclusão de peça
+    partToDelete?.let { toDelete ->
+        AlertDialog(
+            onDismissRequest = { partToDelete = null },
+            title = {
+                Text(
+                    text = stringResource(R.string.dialog_delete_part_title),
+                    fontWeight = FontWeight.Bold,
+                    color = ColorTextPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.dialog_delete_part_message, toDelete.name),
+                    color = ColorTextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        partToDelete = null
+                        viewModel.deletePart(toDelete)
+                        coroutineScope.launch {
+                            val result = snackbarHostState.showSnackbar(
+                                message = context.getString(R.string.snackbar_part_deleted, toDelete.name),
+                                actionLabel = context.getString(R.string.snackbar_action_undo),
+                                duration = SnackbarDuration.Short
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                viewModel.restorePart(toDelete)
+                                Toast.makeText(context, context.getString(R.string.toast_part_restored), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ColorRose,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(stringResource(R.string.btn_delete_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { partToDelete = null }
+                ) {
+                    Text(stringResource(R.string.btn_cancel), color = ColorTextSecondary)
+                }
+            },
+            containerColor = ColorSurfaceElevated,
+            shape = RoundedCornerShape(16.dp)
+        )
     }
 }
 
@@ -152,7 +281,9 @@ private fun ProfileSectionsContent(
     isDark: Boolean,
     onNavigateToPlatforms: () -> Unit,
     onAddVehicleClick: () -> Unit,
-    onEditVehicleClick: (Long) -> Unit
+    onEditVehicleClick: (Long) -> Unit,
+    onDeleteVehicle: (Vehicle) -> Unit,
+    onDeletePart: (VehiclePart) -> Unit
 ) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
@@ -237,10 +368,7 @@ private fun ProfileSectionsContent(
                 viewModel.setActiveVehicle(vehicleId)
                 Toast.makeText(context, "Veículo operacional ativado!", Toast.LENGTH_SHORT).show()
             },
-            onDeleteVehicle = { vehicle ->
-                viewModel.deleteVehicle(vehicle)
-                Toast.makeText(context, "Veículo excluído.", Toast.LENGTH_SHORT).show()
-            }
+            onDeleteVehicle = onDeleteVehicle
         )
 
         // =========================================================================
@@ -258,10 +386,7 @@ private fun ProfileSectionsContent(
                 viewModel.resetPartWear(partId)
                 Toast.makeText(context, "Desgaste da peça zerado!", Toast.LENGTH_SHORT).show()
             },
-            onDeletePart = { part ->
-                viewModel.deletePart(part)
-                Toast.makeText(context, "Peça removida do monitoramento.", Toast.LENGTH_SHORT).show()
-            }
+            onDeletePart = onDeletePart
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -1144,19 +1269,24 @@ private fun MyVehiclesSection(
                                 IconButton(
                                     onClick = { onEditVehicleClick(vehicle.id) },
                                     modifier = Modifier
-                                        .size(30.dp)
+                                        .size(48.dp)
                                         .testTag("profile_vehicle_edit_btn_${vehicle.id}")
                                 ) {
-                                    Icon(Icons.Filled.Edit, contentDescription = "Editar", tint = ColorSky, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Filled.Edit, contentDescription = "Editar", tint = ColorSky, modifier = Modifier.size(20.dp))
                                 }
 
                                 IconButton(
                                     onClick = { onDeleteVehicle(vehicle) },
                                     modifier = Modifier
-                                        .size(30.dp)
+                                        .size(48.dp)
                                         .testTag("profile_vehicle_delete_btn_${vehicle.id}")
                                 ) {
-                                    Icon(Icons.Filled.DeleteOutline, contentDescription = "Excluir", tint = ColorRose, modifier = Modifier.size(16.dp))
+                                    Icon(
+                                        Icons.Filled.DeleteOutline,
+                                        contentDescription = stringResource(R.string.cd_delete_vehicle),
+                                        tint = ColorRose,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
                             }
                         }
@@ -1321,32 +1451,33 @@ private fun PartsWearSection(
                                 IconButton(
                                     onClick = { onEditPartClick(part) },
                                     modifier = Modifier
-                                        .size(28.dp)
+                                        .size(48.dp)
                                         .testTag("profile_part_edit_btn_${part.id}")
                                 ) {
-                                    Icon(Icons.Filled.Edit, "Editar Peça", tint = ColorSky, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Filled.Edit, contentDescription = "Editar Peça", tint = ColorSky, modifier = Modifier.size(20.dp))
                                 }
-
-                                Spacer(modifier = Modifier.width(4.dp))
 
                                 IconButton(
                                     onClick = { onResetWear(part.id) },
                                     modifier = Modifier
-                                        .size(28.dp)
+                                        .size(48.dp)
                                         .testTag("profile_part_reset_btn_${part.id}")
                                 ) {
-                                    Icon(Icons.Filled.Build, "Zerar Desgaste", tint = ColorBrandEmerald, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Filled.Build, contentDescription = "Zerar Desgaste", tint = ColorBrandEmerald, modifier = Modifier.size(20.dp))
                                 }
-
-                                Spacer(modifier = Modifier.width(4.dp))
 
                                 IconButton(
                                     onClick = { onDeletePart(part) },
                                     modifier = Modifier
-                                        .size(28.dp)
+                                        .size(48.dp)
                                         .testTag("profile_part_delete_btn_${part.id}")
                                 ) {
-                                    Icon(Icons.Filled.Delete, "Remover Peça", tint = ColorRose, modifier = Modifier.size(16.dp))
+                                    Icon(
+                                        Icons.Filled.Delete,
+                                        contentDescription = stringResource(R.string.cd_delete_part),
+                                        tint = ColorRose,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
                             }
                         }
@@ -1498,12 +1629,16 @@ private fun VehicleFormSection(
                 IconButton(
                     onClick = onDelete,
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(48.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(ColorRose.copy(alpha = 0.15f))
                         .testTag("delete_vehicle_btn")
                 ) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Excluir Veículo", tint = ColorRose)
+                    Icon(
+                        Icons.Filled.Delete,
+                        contentDescription = stringResource(R.string.cd_delete_vehicle),
+                        tint = ColorRose
+                    )
                 }
             }
         }

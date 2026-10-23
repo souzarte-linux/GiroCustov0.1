@@ -988,6 +988,12 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun restoreVehicle(vehicle: Vehicle) {
+        viewModelScope.launch {
+            repository.restoreVehicle(vehicle)
+        }
+    }
+
     // Ações do Perfil de Usuário
     fun updateUserProfile(
         name: String,
@@ -1068,6 +1074,12 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
     fun deletePart(part: VehiclePart) {
         viewModelScope.launch {
             repository.deletePart(part)
+        }
+    }
+
+    fun restorePart(part: VehiclePart) {
+        viewModelScope.launch {
+            repository.restorePart(part)
         }
     }
 

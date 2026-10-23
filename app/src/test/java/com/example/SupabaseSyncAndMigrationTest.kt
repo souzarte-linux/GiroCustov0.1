@@ -1859,6 +1859,156 @@ class SupabaseSyncAndMigrationTest {
         assertEquals(SyncStatus.PENDING_INSERT, vehicleInDb?.syncStatus)
         assertEquals("", vehicleInDb?.remoteId)
     }
+
+    @Test
+    fun testVehicleAndPart_delete_sync_undo_sync_LWWProtection() = runTest {
+        val repository = GiroCustoRepository(inMemoryDb)
+        val fakeApi = FakeSupabaseRestApi()
+        val syncManager = SupabaseSyncManager(inMemoryDb, fakeApi)
+        val userId = "user_lww_undo_test"
+
+        // Estado inicial: Veículo e Peça inseridos no banco Room e sincronizados com a FakeSupabaseRestApi
+        // (isDeleted = false, syncStatus = SYNCED, updatedAt = 1000L).
+        val initialVehicle = Vehicle(
+            id = 1L,
+            model = "Honda Fan 160",
+            averageConsumption = 38.0,
+            fuelType = "Gasolina",
+            monthlyFixedCosts = 120.0,
+            plannedWorkDays = 22,
+            currentOdometer = 12000.0,
+            active = true,
+            remoteId = "veh-lww-1",
+            syncStatus = SyncStatus.SYNCED,
+            updatedAt = 1000L,
+            isDeleted = false
+        )
+        inMemoryDb.vehicleDao().insertVehicle(initialVehicle)
+        fakeApi.remoteVehicles.add(initialVehicle.toDto(userId))
+
+        val initialPart = VehiclePart(
+            id = 1L,
+            vehicleId = 1L,
+            name = "Kit Relação",
+            price = 150.0,
+            lifespanKm = 15000.0,
+            runKmSinceChange = 3000.0,
+            remoteId = "part-lww-1",
+            syncStatus = SyncStatus.SYNCED,
+            updatedAt = 1000L,
+            isDeleted = false
+        )
+        inMemoryDb.vehiclePartDao().insertPart(initialPart)
+        fakeApi.remoteParts.add(initialPart.toDto(userId, "veh-lww-1"))
+
+        assertEquals(1, inMemoryDb.vehicleDao().getAllVehicles().size)
+        assertEquals(1, inMemoryDb.vehiclePartDao().getAllParts().size)
+
+        // Passo 1 (Excluir / Soft-Delete): Chamar repository.deleteVehicle e repository.deletePart.
+        repository.deleteVehicle(initialVehicle)
+        repository.deletePart(initialPart)
+
+        val softDeletedVehicle = inMemoryDb.vehicleDao().getVehicleById(1L)
+        val softDeletedPart = inMemoryDb.vehiclePartDao().getPartById(1L)
+
+        // Asserções Passo 1: isDeleted = true, syncStatus = PENDING_DELETE, updatedAt atualizado.
+        // DAOs getAllVehicles() e getAllParts() devem retornar vazios (filtrados).
+        assertNotNull(softDeletedVehicle)
+        assertTrue(softDeletedVehicle!!.isDeleted)
+        assertEquals(SyncStatus.PENDING_DELETE, softDeletedVehicle.syncStatus)
+        assertTrue(softDeletedVehicle.updatedAt > 1000L)
+
+        assertNotNull(softDeletedPart)
+        assertTrue(softDeletedPart!!.isDeleted)
+        assertEquals(SyncStatus.PENDING_DELETE, softDeletedPart.syncStatus)
+        assertTrue(softDeletedPart.updatedAt > 1000L)
+
+        assertTrue("getAllVehicles deve filtrar registros com isDeleted = true", inMemoryDb.vehicleDao().getAllVehicles().isEmpty())
+        assertTrue("getAllParts deve filtrar registros com isDeleted = true", inMemoryDb.vehiclePartDao().getAllParts().isEmpty())
+
+        val deleteVehicleTimestamp = softDeletedVehicle.updatedAt
+        val deletePartTimestamp = softDeletedPart.updatedAt
+
+        // Passo 2 (Sincronizar 1): Executar syncManager.sync(userId).
+        val syncResult1 = syncManager.sync(userId)
+        assertTrue("Primeiro sync deve concluir com sucesso", syncResult1 is SyncResult.Success)
+
+        // Asserções Passo 2: No fakeApi, registros recebidos com deletedAt != null.
+        // No banco local, syncStatus = SYNCED, isDeleted = true.
+        val remoteDeletedVehicle = fakeApi.remoteVehicles.firstOrNull { it.id == "veh-lww-1" }
+        assertNotNull(remoteDeletedVehicle)
+        assertNotNull("FakeApi deve conter deletedAt não nulo para veículo", remoteDeletedVehicle?.deletedAt)
+
+        val remoteDeletedPart = fakeApi.remoteParts.firstOrNull { it.id == "part-lww-1" }
+        assertNotNull(remoteDeletedPart)
+        assertNotNull("FakeApi deve conter deletedAt não nulo para peça", remoteDeletedPart?.deletedAt)
+
+        val localVehicleAfterSync1 = inMemoryDb.vehicleDao().getVehicleById(1L)
+        assertNotNull(localVehicleAfterSync1)
+        assertEquals(SyncStatus.SYNCED, localVehicleAfterSync1!!.syncStatus)
+        assertTrue(localVehicleAfterSync1.isDeleted)
+
+        val localPartAfterSync1 = inMemoryDb.vehiclePartDao().getPartById(1L)
+        assertNotNull(localPartAfterSync1)
+        assertEquals(SyncStatus.SYNCED, localPartAfterSync1!!.syncStatus)
+        assertTrue(localPartAfterSync1.isDeleted)
+
+        // Passo 3 (Desfazer / Undo): Chamar repository.restoreVehicle e repository.restorePart.
+        // Pequena pausa para garantir que System.currentTimeMillis() avance estritamente além do deleteTimestamp
+        Thread.sleep(15)
+
+        repository.restoreVehicle(localVehicleAfterSync1)
+        repository.restorePart(localPartAfterSync1)
+
+        val restoredVehicle = inMemoryDb.vehicleDao().getVehicleById(1L)
+        val restoredPart = inMemoryDb.vehiclePartDao().getPartById(1L)
+
+        // Asserções Passo 3: isDeleted = false, syncStatus = PENDING_UPDATE, updatedAt deve ser estritamente maior que o timestamp do passo anterior.
+        assertNotNull(restoredVehicle)
+        assertFalse(restoredVehicle!!.isDeleted)
+        assertEquals(SyncStatus.PENDING_UPDATE, restoredVehicle.syncStatus)
+        assertTrue("updatedAt do veículo restaurado deve ser estritamente maior que o timestamp anterior", restoredVehicle.updatedAt > deleteVehicleTimestamp)
+
+        assertNotNull(restoredPart)
+        assertFalse(restoredPart!!.isDeleted)
+        assertEquals(SyncStatus.PENDING_UPDATE, restoredPart.syncStatus)
+        assertTrue("updatedAt da peça restaurada deve ser estritamente maior que o timestamp anterior", restoredPart.updatedAt > deletePartTimestamp)
+
+        assertEquals("getAllVehicles deve retornar 1 veículo restaurado", 1, inMemoryDb.vehicleDao().getAllVehicles().size)
+        assertEquals("getAllParts deve retornar 1 peça restaurada", 1, inMemoryDb.vehiclePartDao().getAllParts().size)
+
+        val restoreVehicleTimestamp = restoredVehicle.updatedAt
+        val restorePartTimestamp = restoredPart.updatedAt
+
+        // Passo 4 (Sincronizar 2): Executar syncManager.sync(userId).
+        val syncResult2 = syncManager.sync(userId)
+        assertTrue("Segundo sync deve concluir com sucesso", syncResult2 is SyncResult.Success)
+
+        // Asserções Passo 4: No fakeApi, registros atualizados com deletedAt == null e novo updatedAt.
+        // No banco local, syncStatus = SYNCED e isDeleted = false. O pull remoto não re-deleta os itens devido à proteção LWW.
+        val finalRemoteVehicle = fakeApi.remoteVehicles.firstOrNull { it.id == "veh-lww-1" }
+        assertNotNull(finalRemoteVehicle)
+        assertNull("deletedAt deve ser nulo no FakeApi após restore sync", finalRemoteVehicle?.deletedAt)
+        assertEquals(restoreVehicleTimestamp, SupabaseMappers.parseIsoTimestamp(finalRemoteVehicle?.updatedAt))
+
+        val finalRemotePart = fakeApi.remoteParts.firstOrNull { it.id == "part-lww-1" }
+        assertNotNull(finalRemotePart)
+        assertNull("deletedAt deve ser nulo no FakeApi após restore sync", finalRemotePart?.deletedAt)
+        assertEquals(restorePartTimestamp, SupabaseMappers.parseIsoTimestamp(finalRemotePart?.updatedAt))
+
+        val finalLocalVehicle = inMemoryDb.vehicleDao().getVehicleById(1L)
+        assertNotNull(finalLocalVehicle)
+        assertEquals(SyncStatus.SYNCED, finalLocalVehicle!!.syncStatus)
+        assertFalse("isDeleted do veículo local deve permanecer false após sincronização com proteção LWW", finalLocalVehicle.isDeleted)
+
+        val finalLocalPart = inMemoryDb.vehiclePartDao().getPartById(1L)
+        assertNotNull(finalLocalPart)
+        assertEquals(SyncStatus.SYNCED, finalLocalPart!!.syncStatus)
+        assertFalse("isDeleted da peça local deve permanecer false após sincronização com proteção LWW", finalLocalPart.isDeleted)
+
+        assertEquals(1, inMemoryDb.vehicleDao().getAllVehicles().size)
+        assertEquals(1, inMemoryDb.vehiclePartDao().getAllParts().size)
+    }
 }
 
 // =========================================================================
