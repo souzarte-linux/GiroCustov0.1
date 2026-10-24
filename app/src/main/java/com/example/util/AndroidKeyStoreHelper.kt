@@ -19,16 +19,13 @@ import javax.crypto.spec.GCMParameterSpec
  * 1. giro_custo_session_key: Criptografia de tokens em repouso sem exigir biometria (permite sync em background).
  * 2. giro_custo_biometric_auth_key: Desbloqueio biométrico com CryptoObject e detecção de novas digitais.
  */
-object AndroidKeyStoreHelper {
+object AndroidKeyStoreHelper : SessionCryptoEngine {
 
     private const val ANDROID_KEY_STORE = "AndroidKeyStore"
     private const val AES_GCM_NOPADDING = "AES/GCM/NoPadding"
     private const val GCM_TAG_LENGTH = 128
     private const val SESSION_KEY_ALIAS = "giro_custo_session_key"
     private const val BIOMETRIC_KEY_ALIAS = "giro_custo_biometric_auth_key"
-
-    @Volatile
-    private var fallbackSessionKey: SecretKey? = null
 
     fun isKeyStoreAvailable(): Boolean {
         return try {
@@ -49,38 +46,30 @@ object AndroidKeyStoreHelper {
 
     @Synchronized
     fun getOrCreateSessionKey(): SecretKey {
-        if (isKeyStoreAvailable()) {
-            val keyStore = getKeyStore()
-            if (keyStore.containsAlias(SESSION_KEY_ALIAS)) {
-                val entry = keyStore.getEntry(SESSION_KEY_ALIAS, null) as? KeyStore.SecretKeyEntry
-                if (entry != null) {
-                    return entry.secretKey
-                }
-            }
-
-            val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEY_STORE)
-            val spec = KeyGenParameterSpec.Builder(
-                SESSION_KEY_ALIAS,
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-            )
-                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                .setKeySize(256)
-                .setUserAuthenticationRequired(false)
-                .build()
-
-            keyGenerator.init(spec)
-            return keyGenerator.generateKey()
-        } else {
-            // Fallback transparente para ambiente sem provider AndroidKeyStore (testes JVM/Robolectric)
-            return fallbackSessionKey ?: synchronized(this) {
-                fallbackSessionKey ?: run {
-                    val kg = KeyGenerator.getInstance("AES")
-                    kg.init(256)
-                    kg.generateKey().also { fallbackSessionKey = it }
-                }
+        if (!isKeyStoreAvailable()) {
+            throw java.security.KeyStoreException("AndroidKeyStore provider não está disponível no dispositivo.")
+        }
+        val keyStore = getKeyStore()
+        if (keyStore.containsAlias(SESSION_KEY_ALIAS)) {
+            val entry = keyStore.getEntry(SESSION_KEY_ALIAS, null) as? KeyStore.SecretKeyEntry
+            if (entry != null) {
+                return entry.secretKey
             }
         }
+
+        val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEY_STORE)
+        val spec = KeyGenParameterSpec.Builder(
+            SESSION_KEY_ALIAS,
+            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+        )
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setKeySize(256)
+            .setUserAuthenticationRequired(false)
+            .build()
+
+        keyGenerator.init(spec)
+        return keyGenerator.generateKey()
     }
 
     @Synchronized
@@ -126,7 +115,7 @@ object AndroidKeyStoreHelper {
      * Cifra uma string em texto puro usando a chave de sessão do Keystore.
      * Retorna "IV_BASE64:CIPHERTEXT_BASE64".
      */
-    fun encryptSession(plainText: String): String {
+    override fun encryptSession(plainText: String): String {
         val key = getOrCreateSessionKey()
         val cipher = Cipher.getInstance(AES_GCM_NOPADDING)
         cipher.init(Cipher.ENCRYPT_MODE, key)
@@ -140,7 +129,7 @@ object AndroidKeyStoreHelper {
     /**
      * Decifra o payload gerado por encryptSession.
      */
-    fun decryptSession(cipherPayload: String): String {
+    override fun decryptSession(cipherPayload: String): String {
         val parts = cipherPayload.split(":")
         require(parts.size == 2) { "Payload criptográfico inválido" }
         val iv = Base64.decode(parts[0], Base64.NO_WRAP)

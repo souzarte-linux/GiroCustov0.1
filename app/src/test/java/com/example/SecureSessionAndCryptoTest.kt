@@ -94,8 +94,9 @@ class SecureSessionAndCryptoTest {
 
         assertTrue(legacyPrefs.contains("sp_access_token"))
 
-        // 2. Instancia armazenamento criptografado seguro
-        val storage = EncryptedSharedPreferencesStorage(context)
+        // 2. Instancia armazenamento criptografado seguro com FakeSessionCryptoEngine isolado em src/test
+        val fakeCrypto = FakeSessionCryptoEngine()
+        val storage = EncryptedSharedPreferencesStorage(context, fakeCrypto)
         storage.migrateLegacySessionIfPresent()
 
         // 3. Valida que a sessão nova contém exatamente os dados legados confirmados via read-back
@@ -114,7 +115,8 @@ class SecureSessionAndCryptoTest {
 
     @Test
     fun testLegacyMigration_whenNoLegacySession_doesNothing() {
-        val storage = EncryptedSharedPreferencesStorage(context)
+        val fakeCrypto = FakeSessionCryptoEngine()
+        val storage = EncryptedSharedPreferencesStorage(context, fakeCrypto)
         storage.migrateLegacySessionIfPresent()
         assertFalse(storage.hasSavedSession())
         assertNull(storage.getSavedSession())
@@ -131,7 +133,8 @@ class SecureSessionAndCryptoTest {
             .putString("sec_session_payload", "invalid_base64_payload_without_colon")
             .commit()
 
-        val storage = EncryptedSharedPreferencesStorage(context)
+        val fakeCrypto = FakeSessionCryptoEngine()
+        val storage = EncryptedSharedPreferencesStorage(context, fakeCrypto)
         // Deve retornar null e não estourar exceção não tratada
         val session = storage.getSavedSession()
         assertNull(session)
@@ -145,7 +148,8 @@ class SecureSessionAndCryptoTest {
         val dummyPayload = "iv:ciphertext"
         securePrefs.edit().putString("sec_session_payload", dummyPayload).commit()
 
-        val storage = EncryptedSharedPreferencesStorage(context)
+        val fakeCrypto = FakeSessionCryptoEngine()
+        val storage = EncryptedSharedPreferencesStorage(context, fakeCrypto)
         assertNull(storage.getSavedSession())
     }
 
@@ -294,5 +298,45 @@ class SecureSessionAndCryptoTest {
         assertNotNull(finalSession)
         assertTrue(finalSession?.accessToken?.startsWith("new-access-token-") == true)
         assertEquals(2, refreshCallCount)
+    }
+
+    // =========================================================================
+    // 7. FALHA DO KEYSTORE EM PRODUÇÃO: TRATAMENTO GRACIOSO SEM TRAVAR (T-06b)
+    // =========================================================================
+
+    @Test
+    fun testKeystoreFailure_inProduction_handlesGracefullyAsAbsentSessionWithoutCrashing() {
+        val failingCryptoEngine = object : com.example.util.SessionCryptoEngine {
+            override fun encryptSession(plainText: String): String {
+                throw java.security.KeyStoreException("Keystore de produção corrompido ou indisponível")
+            }
+
+            override fun decryptSession(cipherPayload: String): String {
+                throw java.security.KeyStoreException("Keystore de produção inacessível na leitura")
+            }
+        }
+
+        val storage = EncryptedSharedPreferencesStorage(context, failingCryptoEngine)
+
+        // 1. Tentar salvar sessão com Keystore falhando: não trava o app
+        val session = AuthSession(
+            accessToken = "test-token",
+            refreshToken = "test-refresh",
+            userId = "test-user-id",
+            userEmail = "fail@girocusto.com"
+        )
+        storage.saveSession(session)
+
+        // 2. Tentar recuperar sessão: não trava o app, trata como ausente (null)
+        assertNull(storage.getSavedSession())
+        assertFalse(storage.hasSavedSession())
+        assertNull(storage.getSavedUserEmail())
+
+        // 3. Com sessão ausente, restoreSavedSession() falha e direciona ao login
+        SupabaseClient.testStorage = storage
+        val client = SupabaseClient.resetForTesting(context)
+        assertFalse(client.restoreSavedSession())
+        assertNull(client.currentAccessToken)
+        assertFalse(client.isAuthenticated)
     }
 }

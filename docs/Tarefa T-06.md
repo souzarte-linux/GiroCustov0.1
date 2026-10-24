@@ -1,4 +1,10 @@
-# Relatório Final de Execução: Tarefa T-06 [UX-02]
+# Relatório de Ajuste Extra: Layout do Botão Consultar Correios (Commit 78f88d2 rotulado erroneamente como T-06)
+
+> [!NOTE]
+> **Esclarecimento de Escopo e Conformidade:**
+> O commit `78f88d2` foi rotulado erroneamente no Git com o sufixo `(T-06)`. A Tarefa T-06 oficial é **[SEC-01 e SEC-04]: Projeto Único de Segurança de Sessão e Biometria** (implementada nos commits `8d2641d` e `abfdda2`, documentada em [`docs/Relatório de Execução da Tarefa T-06 (SEC-01 + SEC-04).md`](file:///home/nando/Documentos/GiroCustov0.1/docs/Relat%C3%B3rio%20de%20Execu%C3%A7%C3%A3o%20da%20Tarefa%20T-06%20%28SEC-01%20+%20SEC-04%29.md)).
+> A correção do layout vertical do botão "Consultar Correios" e do CEP manual é uma alteração **EXTRA (fora do escopo da T-06)**, pertencente à disciplina de UX/UI e Acessibilidade.
+> **Caminho correto de `SecureSessionStorage.kt`:** [`app/src/main/java/com/example/network/supabase/SecureSessionStorage.kt`](file:///home/nando/Documentos/GiroCustov0.1/app/src/main/java/com/example/network/supabase/SecureSessionStorage.kt) (pertencente à camada de rede e autenticação Supabase, e não `util/`).
 
 ## 1. Resultado
 🟡 **IMPLEMENTADO, NÃO VERIFICADO NO APARELHO**: O botão "Consultar Correios" e o botão de preenchimento manual de CEP na tela "Meus Dados Cadastrais" (`ProfileScreen.kt`) foram reorganizados em uma disposição vertical estruturada (`Column`), eliminando o esmagamento horizontal que forçava as letras a quebrarem verticalmente em 17 linhas. Ambos os botões receberam área de toque mínima acessível de 48dp com suporte pleno a TalkBack e strings centralizadas em `strings.xml`. O teste automatizado de layout (`ProfileCepButtonLayoutTest`) comprovou a falha no código anterior (largura esmagada em 47dp e altura inflada em 356dp) e o sucesso após a correção. A suíte completa de testes (161/161 aprovados) e o Android Lint passaram com 100% de sucesso, e o build foi implantado no aparelho físico conectado.

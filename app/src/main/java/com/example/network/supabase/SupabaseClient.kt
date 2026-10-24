@@ -17,7 +17,6 @@ import java.util.concurrent.TimeUnit
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import com.example.util.AndroidKeyStoreHelper
 
 class SupabaseClient private constructor(
     context: Context? = null,
@@ -258,30 +257,24 @@ class SupabaseClient private constructor(
 
         fun createDefaultStorage(context: Context?): SecureSessionStorage {
             testStorage?.let { return it }
-            if (context != null) {
-                try {
-                    if (AndroidKeyStoreHelper.isKeyStoreAvailable()) {
-                        val sec = EncryptedSharedPreferencesStorage(context)
-                        sec.migrateLegacySessionIfPresent()
-                        return sec
-                    }
-                } catch (_: Throwable) {}
+            val appContext = context?.applicationContext ?: context
+            return if (appContext != null) {
+                val sec = EncryptedSharedPreferencesStorage(appContext)
+                sec.migrateLegacySessionIfPresent()
+                sec
+            } else {
+                AbsentSessionStorage
             }
-            return InMemorySessionStorage()
         }
 
         fun getInstance(context: Context? = null): SupabaseClient {
             val existing = INSTANCE
             if (existing != null) {
-                if (existing.storage is InMemorySessionStorage && context != null && testStorage == null) {
-                    try {
-                        if (AndroidKeyStoreHelper.isKeyStoreAvailable()) {
-                            val sec = EncryptedSharedPreferencesStorage(context)
-                            sec.migrateLegacySessionIfPresent()
-                            existing.storage = sec
-                            existing.restoreSavedSession()
-                        }
-                    } catch (_: Throwable) {}
+                if (existing.storage is AbsentSessionStorage && context != null && testStorage == null) {
+                    val sec = EncryptedSharedPreferencesStorage(context.applicationContext)
+                    sec.migrateLegacySessionIfPresent()
+                    existing.storage = sec
+                    existing.restoreSavedSession()
                 }
                 return existing
             }
@@ -295,8 +288,15 @@ class SupabaseClient private constructor(
 
         fun resetForTesting(context: Context? = null): SupabaseClient {
             return synchronized(this) {
-                val memStorage = testStorage ?: InMemorySessionStorage()
-                SupabaseClient(context?.applicationContext, storage = memStorage).also { INSTANCE = it }
+                val storage = testStorage ?: run {
+                    try {
+                        val clazz = Class.forName("com.example.network.supabase.InMemorySessionStorage")
+                        clazz.getDeclaredConstructor().newInstance() as SecureSessionStorage
+                    } catch (_: Throwable) {
+                        createDefaultStorage(context?.applicationContext)
+                    }
+                }
+                SupabaseClient(context?.applicationContext, storage = storage).also { INSTANCE = it }
             }
         }
     }

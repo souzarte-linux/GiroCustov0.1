@@ -2,11 +2,13 @@ package com.example.network.supabase
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import com.example.util.AndroidKeyStoreHelper
+import com.example.util.SessionCryptoEngine
 import org.json.JSONObject
 
 /**
- * Contrato de armazenamento seguro de sessão (T-06 [SEC-01 e SEC-04]).
+ * Contrato de armazenamento seguro de sessão (T-06 [SEC-01 e SEC-04] / T-06b).
  */
 interface SecureSessionStorage {
     fun getSavedSession(): AuthSession?
@@ -23,7 +25,7 @@ interface SecureSessionStorage {
  */
 class EncryptedSharedPreferencesStorage(
     private val context: Context,
-    private val keyStoreHelper: AndroidKeyStoreHelper = AndroidKeyStoreHelper
+    private val cryptoEngine: SessionCryptoEngine = AndroidKeyStoreHelper
 ) : SecureSessionStorage {
 
     private val prefs: SharedPreferences =
@@ -36,7 +38,7 @@ class EncryptedSharedPreferencesStorage(
     override fun getSavedSession(): AuthSession? {
         val encryptedPayload = prefs.getString(KEY_ENCRYPTED_PAYLOAD, null) ?: return null
         return try {
-            val decryptedJson = keyStoreHelper.decryptSession(encryptedPayload)
+            val decryptedJson = cryptoEngine.decryptSession(encryptedPayload)
             val json = JSONObject(decryptedJson)
             val accessToken = json.getString("accessToken")
             val refreshToken = json.optString("refreshToken", "")
@@ -56,7 +58,9 @@ class EncryptedSharedPreferencesStorage(
                 )
             }
         } catch (_: Exception) {
-            // Em caso de corrupção ou chave invalidada, retorna nulo sem travar o app
+            // Em caso de falha do Keystore, corrupção ou chave invalidada:
+            // Não trava o app, registra aviso sem dados sensíveis e trata a sessão como ausente.
+            Log.w("SecureSessionStorage", "Aviso de segurança: falha ao decifrar sessão no Keystore. Tratando sessão como ausente.")
             null
         }
     }
@@ -66,14 +70,18 @@ class EncryptedSharedPreferencesStorage(
     }
 
     override fun saveSession(session: AuthSession) {
-        val json = JSONObject().apply {
-            put("accessToken", session.accessToken)
-            put("refreshToken", session.refreshToken)
-            put("userId", session.userId)
-            put("userEmail", session.userEmail ?: JSONObject.NULL)
+        try {
+            val json = JSONObject().apply {
+                put("accessToken", session.accessToken)
+                put("refreshToken", session.refreshToken)
+                put("userId", session.userId)
+                put("userEmail", session.userEmail ?: JSONObject.NULL)
+            }
+            val encryptedPayload = cryptoEngine.encryptSession(json.toString())
+            prefs.edit().putString(KEY_ENCRYPTED_PAYLOAD, encryptedPayload).commit()
+        } catch (_: Exception) {
+            Log.w("SecureSessionStorage", "Aviso de segurança: falha ao cifrar sessão no Keystore.")
         }
-        val encryptedPayload = keyStoreHelper.encryptSession(json.toString())
-        prefs.edit().putString(KEY_ENCRYPTED_PAYLOAD, encryptedPayload).commit()
     }
 
     override fun clearSession() {
@@ -118,6 +126,7 @@ class EncryptedSharedPreferencesStorage(
             }
         } catch (_: Exception) {
             // Se a cifragem falhar: não travar o app, apagar a sessão antiga e permitir login
+            Log.w("SecureSessionStorage", "Aviso de segurança: falha na migração da sessão legada.")
             clearSession()
             try {
                 context.deleteSharedPreferences(LEGACY_PREFS_NAME)
@@ -133,28 +142,14 @@ class EncryptedSharedPreferencesStorage(
 }
 
 /**
- * Implementação em memória para isolamento determinístico em testes unitários (Condição 6).
+ * Armazenamento de contingência para quando não há sessão ou contexto disponível (T-06b).
+ * Sempre trata a sessão como ausente.
  */
-class InMemorySessionStorage : SecureSessionStorage {
-
-    @Volatile
-    private var inMemorySession: AuthSession? = null
-
-    override fun getSavedSession(): AuthSession? = inMemorySession
-
-    override fun saveSession(session: AuthSession) {
-        inMemorySession = session
-    }
-
-    override fun clearSession() {
-        inMemorySession = null
-    }
-
-    override fun hasSavedSession(): Boolean = inMemorySession != null
-
-    override fun getSavedUserEmail(): String? = inMemorySession?.userEmail
-
-    override fun migrateLegacySessionIfPresent() {
-        // Nenhuma ação em memória
-    }
+object AbsentSessionStorage : SecureSessionStorage {
+    override fun getSavedSession(): AuthSession? = null
+    override fun saveSession(session: AuthSession) {}
+    override fun clearSession() {}
+    override fun hasSavedSession(): Boolean = false
+    override fun getSavedUserEmail(): String? = null
+    override fun migrateLegacySessionIfPresent() {}
 }
