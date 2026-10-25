@@ -161,8 +161,8 @@ Este procedimento deve ser executado **ANTES** de instalar a nova versão no cel
 1. Acesse o [Supabase Dashboard](https://supabase.com/dashboard) e abra o projeto **GiroCusto**.
 2. No menu lateral esquerdo, vá em **Authentication** -> **Users**.
 3. Localize as duas contas envolvidas e copie seus respectivos **UIDs**:
-   - Conta A (`c***@h***.com`) -> UID A (ex.: `aaaaaaaa-1111-2222-3333-444444444444`)
-   - Conta B (`s***@g***.com`) -> UID B (ex.: `bbbbbbbb-5555-6666-7777-888888888888`)
+   - Conta A (`cyb***@h***.com`) -> UID A (ex.: `aaaaaaaa-1111-2222-3333-444444444444`)
+   - Conta B (`sou***@g***.com`) -> UID B (ex.: `bbbbbbbb-5555-6666-7777-888888888888`)
 
 ---
 
@@ -178,7 +178,7 @@ No menu lateral esquerdo, clique em **Table Editor**. Para cada uma das 7 tabela
 
 Para cada tabela listada, aplique o filtro:
 - Clique em **Filter** -> **Add filter**;
-- Coluna: `user_id` | Operador: `eq` | Valor: cole o **UID B** (`s***@g***.com`);
+- Coluna: `user_id` | Operador: `eq` | Valor: cole o **UID B** (`sou***@g***.com`);
 - Clique no cabeçalho da coluna `created_at` (ou `updated_at`) para ordenar pelos mais recentes;
 - Compare os registros encontrados com o horário em que os testes foram executados;
 - **Preferência de Ação:** Selecione as linhas referentes aos testes e clique no botão vermelho **Delete row(s)**. Excluir os registros de teste é a prática recomendada, pois não corrompe referências estrangeiras nem mantém lixo de homologação.
@@ -202,7 +202,7 @@ Para cada tabela listada, aplique o filtro:
    - *Ação:* Exclua manutenções de teste indevidas.
 6. **`user_profile`**
    - *Colunas principais:* `id`, `user_id`, `name`, `phone`, `city`, `email`, `cep`, `street`, `address_number`, `neighborhood`, `state_uf`, `onboarding_completed`, `created_at`, `updated_at`, `deleted_at`.
-   - *Ação:* Verifique se o perfil do Usuário B tem seu próprio e-mail (`s***@g***.com`) e dados corretos. Se contiver o nome/e-mail do Usuário A, corrija os campos de texto ou exclua o registro para que o Usuário B possa refazer seu onboarding.
+   - *Ação:* Verifique se o perfil do Usuário B tem seu próprio e-mail (`sou***@g***.com`) e dados corretos. Se contiver o nome/e-mail do Usuário A, corrija os campos de texto ou exclua o registro para que o Usuário B possa refazer seu onboarding.
 7. **`platforms`**
    - *Colunas principais:* `id`, `user_id`, `name`, `segment`, `payment_model`, `color_hex`, `created_at`, `updated_at`, `deleted_at`.
    - *Ação:* Exclua plataformas de teste se houver duplicidade ou vínculo incorreto.

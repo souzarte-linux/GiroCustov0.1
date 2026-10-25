@@ -1,1 +1,0 @@
-id,user_id,vehicle_id,date_timestamp,date_string,station_name,station_address,gas_station,fuel_type,liters,price_per_liter,discount,total_paid,odometer,full_tank,is_full_tank,payment_method,is_installment,installments_count,created_at,updated_at,deleted_at

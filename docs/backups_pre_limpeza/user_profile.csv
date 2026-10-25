@@ -1,3 +1,0 @@
-id,user_id,name,phone,city,platforms,created_at,updated_at,deleted_at,email,is_whatsapp,cep,street,address_number,neighborhood,state_uf,onboarding_completed
-501e90df-4ffb-4e08-84da-b11e25be3467,38565471-6315-4b54-999e-a33e56a1291d,Fernando anunciação de Souza,71982[OCULTO],Salvador,,2026-10-22 20:00:32.330711+00,2026-10-22 20:00:31.972+00,,s***@g***.com,True,41110320,Vila Luíza,6,Pernambués,BA,True
-727adb82-6abb-4769-a816-0be02e08c072,3e8a58df-18b6-4667-8152-d7bb2f789e2c,Fernando Cyber,71982[OCULTO],Salvador,,2026-10-24 19:46:15.00191+00,2026-10-24 19:46:13.963+00,,c***@h***.com,True,41110320,Vila Luíza,6,Pernambués,BA,True

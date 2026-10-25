@@ -199,11 +199,11 @@ O proprietário do projeto executou os testes no smartphone físico conectado e 
 > - *Teste 1 (Login com Google):* Passou com Sucesso.  
 > - *Teste 2 (Sincronização de um Registro de Teste):* Passou com Sucesso.  
 > - *Teste 3 (Biometria ao Fechar e Reabrir o App):* Passou com Sucesso.  
-> - *Teste 4 (Login com E-mail/Senha e Fallback):* Passou com Sucesso, com uma ressalva: os dados do usuário `c***@h***.com` continuam aparecendo no usuário `s***@g***.com`.
+> - *Teste 4 (Login com E-mail/Senha e Fallback):* Passou com Sucesso, com uma ressalva: os dados do usuário `cyb***@h***.com` continuam aparecendo no usuário `sou***@g***.com`.
 
 ### 7.2 Diagnóstico Técnico da Ressalva (Troca de Contas no Mesmo Aparelho)
 > [!IMPORTANT]
-> **Privacidade dos dados:** Conforme a Regra 8 de segurança da equipe, os e-mails informados pelo usuário foram mascarados neste relatório como `c***@h***.com` e `s***@g***.com`.
+> **Privacidade dos dados:** Conforme a Regra 8 de segurança da equipe, os e-mails informados pelo usuário foram mascarados neste relatório como `cyb***@h***.com` e `sou***@g***.com`.
 
 1. **Causa Raiz no Código Real:**
    - **Ausência de `userId` no banco local ([`app/src/main/java/com/example/data/Entities.kt`](file:///home/nando/Documentos/GiroCustov0.1/app/src/main/java/com/example/data/Entities.kt)):**  
@@ -211,15 +211,15 @@ O proprietário do projeto executou os testes no smartphone físico conectado e 
    - **Inviolabilidade dos dados locais no Logout ([`app/src/main/java/com/example/ui/GiroCustoViewModel.kt:573-584`](file:///home/nando/Documentos/GiroCustov0.1/app/src/main/java/com/example/ui/GiroCustoViewModel.kt#L573-L584)):**  
      Quando o usuário sai da conta (`logout()`) ou aciona a contingência de login, o app limpa os tokens de autenticação (`supabaseClient.signOut()`) e a biometria (`BiometricHelper.clearBiometrics()`), mas **não apaga o arquivo do banco de dados SQLite local (`giro_custo_database`)**. Essa regra de preservação foi desenhada para garantir que o motorista nunca perca seus lançamentos locais se estiver sem conexão com a internet.
    - **Efeito colateral da troca de contas:**  
-     Como o arquivo local de banco de dados é único no aparelho e não foi limpo, ao entrar com uma conta diferente (`s***@g***.com` após `c***@h***.com`), o app continuou exibindo os registros que já estavam gravados fisicamente na memória daquele smartphone.
+     Como o arquivo local de banco de dados é único no aparelho e não foi limpo, ao entrar com uma conta diferente (`sou***@g***.com` após `cyb***@h***.com`), o app continuou exibindo os registros que já estavam gravados fisicamente na memória daquele smartphone.
 
 2. **Riscos Identificados:**
    - **Privacidade entre motoristas que compartilham o mesmo celular:** se dois entregadores utilizam o mesmo aparelho em turnos alternados, um consegue ver o histórico de faturamento e despesas do outro.
-   - **Risco de sincronização cruzada:** se a conta `c***@h***.com` criar um lançamento e deslogar antes de sincronizar, e a conta `s***@g***.com` entrar e tocar em *"Sincronizar Agora"*, o `SupabaseSyncManager` enviará os dados locais pendentes para a nuvem da conta que está logada naquele momento (`s***@g***.com`).
+   - **Risco de sincronização cruzada:** se a conta `cyb***@h***.com` criar um lançamento e deslogar antes de sincronizar, e a conta `sou***@g***.com` entrar e tocar em *"Sincronizar Agora"*, o `SupabaseSyncManager` enviará os dados locais pendentes para a nuvem da conta que está logada naquele momento (`sou***@g***.com`).
 
 ### 7.3 Opções Arquiteturais de Solução
 - **Opção 1: Banco de dados isolado por conta (Multi-database local — *Recomendada*):**  
-  O app abre um arquivo de banco SQLite separado para cada ID de usuário (ex.: `giro_custo_<userId>.db`). Se alternar entre `c***@h***.com` e `s***@g***.com` no mesmo aparelho, os dados de cada motorista ficam 100% isolados, sem misturar registros e sem apagar nada. Ao logar de volta na primeira conta, tudo reaparece instantaneamente, inclusive offline.
+  O app abre um arquivo de banco SQLite separado para cada ID de usuário (ex.: `giro_custo_<userId>.db`). Se alternar entre `cyb***@h***.com` e `sou***@g***.com` no mesmo aparelho, os dados de cada motorista ficam 100% isolados, sem misturar registros e sem apagar nada. Ao logar de volta na primeira conta, tudo reaparece instantaneamente, inclusive offline.
 - **Opção 2: Limpeza e re-sincronização na troca de conta:**  
   Ao detectar que uma conta diferente está entrando (`novo_user_id != user_id_anterior`), o app exibe um aviso de segurança, limpa as tabelas locais do aparelho e baixa da nuvem Supabase estritamente os dados pertencentes à nova conta logada. (*Desvantagem:* se a conta anterior tinha dados não sincronizados, eles serão perdidos no aparelho).
 - **Opção 3: Adicionar a coluna `userId` no Room (Migração de banco v13):**  

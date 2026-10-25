@@ -20,3 +20,9 @@ debug.keystore
 *.keystore
 google-services.json
 secrets.properties
+
+# Exportações de banco de dados e backups locais (Proibido commitar)
+docs/backups_pre_limpeza/
+docs/*.csv
+*.dump
+

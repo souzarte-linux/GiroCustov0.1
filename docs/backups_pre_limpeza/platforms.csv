@@ -1,4 +1,0 @@
-id,user_id,name,segment,payment_model,cycle,payment_day,fixed_pay_delay,cycle_entries_json,bank_name,bank_agency,bank_account,pix_key_type,pix_key,color_hex,active,created_at,updated_at,deleted_at
-02e7c49b-eaf4-408e-a64a-49e6f3fd967d,38565471-6315-4b54-999e-a33e56a1291d,Plataforma Teste 1,delivery,producao,semanal,QUA,7,"1:7,16:7",,,,CPF,,#1976D2,True,2026-10-24 00:33:03.079357+00,2026-10-24 18:26:22.731477+00,2026-10-24 14:26:47.824+00
-23332ef8-ce9b-4657-891b-499fc736ceec,38565471-6315-4b54-999e-a33e56a1291d,Plataforma Teste 2,delivery,producao,semanal,QUA,7,"1:7,16:7",,,,CPF,,#1976D2,True,2026-10-24 19:42:09.509789+00,2026-10-24 19:39:19.464+00,
-c1a857d8-a376-4bbf-bc0d-f85ab5efea4e,3e8a58df-18b6-4667-8152-d7bb2f789e2c,Plataforma Cyber Teste,logistica,producao,semanal,QUA,7,"1:7,16:7",,,,CPF,,#1976D2,True,2026-10-24 19:49:41.841886+00,2026-10-24 19:47:00.862+00,

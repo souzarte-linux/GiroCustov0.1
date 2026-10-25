@@ -10,7 +10,7 @@
 ### 2. O que mudou
 
 #### Explicação Leiga:
-Anteriormente, quando dois motoristas utilizavam o mesmo smartphone ou quando você alternava de uma conta para outra (por exemplo, de `c***@h***.com` para `s***@g***.com`), o aplicativo mantinha no aparelho os veículos e corridas gravados pela primeira conta. Ao acionar a sincronização na segunda conta, o sistema enviava os dados do motorista anterior para a nuvem da conta recém-conectada, misturando as informações financeiras.
+Anteriormente, quando dois motoristas utilizavam o mesmo smartphone ou quando você alternava de uma conta para outra (por exemplo, de `cyb***@h***.com` para `sou***@g***.com`), o aplicativo mantinha no aparelho os veículos e corridas gravados pela primeira conta. Ao acionar a sincronização na segunda conta, o sistema enviava os dados do motorista anterior para a nuvem da conta recém-conectada, misturando as informações financeiras.
 
 Com esta alteração:
 1. **Guarda de Dono:** O aplicativo agora registra e memoriza quem é o proprietário legítimo dos dados armazenados no celular. Esse registro fica guardado em um arquivo de preferências próprio (`giro_custo_data_owner.xml`), que não altera a estrutura interna do banco de dados (sem risco de quebras em futuras migrações) e permanece protegido no backup do sistema Android junto com o banco de dados.
@@ -142,8 +142,8 @@ Com esta alteração:
 
 #### PARTE B: Roteiro de Testes Manuais no Aparelho (Após Limpeza)
 1. Abra o app, vá na aba **Nuvem** e use o botão **Sair da Conta**.
-2. Faça login com a Conta A (`s***@g***.com`) e sincronize.
-3. Saia e faça login com a Conta B (`c***@h***.com`). Confirme que os dados da Conta A somem e não aparecem.
+2. Faça login com a Conta A (`sou***@g***.com`) e sincronize.
+3. Saia e faça login com a Conta B (`cyb***@h***.com`). Confirme que os dados da Conta A somem e não aparecem.
 4. Crie uma corrida sem sincronizar e tente sair da conta. Confirme que o diálogo de lançamentos pendentes aparece.
 5. Ao tentar sincronizar em outra conta com dados pendentes, confirme a trava e teste o fluxo de descarte seguro com dupla confirmação ou "Estes dados são meus".
 
