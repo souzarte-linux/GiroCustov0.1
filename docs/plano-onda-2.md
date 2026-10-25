@@ -13,20 +13,21 @@
 
 ## 1. Quadro de Situação da Onda 1 (T-01 a T-07, T-06b, T-06c, T-06d)
 
-A Onda 1 teve como meta primordial a blindagem imediata contra riscos críticos de segurança, proteção de credenciais, correção de usabilidade crítica de tela e ativação de minificação R8. Todas as tarefas planejadas foram concluídas no código e validadas por testes unitários automatizados com 100% de sucesso.
+A Onda 1 teve como meta primordial a blindagem imediata contra riscos críticos de segurança, proteção de credenciais, correção de usabilidade crítica de tela e ativação de minificação R8. Todas as tarefas planejadas foram concluídas no código, validadas por testes unitários automatizados com 100% de sucesso e testadas no aparelho físico pelo usuário, alcançando o status oficial ✅ **VERIFICADO**. Resta apenas o teste de 70 minutos da renovação do token da T-06, a ser confirmado pelo usuário.
 
 | ID Tarefa | Achado Auditado | Risco | Status Oficial | Hash Commit | Mensagem do Commit | Verificação / Observações |
 | :--- | :---: | :---: | :---: | :---: | :--- | :--- |
 | **T-01** | SEC-08 | Baixo | ✅ **VERIFICADO** | `69c9a71` | `Segurança: adiciona padrões de certificados e credenciais ao .gitignore (T-01)` | Blindagem do `.gitignore` contra chaves, keystores e credenciais; verificado com `git check-ignore`. |
 | **T-02** | SEC-02 | Alto | ✅ **VERIFICADO** | `077bd66` | `Segurança: exclui preferências de autenticação e biometria do backup Android (T-02)` | Exclusão cirúrgica de tokens e biometria do backup em nuvem e USB; Room preservado. |
-| **T-03** | UI-01 | Crítico | 🟡 **IMPLEMENTADO, NÃO VERIFICADO NO APARELHO** | `11cf935` | `UI: remove moldura de SmartphoneSimulator da produção em GiroCustoMainApp (T-03)` | Removida moldura restritiva de 390dp da produção; pendente prova manual do usuário em tablet ou rotação paisagem. |
+| **T-03** | UI-01 | Crítico | ✅ **VERIFICADO** | `11cf935` | `UI: remove moldura de SmartphoneSimulator da produção em GiroCustoMainApp (T-03)` | Testado e homologado pelo usuário no aparelho físico; rotação de tela em modo paisagem verificada sem barras pretas laterais ou moldura de 390dp. |
 | **T-04** | INT-01 + SEC-03 | Alto | ✅ **VERIFICADO** | `fa60196` | `Segurança: oculta login por SMS e higieniza logs HTTP com Level.BASIC (T-04)` | Testado no aparelho real com Logcat (`Level.BASIC`, redação de `Authorization`/`apikey`); stub de SMS com rótulo "Em breve". |
 | **T-05** | UX-01 | Alto | ✅ **VERIFICADO** | `b2714f0` | `UX: adiciona diálogo de confirmação e desfazer com proteção LWW ao excluir veículos e peças (T-05)` | Testado e homologado no aparelho físico pelo usuário; diálogo de confirmação, snackbar com Desfazer e proteção LWW. |
-| **T-06** | SEC-01 + SEC-04 | Alto | ✅ **VERIFICADO** | `8d2641d`<br>`abfdda2` | `Segurança: implementa sessão segura em repouso e biometria com Keystore AES-GCM (T-06)`<br>`Fix(Segurança): adiciona switch de biometria no perfil e força reautenticação no fallback (T-06)` | Sessão segura em repouso com Keystore AES-GCM, CryptoObject real em BiometricPrompt, switch no perfil e contingência segura testados no aparelho. |
+| **T-06** | SEC-01 + SEC-04 | Alto | ✅ **VERIFICADO** | `8d2641d`<br>`78f88d2`<br>`abfdda2`<br>`fa80a8e` | `Segurança: implementa sessão segura em repouso e biometria com Keystore AES-GCM (T-06)`<br>`UI/Acessibilidade: corrige layout vertical do botão Consultar Correios em Meus Dados (T-06)`<br>`Fix(Segurança): adiciona switch de biometria no perfil e força reautenticação no fallback (T-06)`<br>`Docs: atualiza hash de commit no relatório da Tarefa T-06` | Sessão segura em repouso com Keystore AES-GCM, CryptoObject real em BiometricPrompt, switch no perfil e contingência segura testados no aparelho. O commit `78f88d2` (layout do botão Consultar Correios) foi uma alteração extra realizada durante o ciclo. Resta apenas o teste de 70 minutos da renovação do token da T-06, a ser confirmado pelo usuário. |
 | **T-06b** | SEC-01 (Conformidade) | Alto | ✅ **VERIFICADO** | `86aa696` | `Segurança: remove fallback em memória e implementa conformidade estrita de sessão segura (T-06b)` | Remoção de fallback de chaves em RAM na produção; contrato `SessionCryptoEngine` implementado pelo Keystore e fakes restritos a `src/test`. |
-| **T-06c** | SEC-01 (Isolamento) | Alto | 🟡 **IMPLEMENTADO, NÃO VERIFICADO NO APARELHO** | `e1c0742` | `feat(sync): isolamento estrito de dados entre contas no mesmo dispositivo (T-06c)` | Implementação do `DataOwnerStorage`, travas PUSH/PULL no `SupabaseSyncManager` e decisão central no ViewModel; 182 testes unitários aprovados; aguarda teste manual no aparelho. |
-| **T-06d** | Integridade Nuvem | Alto | ✅ **VERIFICADO** | `bc7453b` | `docs: salvar backups CSV pre-limpeza da base Supabase` | Exportação de backups CSV com mascaramento estrito de dados pessoais (`user_profile.csv`) e limpeza de registros inconsistentes no Supabase. |
-| **T-07** | SEC-05 | Alto | 🟡 **IMPLEMENTADO, NÃO VERIFICADO NO APARELHO** | `129cd7a` | `build(release): ativa R8 em release, cria buildType releaseCheck e define regras ProGuard (T-07)` | R8 ativado em release; criado buildType `releaseCheck`; ProGuard configurado; SHA-1 conferido; aguarda instalação e homologação do APK no celular. |
+| **T-06c** | SEC-01 (Isolamento) | Alto | ✅ **VERIFICADO** | `e1c0742` | `feat(sync): isolamento estrito de dados entre contas no mesmo dispositivo (T-06c)` | Testado e homologado pelo usuário no aparelho físico; isolamento entre contas, máquina de estados de troca de conta, travas defensivas de sync e persistência no DataOwnerStorage validadas com sucesso no dispositivo. |
+| **T-06d** | Integridade Nuvem | Alto | ✅ **VERIFICADO** | `5da367d` | `Segurança: remove dados pessoais e senha dos documentos` | Removidos dados pessoais, senhas e arquivos de exportação CSV do repositório, blindando a documentação e histórico conforme a Regra 8; base Supabase limpa de registros inconsistentes. (Nota: o commit `bc7453b` foi o que enviou exportações ao repositório e NÃO é o commit da T-06d). |
+| **T-07** | SEC-05 | Alto | ✅ **VERIFICADO** | `129cd7a` | `build(release): ativa R8 em release, cria buildType releaseCheck e define regras ProGuard (T-07)` | Testado e homologado pelo usuário no aparelho físico; APK `releaseCheck` instalado com sucesso por cima da versão existente com R8 e regras ProGuard ativas, fluxos críticos validados sem travamentos. |
+
 
 ---
 
@@ -40,8 +41,10 @@ A Onda 1 teve como meta primordial a blindagem imediata contra riscos críticos 
    - O `GiroCustoViewModel` passou a gerenciar estados de conflito de conta (`AccountConflictState`), diálogos de confirmação de descarte de dados e reivindicação de propriedade local.
    - O `GiroCustoRepository` recebeu métodos atômicos de contagem de pendências (`countPendingChanges`), verificação de dados locais (`hasAnyLocalData`) e limpeza de tabelas (`clearAllLocalData`).
    - **Impacto direto:** 
-     - A tarefa **T-10 (Exclusão de Conta)** agora precisa interagir compulsoriamente com o `DataOwnerStorage` e a limpeza de tabelas locais para não deixar o aparelho bloqueado após a exclusão da conta no servidor.
-     - A tarefa **T-08 (Índices Room e Migration v13)** precisa considerar a interação entre as operações de limpeza local (`clearAllLocalData`) e o desempenho de deleção em cascata/reconciliação.
+     - A tarefa **T-10 (Exclusão de Conta)** agora precisa interagir compulsoriamente com o `DataOwnerStorage`, a limpeza de tabelas locais e a exclusão de metas (T-28B), além de implementar proteção fail-safe (se o servidor falhar, nada local é apagado), confirmação reforçada e oferta de exportação prévia para não deixar o aparelho em estado inconsistente ou bloqueado.
+     - A tarefa **T-08 (Índices Room e Migration v13)** coordena a estrutura do banco Room com a introdução das metas persistidas na nuvem (T-28B) e com a futura migração monetária para centavos (T-18B).
+     - A tarefa **T-28 (Metas por Conta)** passa a ter implementação (T-28B) vinculada à Opção B (sincronização na nuvem), precedida de desenho e inventário de preferências (T-28A).
+     - A tarefa **T-14** é desacoplada em **T-14a** (Auth/Biometria/Sessão) e **T-14b** (Clientes de Rede/Room) para menor risco e foco cirúrgico na auditoria.
 
 2. **Ativação do R8 e Criação do buildType `releaseCheck` (T-07):**
    - O compilador R8 agora ofusca e otimiza compilações de release.
@@ -125,24 +128,26 @@ A Onda 1 teve como meta primordial a blindagem imediata contra riscos críticos 
 }
 ```
 
-#### Tarefa T-10 [SEC-06]: Portabilidade de Dados e Exclusão Segura de Conta (LGPD) com Limpeza de Dono
+#### Tarefa T-10 [SEC-06]: Portabilidade de Dados e Exclusão Segura de Conta (LGPD) com Limpeza de Dono e Metas
 ```json
 {
   "task_id": "T-10",
   "to_agent": "seguranca",
   "task_type": "implementacao",
   "risk": "alto",
-  "title": "Implementar exportação de dados via SAF e exclusão definitiva de conta no Supabase com expurgo do DataOwnerStorage e Room local",
-  "context": "O app não atende aos requisitos de exclusão e portabilidade da LGPD. Além de deletar o usuário na nuvem por RPC SECURITY DEFINER sem usar chave service_role no cliente, o processo deve compulsoriamente expurgar os dados locais, limpar o DataOwnerStorage e revogar sessões locais para evitar bloqueios em logins posteriores no mesmo aparelho.",
+  "title": "Implementar exportação de dados via SAF e exclusão definitiva de conta no Supabase com expurgo do DataOwnerStorage, metas e Room local",
+  "context": "O app não atende aos requisitos de exclusão e portabilidade da LGPD. Além de deletar o usuário na nuvem por RPC SECURITY DEFINER sem usar chave service_role no cliente, o processo deve compulsoriamente expurgar os dados locais (incluindo metas sincronizadas), limpar o DataOwnerStorage e revogar sessões locais. Se a chamada remota falhar, nada local pode ser apagado. A interface deve exigir confirmação reforçada e oferecer a exportação dos dados previamente.",
   "root_cause_evidence": "Ausência de rotinas de exportação e exclusão de conta em GiroCustoViewModel.kt e ProfileScreen.kt",
   "acceptance_criteria": [
     "(a) Criar migração SQL remota em supabase/migrations com a RPC delete_user_account() configurada como SECURITY DEFINER, com search_path = public fixo, permitida exclusivamente ao papel authenticated (REVOKE ALL FROM anon, public; GRANT EXECUTE TO authenticated;)",
-    "(b) A RPC deve garantir a exclusão em cascata de todas as 7 tabelas do usuário antes de expurgar a conta em auth.users",
-    "(c) Exportação de dados locais realizada via SAF (CreateDocument) ou ShareSheet nativo em formato JSON/CSV, SEM exigir permissão intrusiva de armazenamento",
-    "(d) Ao confirmar a exclusão da conta no app: (1) acionar a RPC remota; (2) executar repository.clearAllLocalData(); (3) executar dataOwnerStorage.clearDataOwner(); (4) executar supabaseClient.signOut() e clearSavedSession(); (5) executar BiometricHelper.clearBiometrics(); (6) resetar preferências locais e transitar para RootNavState.Unauthenticated",
-    "(e) Criar teste automatizado validando o expurgo completo dos dados locais e a limpeza do DataOwnerStorage após sucesso na exclusão",
-    "(f) Script SQL entregue com documentação detalhada em supabase/README.md. Status da etapa de servidor até execução pelo usuário no painel: ⛔ BLOQUEADO",
-    "Entregar roteiro de teste manual no aparelho, passo a passo completo, para o usuário executar (sem confirmação no aparelho, status máximo 🟡)"
+    "(b) A RPC remota deve garantir a exclusão em cascata de todas as tabelas do usuário (incluindo as metas na nuvem da T-28B) antes de expurgar a conta em auth.users",
+    "(c) Proteção Fail-Safe Local: Se a chamada ao servidor falhar (erro HTTP, timeout ou sem internet), NADA local é apagado (banco Room, preferências, metas, sessão e DataOwnerStorage permanecem rigorosamente intactos); incluir teste automatizado específico cobrindo a falha do servidor e a preservação total dos dados locais",
+    "(d) Confirmação reforçada antes da exclusão (ação irreversível): diálogo de confirmação com aviso explícito de destruição definitiva e digitação obrigatória de palavra de segurança (ex.: 'EXCLUIR') ou confirmação em duas etapas para impedir cliques acidentais",
+    "(e) Oferecer proativamente a exportação de dados locais via SAF (CreateDocument) ou ShareSheet nativo em formato JSON/CSV antes de permitir a exclusão definitiva, sem exigir permissão intrusiva de armazenamento",
+    "(f) Ao confirmar a exclusão com sucesso na RPC remota: (1) acionar a RPC remota; (2) executar repository.clearAllLocalData() (incluindo dados de metas da T-28B); (3) executar dataOwnerStorage.clearDataOwner(); (4) executar supabaseClient.signOut() e clearSavedSession(); (5) executar BiometricHelper.clearBiometrics(); (6) resetar preferências locais e transitar para RootNavState.Unauthenticated",
+    "(g) Criar teste automatizado validando o expurgo completo dos dados locais e a limpeza do DataOwnerStorage após sucesso na exclusão",
+    "(h) Script SQL entregue com documentação detalhada em supabase/README.md. Status da etapa de servidor até execução pelo usuário no painel: ⛔ BLOQUEADO",
+    "(i) Entregar roteiro de teste manual no aparelho, passo a passo completo, orientando expressamente a realização do teste APENAS com conta de teste descartável (nunca com a conta real do usuário) (status máximo 🟡 sem teste no aparelho)"
   ],
   "files_expected": [
     "app/src/main/java/com/example/ui/screens/ProfileScreen.kt",
@@ -160,7 +165,7 @@ A Onda 1 teve como meta primordial a blindagem imediata contra riscos críticos 
     "./gradlew assembleReleaseCheck"
   ],
   "required_reviewers": ["seguranca", "backend", "revisor"],
-  "depends_on": ["T-06c"]
+  "depends_on": ["T-06c", "T-30", "T-28B"]
 }
 ```
 
@@ -254,20 +259,20 @@ A Onda 1 teve como meta primordial a blindagem imediata contra riscos críticos 
 }
 ```
 
-#### Tarefa T-14 [ARQ-01]: Remoção de Ganchos de Teste em Produção com Asserções Idênticas
+#### Tarefa T-14a [ARQ-01A]: Remoção de Ganchos Públicos e Reflexão de Autenticação e Sessão em Produção
 ```json
 {
-  "task_id": "T-14",
+  "task_id": "T-14a",
   "to_agent": "arquiteto",
   "task_type": "implementacao",
   "risk": "alto",
-  "title": "Remover ganchos públicos 'test...', resetForTesting e reflexão de classes de teste dos singletons de produção",
-  "context": "GoogleAuthHelper (testAuthHandler), BiometricHelper (testHardwareAvailable), SupabaseClient (resetForTesting, testStorage e reflexão de InMemorySessionStorage), FipeNetworkClient, ViaCepNetworkClient e GiroCustoDatabase contêm variáveis e métodos públicos que violam a separação estrita entre código de produção e ambiente de testes.",
-  "root_cause_evidence": "GoogleAuthHelper.kt:37, BiometricHelper.kt:27, SupabaseClient.kt:253, 289-298, FipeNetworkClient.kt:41, ViaCepNetworkClient.kt:37 e GiroCustoDatabase.kt:203",
+  "title": "Remover ganchos públicos 'test...', resetForTesting e reflexão de classes de teste em GoogleAuthHelper, BiometricHelper e SupabaseClient",
+  "context": "GoogleAuthHelper (testAuthHandler), BiometricHelper (testHardwareAvailable) e SupabaseClient (resetForTesting, testStorage e reflexão de InMemorySessionStorage) contêm ganchos de teste em código de produção que violam a separação entre produção e ambiente de testes.",
+  "root_cause_evidence": "GoogleAuthHelper.kt:37, BiometricHelper.kt:27 e SupabaseClient.kt:253, 289-298",
   "acceptance_criteria": [
-    "Remover todas as variáveis públicas 'test...' dos objetos de produção",
-    "Remover SupabaseClient.resetForTesting e a tentativa de instanciar InMemorySessionStorage via Class.forName / reflexão no código de produção",
     "Remover GoogleAuthHelper.testAuthHandler de produção, provendo ponto de injeção limpo via construtor ou visibilidade restrita a testes",
+    "Remover BiometricHelper.testHardwareAvailable de produção, utilizando injeção de dependência limpa",
+    "Remover SupabaseClient.resetForTesting, @Volatile var testStorage e o carregamento por reflexão dinâmica de InMemorySessionStorage via Class.forName",
     "Substituir acoplamentos de teste por injeção de dependência via construtores ou factories limpas",
     "As asserções de TODOS os testes unitários existentes permanecem RIGOROSAMENTE IDÊNTICAS linha por linha (somente a inicialização dos objetos nos testes é adaptada)",
     "O Revisor Independente deve conferir o diff de teste linha por linha comprovando que nenhuma asserção foi enfraquecida ou removida",
@@ -277,20 +282,50 @@ A Onda 1 teve como meta primordial a blindagem imediata contra riscos críticos 
     "app/src/main/java/com/example/util/GoogleAuthHelper.kt",
     "app/src/main/java/com/example/util/BiometricHelper.kt",
     "app/src/main/java/com/example/network/supabase/SupabaseClient.kt",
-    "app/src/main/java/com/example/network/fipe/FipeNetworkClient.kt",
-    "app/src/main/java/com/example/network/viacep/ViaCepNetworkClient.kt",
-    "app/src/main/java/com/example/data/GiroCustoDatabase.kt",
     "app/src/test/java/com/example/AuthBiometricsAndViaCepTest.kt",
-    "app/src/test/java/com/example/FipeNetworkAndViewModelTest.kt",
     "app/src/test/java/com/example/SecureSessionAndCryptoTest.kt"
   ],
-  "out_of_scope": ["Alteração da lógica das APIs externas"],
+  "out_of_scope": ["Ganchos de teste de FIPE, ViaCep e Room (tratados na T-14b)"],
   "verification": [
     "./gradlew testDebugUnitTest lintDebug",
     "./gradlew assembleReleaseCheck"
   ],
-  "required_reviewers": ["arquiteto", "revisor", "seguranca"],
+  "required_reviewers": ["arquiteto", "seguranca", "revisor"],
   "depends_on": ["T-06b", "T-06c"]
+}
+```
+
+#### Tarefa T-14b [ARQ-01B]: Remoção de Ganchos Públicos de Teste em Clientes de Rede e Banco
+```json
+{
+  "task_id": "T-14b",
+  "to_agent": "arquiteto",
+  "task_type": "implementacao",
+  "risk": "alto",
+  "title": "Remover ganchos públicos de teste em FipeNetworkClient, ViaCepNetworkClient e GiroCustoDatabase",
+  "context": "FipeNetworkClient (setClientForTesting/testEngine), ViaCepNetworkClient (testEngine/mock) e GiroCustoDatabase (resetForTesting) contêm variáveis e métodos públicos para testes que poluem o código de produção.",
+  "root_cause_evidence": "FipeNetworkClient.kt:41, ViaCepNetworkClient.kt:37 e GiroCustoDatabase.kt:203",
+  "acceptance_criteria": [
+    "Remover todas as variáveis públicas de mock/teste em FipeNetworkClient e ViaCepNetworkClient, provendo injeção via construtor nos testes",
+    "Remover GiroCustoDatabase.resetForTesting de produção",
+    "As asserções de TODOS os testes unitários existentes permanecem RIGOROSAMENTE IDÊNTICAS linha por linha",
+    "O Revisor Independente deve conferir o diff de teste linha por linha comprovando que nenhuma asserção foi enfraquecida ou removida",
+    "Entregar roteiro manual no aparelho: consulta de CEP em Meus Dados e busca na Tabela FIPE (status máximo 🟡 sem teste no aparelho)"
+  ],
+  "files_expected": [
+    "app/src/main/java/com/example/network/fipe/FipeNetworkClient.kt",
+    "app/src/main/java/com/example/network/viacep/ViaCepNetworkClient.kt",
+    "app/src/main/java/com/example/data/GiroCustoDatabase.kt",
+    "app/src/test/java/com/example/FipeNetworkAndViewModelTest.kt",
+    "app/src/test/java/com/example/AuthBiometricsAndViaCepTest.kt"
+  ],
+  "out_of_scope": ["Alterações nas regras de negócio das APIs ou do Room"],
+  "verification": [
+    "./gradlew testDebugUnitTest lintDebug",
+    "./gradlew assembleReleaseCheck"
+  ],
+  "required_reviewers": ["arquiteto", "revisor"],
+  "depends_on": ["T-14a"]
 }
 ```
 
@@ -687,6 +722,10 @@ As sete novas tarefas identificadas durante a auditoria e os testes da Onda 1 fo
 - **Responsável:** Agente Integrador / Frontend
 - **Revisores:** Agente Revisor Independente e Agente Designer
 - **Contexto:** Em `SupabaseClient.kt:155, 177, 206, 232`, as falhas da API Supabase Auth são capturadas diretamente como `response.errorBody()?.string()` e repassadas sem tratamento para o `GiroCustoViewModel.kt`. Quando ocorre um erro como e-mail não confirmado ou taxa de envio excedida, o banner da `AuthGateScreen.kt` exibe JSON cru em inglês na tela do motorista (ex.: `{"code":400,"error_code":"email_not_confirmed","msg":"Email not confirmed"}` ou `{"error":"over_email_send_rate_limit"}`).
+- **Definição de Critério de Segurança vs. UX:** 
+  - **No fluxo de LOGIN:** Adota-se estritamente mensagem genérica para qualquer falha de credenciais (`invalid_credentials`), sem revelar se o e-mail existe ou não no sistema (*"E-mail ou senha incorretos. Verifique seus dados e tente novamente."*), prevenindo ataques de enumeração de contas em conformidade com a seção 1.4 de `padroes-seguranca-ux.md`.
+  - **No fluxo de CADASTRO e E-mail Não Confirmado:** Adotam-se mensagens específicas (*"Já existe uma conta cadastrada com este e-mail. Faça login."* e *"Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou spam."*). Essa concessão é um compromisso deliberado de usabilidade (UX), formalmente documentado, indispensável para orientar entregadores que esquecem se já se cadastraram ou que aguardam a validação por link.
+- **Arquitetura Desacoplada de Texto:** `AuthErrorMapper.kt` pertence à camada lógica e **NUNCA** deve chamar `stringResource` diretamente (função restrita a `@Composable`). O mapper deve retornar um identificador tipado de recurso (`@StringRes Int` ou `AuthErrorMessage` sealed) associado ao arquivo `strings.xml`. A tela Compose (`AuthGateScreen`) é a única responsável por resolver o identificador em texto visual através de `stringResource`.
 - **Root Cause Evidence:** `SupabaseClient.kt:155, 177, 206, 232` e `GiroCustoViewModel.kt:479-482, 509-512, 534-537, 554-557`.
 
 ```json
@@ -695,31 +734,32 @@ As sete novas tarefas identificadas durante a auditoria e os testes da Onda 1 fo
   "to_agent": "integracoes",
   "task_type": "implementacao",
   "risk": "medio",
-  "title": "Traduzir erros da API Supabase Auth para mensagens amigáveis em português",
-  "context": "Falhas de login e cadastro exibem payloads JSON brutos em inglês no banner da tela AuthGateScreen. As respostas devem ser tratadas e convertidas para mensagens claras ao usuário brasileiro.",
+  "title": "Traduzir erros da API Supabase Auth para mensagens amigáveis em português com identificadores tipados",
+  "context": "Falhas de login e cadastro exibem payloads JSON brutos em inglês no banner da tela AuthGateScreen. As respostas devem ser tratadas por um mapper desacoplado e convertidas para mensagens claras ao usuário brasileiro.",
   "root_cause_evidence": "SupabaseClient.kt:155, 177, 206, 232 e GiroCustoViewModel.kt:479-482, 509-512",
   "acceptance_criteria": [
-    "Criar utilitário/mapper de erro de autenticação (AuthErrorMapper.kt) que analisa o código HTTP e o payload JSON da resposta",
-    "Mapear com mensagens claras em português via stringResource:",
-    "- email_not_confirmed / Email not confirmed -> 'Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou spam.'",
-    "- invalid_credentials / Invalid login credentials -> 'E-mail ou senha incorretos. Verifique seus dados e tente novamente.'",
-    "- over_email_send_rate_limit / email rate limit exceeded -> 'Muitas tentativas em pouco tempo. Aguarde alguns minutos antes de tentar novamente.'",
-    "- user_already_exists / User already registered -> 'Já existe uma conta cadastrada com este e-mail. Faça login.'",
-    "- weak_password -> 'A senha escolhida é muito fraca. Utilize ao menos 6 caracteres com números ou símbolos.'",
-    "- Falhas de timeout ou conexão -> 'Sem conexão com a internet. Verifique seu sinal e tente novamente.'",
-    "Caso o erro seja desconhecido, exibir mensagem genérica amigável em português sem vazar strings JSON cruas ou stack traces",
-    "Mensagens de login não devem revelar se o e-mail específico existe no sistema (em conformidade com a seção 1.4 de padroes-seguranca-ux.md)",
-    "Criar testes unitários específicos em AuthErrorMapperTest cobrindo cada payload de erro",
+    "Criar utilitário/mapper de erro de autenticação (AuthErrorMapper.kt) que analisa o código HTTP e o payload JSON da resposta, retornando um identificador tipado (@StringRes Int ou sealed type de erro)",
+    "PROIBIDO usar stringResource dentro de AuthErrorMapper.kt ou fora de funções @Composable; a tela Compose resolve o texto a partir do identificador",
+    "Critério de Segurança e UX formalmente aplicado:",
+    "- No LOGIN: invalid_credentials / Invalid login credentials -> mensagem genérica R.string.auth_error_invalid_credentials ('E-mail ou senha incorretos. Verifique seus dados e tente novamente.') sem revelar se o e-mail existe no banco",
+    "- No CADASTRO: user_already_exists / User already registered -> mensagem específica R.string.auth_error_user_already_exists ('Já existe uma conta cadastrada com este e-mail. Faça login.') aceita como compromisso de usabilidade documentado",
+    "- No LOGIN ou CADASTRO: email_not_confirmed / Email not confirmed -> mensagem específica R.string.auth_error_email_not_confirmed ('Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou spam.') aceita como compromisso de usabilidade documentado",
+    "- over_email_send_rate_limit / email rate limit exceeded -> R.string.auth_error_rate_limit ('Muitas tentativas em pouco tempo. Aguarde alguns minutos antes de tentar novamente.')",
+    "- weak_password -> R.string.auth_error_weak_password ('A senha escolhida é muito fraca. Utilize ao menos 6 caracteres com números ou símbolos.')",
+    "- Falhas de timeout ou conexão de rede -> R.string.auth_error_network ('Sem conexão com a internet. Verifique seu sinal e tente novamente.')",
+    "- Erros desconhecidos -> mensagem amigável genérica sem vazar chaves JSON cruas, códigos de erro em inglês ou stack traces",
+    "Criar testes unitários em AuthErrorMapperTest validando o mapeamento correto de cada payload e código HTTP para seu respectivo identificador de recurso",
     "Entregar roteiro de teste manual no aparelho, passo a passo completo, para validação visual (status máximo 🟡 sem teste no aparelho)"
   ],
   "files_expected": [
     "app/src/main/java/com/example/network/supabase/AuthErrorMapper.kt",
     "app/src/main/java/com/example/network/supabase/SupabaseClient.kt",
+    "app/src/main/java/com/example/ui/screens/AuthGateScreen.kt",
     "app/src/main/java/com/example/ui/GiroCustoViewModel.kt",
     "app/src/main/res/values/strings.xml",
     "app/src/test/java/com/example/network/supabase/AuthErrorMapperTest.kt"
   ],
-  "out_of_scope": ["Mudanças no layout visual de AuthGateScreen"],
+  "out_of_scope": ["Mudanças na arquitetura de navegação de AuthGateScreen"],
   "verification": [
     "./gradlew testDebugUnitTest lintDebug",
     "./gradlew assembleReleaseCheck"
@@ -768,51 +808,114 @@ As sete novas tarefas identificadas durante a auditoria e os testes da Onda 1 fo
 
 ---
 
-### Tarefa Nova 3.c [Integrada à T-14 / ARQ-01]: Remoção de Ganchos de Teste em Produção com Asserções Idênticas
+### Tarefa Nova 3.c [Integrada à T-14a e T-14b / ARQ-01A e ARQ-01B]: Remoção de Ganchos de Teste em Produção com Asserções Idênticas
 
 - **Severidade:** 🟠 **Alta** (Separação Rígida entre Código de Produção e Testes)
 - **Responsável:** Agente Arquiteto
 - **Revisores:** Agente Revisor Independente e Agente de Segurança
-- **Contexto:** Durante as correções da T-06 e T-06b, foram introduzidos em `SupabaseClient.kt` os ganchos `@Volatile var testStorage: SecureSessionStorage? = null`, o método `resetForTesting` e o carregamento por reflexão dinâmica de `InMemorySessionStorage` via `Class.forName("com.example.network.supabase.InMemorySessionStorage")`. Adicionalmente, `GoogleAuthHelper.kt:37` mantém `var testAuthHandler`. Essas construções violam a Seção 1 (Item 5) de `integridade-de-testes.md`.
-- **Decisão:** Este escopo foi **formalmente integrado aos critérios de aceite da Tarefa T-14 [ARQ-01]** (vide Seção 2.2), mantendo 100% das asserções dos testes existentes IDÊNTICAS linha por linha.
+- **Contexto:** Durante as correções da T-06 e T-06b, foram introduzidos em `SupabaseClient.kt` os ganchos `@Volatile var testStorage: SecureSessionStorage? = null`, o método `resetForTesting` e o carregamento por reflexão dinâmica de `InMemorySessionStorage` via `Class.forName("com.example.network.supabase.InMemorySessionStorage")`. Adicionalmente, `GoogleAuthHelper.kt:37` mantém `var testAuthHandler`, `BiometricHelper.kt:27` mantém `testHardwareAvailable`, e os clientes `FipeNetworkClient`, `ViaCepNetworkClient` e `GiroCustoDatabase` mantêm ganchos de mock/reset. Essas construções violam a Seção 1 (Item 5) de `integridade-de-testes.md`.
+- **Decisão:** Este escopo foi **formalmente dividido em duas etapas de menor risco (vide Seção 2.2)**: **T-14a** (focado no núcleo crítico de Autenticação, Biometria e Sessão Segura) e **T-14b** (focado em Clientes de Rede e Room), mantendo 100% das asserções dos testes existentes RIGOROSAMENTE IDÊNTICAS linha por linha.
 
 ---
 
-### Tarefa Nova 3.d [T-28 / ARQ-06]: Diagnóstico e Desenho de Persistência de Metas de Faturamento por Conta
+### Tarefa Nova 3.d.1 [T-28A / ARQ-06A]: Diagnóstico, Inventário de Preferências e Desenho de Metas na Nuvem (Opção B)
 
-- **Severidade:** 🟡 **Média** (Integridade de Dados e UX de Metas)
+- **Severidade:** 🟡 **Média** (Integridade de Dados e Desenho Arquitetural)
 - **Responsável:** Agente Arquiteto / Backend
 - **Revisores:** Agente Revisor Independente e Agente Designer
-- **Contexto:** Em `GiroCustoViewModel.kt:926-941`, o método `resetAccountSpecificPreferences()` limpa o SharedPreferences `prefs.edit().clear()` ao alternar de conta ou no descarte de dados locais, resetando as metas diárias, semanais e mensais (`daily_goal_*`, `weekly_goal_*`, `monthly_goal_*`) para os valores estáticos padrão (R$ 200, R$ 130, 100 km, 15 entregas, etc.). Se o motorista A configurou metas personalizadas, e o motorista B loga no aparelho e depois o motorista A retorna, as metas de A foram permanentemente perdidas. É mandatório decidir e desenhar a arquitetura correta antes de codificar.
+- **Contexto & Decisão do Usuário:** O proprietário do projeto selecionou formalmente a **Opção B** (sincronizar as metas na nuvem Supabase para acompanharem o motorista caso ele troque de celular). Em `GiroCustoViewModel.kt:926-941`, o método `resetAccountSpecificPreferences()` executa `prefs.edit().clear()`, apagando metas personalizadas e misturando preferências de tema. Para garantir que nenhuma meta seja perdida e que o esquema de banco seja robusto, a tarefa foi bifurcada:
+  - **T-28A:** Diagnóstico técnico, inventário de preferências e elaboração da especificação técnica em `docs/design-metas-por-conta.md` (estritamente SEM CÓDIGO).
+  - **T-28B:** Implementação no Room, Supabase e ViewModel (que só inicia após aprovação formal do desenho pelo usuário).
+- **Inventário Mandatório de Preferências no Diagnóstico:**
+  - O diagnóstico deve documentar exaustivamente tudo o que reside no arquivo `giro_custo_goals.xml` afetado por `prefs.edit().clear()`:
+    1. As 12 metas do motorista: `daily_goal_gross`, `daily_goal_net`, `daily_goal_km`, `daily_goal_deliveries`, `weekly_goal_gross`, `weekly_goal_net`, `weekly_goal_km`, `weekly_goal_deliveries`, `monthly_goal_gross`, `monthly_goal_net`, `monthly_goal_km`, `monthly_goal_deliveries`.
+    2. A preferência global de tema visual `is_dark_theme` (que estava indevidamente acoplada no mesmo arquivo de metas, exigindo leitura e regravação manual para não ser perdida).
+    3. Mapear o que mais é apagado ou afetado sem querer ao alternar de conta no fluxo `resetAccountSpecificPreferences()` (ex.: `last_sync_timestamp` em `giro_custo_sync_prefs` e quaisquer preferências residuais).
+- **Especificações Obrigatórias do Desenho (`docs/design-metas-por-conta.md`):**
+  - **(a) Onde guardar as metas:** Decidir e justificar se as metas devem ser colunas adicionais na tabela `user_profile` ou uma tabela dedicada `user_goals` (análise de cardinalidade 1:1, performance de sync e concorrência); definir o schema no Room (migration coordenada com a versão 13 da T-08 e futura conversão para centavos em T-18B); definir o schema no Supabase (script SQL com políticas RLS restritas ao dono `auth.uid() = user_id`, status inicial ⛔ BLOQUEADO até execução no painel); e desenhar o fluxo no `SupabaseSyncManager`.
+  - **(b) Regra de conflito e offline:** Definir regra de resolução Last-Write-Wins (LWW) baseada em timestamp `updatedAt` / `updated_at`; garantir que o motorista possa alterar suas metas 100% offline, enfileirando para sincronização posterior com status pendente.
+  - **(c) Valores padrão:** Especificar valores padrão de fábrica caso a conta nunca tenha configurado metas (R$ 200 bruto, R$ 130 líquido, 100 km, 15 entregas diárias; proporcionalidade semanal e mensal).
+  - **(d) Migração transparente de preferências locais:** Projetar a migração segura das metas atualmente armazenadas em `giro_custo_goals.xml` para a nova entidade no primeiro boot após o update, garantindo que nenhum motorista perca suas metas atuais.
+  - **(e) Interação com a troca de conta (T-06c):** As metas passam a ser propriedade da conta ativa (`userId`); ao trocar de conta, as metas da conta logada são carregadas do Room/nuvem e o reset de preferências deixa de apagá-las.
+  - **(f) Impacto na exclusão de conta (T-10) e sincronização (T-30):** Incluir o expurgo de metas na RPC remota e no expurgo local da T-10; e incluir as metas nas travas fail-safe de dono da T-30.
+  - **(g) Plano de testes e roteiro manual:** Definir plano de testes automatizados e roteiro passo a passo para validação manual no aparelho.
 - **Root Cause Evidence:** `GiroCustoViewModel.kt:407-420, 922-944, 1141-1154`.
 
 ```json
 {
-  "task_id": "T-28",
+  "task_id": "T-28A",
   "to_agent": "arquiteto",
   "task_type": "diagnostico",
   "risk": "medio",
-  "title": "Elaborar diagnóstico e especificação técnica para persistência e isolamento de metas por conta",
-  "context": "Metas de faturamento são resetadas para os valores de fábrica ao trocar de conta. É necessário especificar a melhor estratégia de isolamento (SharedPreferences por userId vs. persistência no Room / Supabase user_profile) antes de implementar.",
+  "title": "Diagnóstico, inventário de preferências e especificação técnica para sincronização de metas na nuvem (Opção B)",
+  "context": "Metas de faturamento são resetadas ao trocar de conta. O usuário escolheu a Opção B (sincronizar na nuvem). É necessário inventariar SharedPreferences e especificar detalhadamente a arquitetura de metas antes de codificar.",
   "root_cause_evidence": "GiroCustoViewModel.kt:407-420, 922-944",
   "acceptance_criteria": [
-    "Entregar documento técnico em docs/design-metas-por-conta.md comparando três alternativas técnicas:",
-    "  - Opção 1: SharedPreferences local isolado por conta (ex.: giro_custo_goals_<userId>.xml ou chaves prefixadas goal_<userId>_*)",
-    "  - Opção 2: Persistência no banco Room na tabela user_profile com sincronização na nuvem Supabase",
-    "  - Opção 3: Metas globais do dispositivo (não resetadas na troca de conta)",
-    "Detalhar impacto na sincronização offline-first, backup e migração de banco",
-    "Nenhuma alteração de código nesta etapa",
-    "Submeter a proposta para escolha do proprietário do projeto"
+    "Entregar documento técnico completo em docs/design-metas-por-conta.md sem alterar nenhuma linha de código",
+    "Incluir inventário completo de giro_custo_goals.xml e giro_custo_sync_prefs",
+    "Decidir e justificar os 7 tópicos mandatórios (a) a (g): localização no Room/Supabase, regra de conflito LWW, valores padrão, migração de prefs legadas, isolamento por conta, impacto na T-10/T-30 e plano de testes",
+    "PARADA OBRIGATÓRIA: Submeter o desenho para aprovação formal do proprietário do projeto antes de liberar a T-28B"
   ],
   "files_expected": [
     "docs/design-metas-por-conta.md"
   ],
-  "out_of_scope": ["Alterações de código ou migração de banco nesta fase"],
+  "out_of_scope": ["Alterações em arquivos Kotlin, build ou banco de dados nesta etapa"],
   "verification": [
     "./gradlew testDebugUnitTest lintDebug"
   ],
   "required_reviewers": ["arquiteto", "backend", "revisor"],
   "depends_on": ["T-06c"]
+}
+```
+
+---
+
+### Tarefa Nova 3.d.2 [T-28B / DAT-03]: Implementação da Sincronização de Metas na Nuvem (Opção B) no Room e Supabase
+
+- **Severidade:** 🟠 **Alta** (Integridade de Dados e Sincronização Multi-dispositivo)
+- **Responsável:** Agente Backend / Integrações
+- **Revisores:** Agente Revisor Independente, Agente de Segurança e Agente Arquiteto
+- **Contexto:** Execução da implementação prática das metas persistidas e sincronizadas, conforme a arquitetura aprovada em T-28A.
+- **Root Cause Evidence:** `GiroCustoViewModel.kt:407-420, 922-944, 1141-1154`.
+
+```json
+{
+  "task_id": "T-28B",
+  "to_agent": "backend",
+  "task_type": "implementacao",
+  "risk": "alto",
+  "title": "Implementar persistência de metas no Room e sincronização Supabase com resolução LWW",
+  "context": "Implementar as entidades, DAOs, sincronização e mappers de metas com base no desenho técnico aprovado na T-28A, eliminando a dependência volátil do SharedPreferences.",
+  "root_cause_evidence": "GiroCustoViewModel.kt:407-420, 922-944, 1141-1154",
+  "acceptance_criteria": [
+    "Implementar modelo de persistência de metas no Room conforme especificação aprovada em T-28A",
+    "Criar script SQL em supabase/migrations/20261026_user_goals.sql com políticas RLS restritas ao dono (auth.uid() = user_id) e documentar em supabase/README.md (Status do script: ⛔ BLOQUEADO até execução no painel web)",
+    "Implementar rotinas de PUSH e PULL no SupabaseSyncManager com resolução de conflitos Last-Write-Wins (LWW) via updatedAt",
+    "Migrar automaticamente as metas salvas anteriormente em giro_custo_goals.xml para o novo modelo persistido no primeiro boot, garantindo perda zero",
+    "Desacoplar a preferência de tema visual is_dark_theme para armazenamento independente",
+    "Atualizar resetAccountSpecificPreferences() em GiroCustoViewModel para não mais expurgar as metas ao trocar de conta, carregando os dados da conta ativa",
+    "Criar testes unitários em UserGoalsSyncTest cobrindo persistência, conflito LWW, migração de SharedPreferences legados e suporte offline",
+    "Entregar roteiro de teste manual no aparelho, passo a passo completo, para validação da sincronização de metas entre contas (status máximo 🟡 sem teste no aparelho)"
+  ],
+  "files_expected": [
+    "app/src/main/java/com/example/data/Entities.kt",
+    "app/src/main/java/com/example/data/Daos.kt",
+    "app/src/main/java/com/example/data/GiroCustoDatabase.kt",
+    "app/src/main/java/com/example/network/supabase/SupabaseClient.kt",
+    "app/src/main/java/com/example/network/supabase/SupabaseMappers.kt",
+    "app/src/main/java/com/example/network/supabase/SupabaseSyncManager.kt",
+    "app/src/main/java/com/example/ui/GiroCustoViewModel.kt",
+    "supabase/migrations/20261026_user_goals.sql",
+    "supabase/README.md",
+    "app/src/test/java/com/example/UserGoalsSyncTest.kt"
+  ],
+  "out_of_scope": ["Alteração visual dos layouts de configuração de metas"],
+  "verification": [
+    "./gradlew testDebugUnitTest lintDebug",
+    "./gradlew assembleReleaseCheck"
+  ],
+  "required_reviewers": ["backend", "integracoes", "revisor", "seguranca"],
+  "depends_on": ["T-28A", "T-08"]
 }
 ```
 
@@ -844,7 +947,17 @@ As sete novas tarefas identificadas durante a auditoria e os testes da Onda 1 fo
     "- DataOwnerStorage e SecureSessionStorage: apenas métodos contratuais essenciais caso haja chamada externa;",
     "Compilação com ./gradlew assembleReleaseCheck executada com sucesso sem avisos não tratados de compilação",
     "Suíte completa de testes unitários automatizados 100% verde",
-    "Entregar roteiro manual no aparelho executando os 5 fluxos críticos do app na versão releaseCheck minificada (login Google/email, diária no Room, busca no mapa, FIPE e sync) (status máximo 🟡 sem teste no aparelho)"
+    "Entregar roteiro manual no aparelho executando os seguintes 9 fluxos essenciais na versão releaseCheck minificada:",
+    "  1. Login com Google;",
+    "  2. Login com e-mail e senha;",
+    "  3. Autenticação biométrica;",
+    "  4. Consulta de CEP (botão 'Consultar Correios');",
+    "  5. Sincronização com Supabase (PUSH e PULL);",
+    "  6. Consulta à Tabela FIPE (marcas, modelos e anos);",
+    "  7. Mapa de postos de combustível (busca Overpass);",
+    "  8. Exclusão e Desfazer de lançamento/veículo (Snackbar com Desfazer);",
+    "  9. Instalação e abertura imediata do app logo após atualizar por cima da versão anterior (sem desinstalar antes, preservando banco Room e Keystore);",
+    "Monitorar a execução manual no dispositivo com o comando: adb logcat -d | grep -E \"FATAL EXCEPTION|ClassNotFoundException|NoSuchMethodError|NoSuchFieldException|JsonDataException\" (status máximo 🟡 sem teste no aparelho)"
   ],
   "files_expected": [
     "app/proguard-rules.pro"
@@ -886,16 +999,18 @@ As sete novas tarefas identificadas durante a auditoria e os testes da Onda 1 fo
   "context": "SupabaseSyncManager permite injeção nula de DataOwnerStorage e libera envio quando ownerId é nulo, gerando risco de sincronização indevida se acionado diretamente fora do ViewModel.",
   "root_cause_evidence": "SupabaseSyncManager.kt:19, 22, 53-60, 193-200",
   "acceptance_criteria": [
-    "Tornar DataOwnerStorage dependência obrigatória e não-nula (remover valor default null no construtor primário)",
+    "Tornar DataOwnerStorage dependência obrigatória e não-nula (remover valor default null no construtor primário de SupabaseSyncManager)",
     "Trava Fail-Safe no PUSH e PULL: se ownerId == null mas o banco local possuir registros (hasAnyLocalData == true), lançar compulsoriamente DataOwnerMismatchException impedindo qualquer envio REST à nuvem",
+    "Adicionar teste automatizado cobrindo o cenário de nova instalação do app: banco Room vazio, dono desconhecido/nulo no DataOwnerStorage, sincronização PULL permitida normalmente e o dono autenticado gravado no DataOwnerStorage após a conclusão",
     "Garantir alinhamento com a máquina de estados do ViewModel: quando o usuário optar por 'Estes dados são meus', o ViewModel define o dono no DataOwnerStorage ANTES de disparar o sync",
-    "Atualizar testes unitários em AccountIsolationAndSyncTest e SupabaseSyncAndMigrationTest cobrindo o bloqueio fail-safe",
-    "Nenhum teste existente quebrado"
+    "Nos testes existentes (SupabaseSyncAndMigrationTest.kt e AccountIsolationAndSyncTest.kt), SOMENTE a forma de construir os objetos pode mudar (passando o DataOwnerStorage); as asserções de validação de sync e migration permanecem RIGOROSAMENTE IDÊNTICAS, com conferência linha a linha do Revisor Independente",
+    "Nenhum teste existente quebrado, enfraquecido ou removido"
   ],
   "files_expected": [
     "app/src/main/java/com/example/network/supabase/SupabaseSyncManager.kt",
     "app/src/main/java/com/example/data/Repository.kt",
-    "app/src/test/java/com/example/network/supabase/AccountIsolationAndSyncTest.kt"
+    "app/src/test/java/com/example/network/supabase/AccountIsolationAndSyncTest.kt",
+    "app/src/test/java/com/example/SupabaseSyncAndMigrationTest.kt"
   ],
   "out_of_scope": ["Alterações nas rotas REST do Supabase"],
   "verification": [
@@ -909,13 +1024,13 @@ As sete novas tarefas identificadas durante a auditoria e os testes da Onda 1 fo
 
 ---
 
-### Tarefa Nova 3.g [Integrada à T-10 / SEC-06]: Exclusão Segura com DataOwnerStorage e Limpeza Local
+### Tarefa Nova 3.g [Integrada à T-10 / SEC-06]: Exclusão Segura com DataOwnerStorage, Metas e Proteção Local
 
-- **Severidade:** 🟠 **Alta** (Conformidade LGPD e Consistência Multi-conta)
+- **Severidade:** 🟠 **Alta** (Conformidade LGPD, Integridade de Metas e Consistência Multi-conta)
 - **Responsável:** Agente de Segurança / Backend
 - **Revisores:** Agente Revisor Independente e Agente Arquiteto
-- **Contexto:** Ao solicitar a exclusão definitiva da conta, o aplicativo não pode apenas chamar o servidor Supabase: se o `DataOwnerStorage` não for limpo e as tabelas locais não forem expurgadas, o aparelho permanecerá com o ID do usuário excluído registrado como dono, bloqueando qualquer sincronização ou novo login no mesmo aparelho.
-- **Decisão:** Este requisito foi **formalmente incorporado aos critérios de aceite da Tarefa T-10 [SEC-06]** (vide Seção 2.2), abrangendo o ciclo completo de expurgo local (`clearAllLocalData`, `clearDataOwner`, `signOut`, `clearBiometrics` e reset de preferências).
+- **Contexto:** Ao solicitar a exclusão definitiva da conta, o aplicativo não pode apenas chamar o servidor Supabase: se o `DataOwnerStorage` não for limpo e as tabelas locais (incluindo as metas sincronizadas na nuvem) não forem expurgadas, o aparelho permanecerá com o ID do usuário excluído registrado como dono, bloqueando qualquer sincronização ou novo login no mesmo aparelho. Além disso, se a chamada remota falhar, nada local pode ser destruído, e a interface deve oferecer exportação prévia e confirmação reforçada.
+- **Decisão:** Este requisito foi **formalmente incorporado aos critérios de aceite da Tarefa T-10 [SEC-06]** (vide Seção 2.2), abrangendo proteção fail-safe local contra falha remota, confirmação reforçada, oferta de exportação prévia via SAF e o ciclo completo de expurgo local (`clearAllLocalData` com metas, `clearDataOwner`, `signOut`, `clearBiometrics` e reset de preferências), com roteiro manual exclusivo em conta descartável.
 
 ---
 
@@ -937,20 +1052,22 @@ A ordem proposta para a execução da Onda 2 foi estruturada respeitando:
 | Ordem | ID Tarefa | Tipo | Risco | Responsável | Depende de | Impacto Principal |
 | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
 | **1º** | **T-27** | Limpeza | Baixo | Frontend | - | Remove `signInWithPhone` e mensagem proibida de homologação no ViewModel. |
-| **2º** | **T-30** | Segurança | Alto | Segurança | T-06c | Blindagem fail-safe de dono nulo no `SupabaseSyncManager`. |
-| **3º** | **T-26** | UX/Rede | Médio | Integrações | - | Tradução amigável em pt-BR de erros da API Supabase Auth (elimina JSON cru). |
-| **4º** | **T-14** | Arquitetura | Alto | Arquiteto | T-06b, T-06c | Remoção de ganchos `test...`, `resetForTesting` e reflexão mantendo asserções idênticas. |
-| **5º** | **T-29** | DevOps/R8 | Alto | DevOps | T-07 | Aperto cirúrgico das regras de keep do ProGuard/R8 e teste em `releaseCheck`. |
-| **6º** | **T-08** | Dados | Alto | Backend | - | Índices Room nas 7 tabelas e Migration v13 com `runMigrationsAndValidate`. |
-| **7º** | **T-09** | Performance | Alto | Frontend | - | Chaves estáveis (`key`) em todas as LazyColumns. |
-| **8º** | **T-10** | Segurança/LGPD | Alto | Segurança | T-06c, T-30 | Exclusão de conta via RPC Supabase com limpeza local e `DataOwnerStorage` (Status inicial: ⛔ BLOQUEADO para a parte SQL até o usuário rodar no painel). |
-| **9º** | **T-11** | UX/Privacidade | Médio | Frontend | - | Diálogo explicativo de rationale prévia antes de solicitar permissão de GPS. |
-| **10º** | **T-13** | Integração | Médio | Integrações | - | Alinhamento de timeouts do OkHttp para 25s na Overpass API. |
-| **11º** | **T-15** | Acessibilidade | Alto | Acessibilidade | - | Inserção de `contentDescription` acessível em todos os botões e ícones clicáveis. |
-| **12º** | **T-12** | UX/Design | Médio | Designer | T-03 | Padronização dos estados de Carregando, Vazio, Erro e Offline nas telas. |
-| **13º** | **T-16** | Arquitetura/UI | Médio | Frontend | - | Elevação de cálculos e regras pesadas dos Composables para o ViewModel. |
-| **14º** | **T-28** | Diagnóstico | Médio | Arquiteto | T-06c | Diagnóstico e proposta técnica para isolamento de metas de faturamento por conta. |
-| **15º** | **T-17** | Testes | Médio | QA | - | Substituição de testes de modelo (2+2) por regras reais (PARADA OBRIGATÓRIA para autorização do usuário). |
+| **2º** | **T-30** | Segurança | Alto | Segurança | T-06c | Blindagem fail-safe de dono nulo no `SupabaseSyncManager` com teste de instalação nova e testes existentes idênticos. |
+| **3º** | **T-26** | UX/Rede | Médio | Integrações | - | Tradução amigável em pt-BR de erros Supabase Auth com identificador tipado; login genérico e cadastro/não-confirmado específicos. |
+| **4º** | **T-14a** | Arquitetura/Segurança | Alto | Arquiteto | T-06b, T-06c | Remoção de ganchos `test...`, `resetForTesting` e reflexão em Auth e Sessão (`GoogleAuthHelper`, `BiometricHelper`, `SupabaseClient`) com asserções idênticas e roteiro manual de login Google e biometria. |
+| **5º** | **T-14b** | Arquitetura | Alto | Arquiteto | T-14a | Remoção de ganchos de teste em clientes de rede e banco (`FipeNetworkClient`, `ViaCepNetworkClient`, `GiroCustoDatabase`) com asserções idênticas. |
+| **6º** | **T-29** | DevOps/R8 | Alto | DevOps | T-07 | Aperto cirúrgico das regras de keep do ProGuard/R8, teste em `releaseCheck` e roteiro manual de 9 fluxos com comando de logcat. |
+| **7º** | **T-28A** | Diagnóstico | Médio | Arquiteto | T-06c | Diagnóstico, inventário de preferências e desenho técnico para sincronização de metas na nuvem (Opção B) em `docs/design-metas-por-conta.md` (SEM CÓDIGO). **PARADA OBRIGATÓRIA**: aguarda aprovação do usuário. |
+| **8º** | **T-08** | Dados | Alto | Backend | - | Índices Room nas 7 tabelas e Migration v13 com `runMigrationsAndValidate`. |
+| **9º** | **T-28B** | Implementação/Dados | Alto | Backend | T-28A (Aprovado), T-08 | Implementação das metas sincronizadas na nuvem (Room, Supabase SQL, Sync, ViewModel), preservando preferências legadas (Status SQL: ⛔ BLOQUEADO até execução no painel). |
+| **10º** | **T-09** | Performance | Alto | Frontend | - | Chaves estáveis (`key`) em todas as LazyColumns. |
+| **11º** | **T-10** | Segurança/LGPD | Alto | Segurança | T-06c, T-30, T-28B | Exclusão de conta via RPC Supabase com limpeza local, `DataOwnerStorage` e metas (falha no servidor não apaga nada local, confirmação reforçada, oferta de exportação e teste com conta descartável) (Status SQL: ⛔ BLOQUEADO até execução no painel). |
+| **12º** | **T-11** | UX/Privacidade | Médio | Frontend | - | Diálogo explicativo de rationale prévia antes de solicitar permissão de GPS. |
+| **13º** | **T-13** | Integração | Médio | Integrações | - | Alinhamento de timeouts do OkHttp para 25s na Overpass API. |
+| **14º** | **T-15** | Acessibilidade | Alto | Acessibilidade | - | Inserção de `contentDescription` acessível em todos os botões e ícones clicáveis. |
+| **15º** | **T-12** | UX/Design | Médio | Designer | T-03 | Padronização dos estados de Carregando, Vazio, Erro e Offline nas telas. |
+| **16º** | **T-16** | Arquitetura/UI | Médio | Frontend | - | Elevação de cálculos e regras pesadas dos Composables para o ViewModel. |
+| **17º** | **T-17** | Testes | Médio | QA | - | Substituição de testes de modelo (2+2) por regras reais (**PARADA OBRIGATÓRIA** para autorização do usuário). |
 
 ---
 
@@ -971,38 +1088,92 @@ As demais tarefas da Onda 3 seguem a ordem: **T-19** (schemas Room), **T-20** (d
 
 ## 5. Lista de Decisões que Dependem do Proprietário do Projeto
 
-Abaixo estão listadas, de forma transparente e objetiva, todas as decisões e ações que dependem exclusivamente de você antes ou durante a execução:
+As validações manuais das tarefas da Onda 1 no smartphone físico (T-03, T-06c e T-07) foram concluídas com sucesso pelo usuário e todas alcançaram o status oficial ✅ **VERIFICADO** (restando apenas o teste de 70 minutos da renovação do token da T-06, a ser confirmado pelo usuário). Além disso, a definição sobre as metas foi formalmente resolvida com a sua escolha pela **Opção B** (sincronização na nuvem).
 
-### Decisão 1: Validação dos Testes Manuais Pendentes da Onda 1 no Smartphone Físico
-- **Contexto:** Três tarefas da Onda 1 encontram-se com status 🟡 **IMPLEMENTADO, NÃO VERIFICADO NO APARELHO** aguardando validação manual no seu smartphone:
-  - **T-03:** Rotação de tela em modo paisagem (confirmar ausência de bordas pretas de 390dp).
-  - **T-06c:** Teste de troca de contas e trava de sincronização (após a limpeza da base Supabase realizada em T-06d).
-  - **T-07:** Instalação do APK `app-releaseCheck.apk` por cima da versão existente e teste dos 5 fluxos principais (login Google/e-mail, diária, mapa, FIPE e sync).
-- **Ação necessária:** Executar esses testes práticos para que as tarefas possam ser formalmente homologadas como ✅ **VERIFICADO**.
+Abaixo estão listadas, de forma transparente e objetiva, as decisões e aprovações que dependem exclusivamente de você antes ou durante a execução da Onda 2:
 
----
-
-### Decisão 2: Definição do Modelo de Metas de Faturamento por Conta (Item 3.d / T-28)
-- **Contexto:** Ao trocar de conta, as metas (`daily_goal_*`, `weekly_goal_*`, `monthly_goal_*`) voltam aos valores de fábrica padrão e apagam as preferências customizadas do motorista anterior.
-- **Opções disponíveis para sua escolha:**
-  - **Opção A (Recomendada para rapidez e simplicidade):** Salvar as metas associadas ao ID de cada conta no armazenamento local do aparelho (ex.: `goal_<userId>_*` em arquivo seguro). *Vantagem:* Rápido, não mexe na nuvem, funciona 100% offline e cada motorista mantém suas metas salvas no celular.
-  - **Opção B:** Criar colunas de metas na tabela `user_profile` no Supabase e sincronizar via nuvem. *Vantagem:* As metas acompanham o motorista caso ele troque de celular. *Desvantagem:* Exige migration e script SQL na nuvem.
-  - **Opção C:** Metas globais do aparelho (as metas não se resetam ao trocar de conta; o celular mantém as mesmas metas independentemente de quem estiver logado).
+### Decisão 1: Aprovação do Desenho Técnico de Metas por Conta (T-28A) Antes da Implementação (T-28B)
+- **Contexto:** A Opção B (sincronizar metas na nuvem) foi escolhida para que as metas acompanhem o motorista ao trocar de aparelho. A tarefa T-28A elaborará o documento técnico completo `docs/design-metas-por-conta.md` (SEM CÓDIGO) contemplando o inventário das preferências, a escolha entre colunas em `user_profile` vs. tabela `user_goals`, migrations Room v13, scripts Supabase com RLS, regras de conflito LWW, valores padrão, migração de dados legados e impacto na T-10 e T-30.
+- **Ação necessária:** Ler o documento técnico entregue em T-28A e aprovar formalmente no chat para liberar o início da implementação em T-28B (**PARADA OBRIGATÓRIA**).
 
 ---
 
-### Decisão 3: Execução do Script SQL da Exclusão de Conta no Supabase (T-10)
-- **Contexto:** Para atender à LGPD sem embutir chaves mestras (`service_role`) no aplicativo, a exclusão da conta exige a criação de uma função SQL no Supabase (`delete_user_account()`).
-- **Ação necessária:** O agente de Segurança criará o arquivo `supabase/migrations/20261026_user_deletion_rpc.sql` e a documentação passo a passo. Você precisará abrir o painel web do Supabase, colar o script no **SQL Editor** e clicar em **Run**. A tarefa permanecerá em ⛔ **BLOQUEADO** até sua confirmação de execução no servidor.
+### Decisão 2: Execução de Scripts SQL no Painel Web do Supabase (T-10 e T-28B)
+- **Contexto:** Para manter o app seguro sem chaves `service_role` no cliente e respeitar a LGPD e o isolamento de metas, duas funções/tabelas dependem de scripts no banco Supabase:
+  1. **T-10 (Exclusão definitiva de conta):** RPC `delete_user_account()` via arquivo `supabase/migrations/20261026_user_deletion_rpc.sql`.
+  2. **T-28B (Metas sincronizadas):** Schema e RLS de metas via arquivo `supabase/migrations/20261026_user_goals.sql`.
+- **Ação necessária:** O agente criará os scripts e documentará passo a passo no README. Você precisará abrir o painel web do Supabase, colar cada script no **SQL Editor** e clicar em **Run**. Cada uma dessas tarefas permanecerá em ⛔ **BLOQUEADO** para a etapa remota até a sua confirmação.
 
 ---
 
-### Decisão 4: Autorização Explícita para Remoção dos Testes de Template (T-17)
-- **Contexto:** A Seção 1 de `integridade-de-testes.md` proíbe remover qualquer teste sem autorização prévia por escrito no chat. Os testes herdados de templates de projeto (`assertEquals(4, 2 + 2)` e similares) precisam ser substituídos por testes úteis de regras de validação.
-- **Ação necessária:** Quando a tarefa T-17 for iniciada, o agente fará uma parada mandatória no chat listando os testes afetados para que você responda autorizando a substituição.
+### Decisão 3: Autorização Explícita para Substituição dos Testes de Template (T-17)
+- **Contexto:** A Seção 1 de `integridade-de-testes.md` proíbe remover qualquer teste sem autorização prévia por escrito no chat. Os testes herdados de templates de projeto (`assertEquals(4, 2 + 2)` e similares) precisam ser substituídos por testes úteis de regras de validação real.
+- **Ação necessária:** Quando a tarefa T-17 for iniciada, o agente fará uma parada mandatória no chat listando os testes afetados para que você responda autorizando a substituição (**PARADA OBRIGATÓRIA**).
 
 ---
 
-### Decisão 5: Aprovação do Diagnóstico Monetário (T-18A) Antes da Implementação (T-18B)
+### Decisão 4: Aprovação do Diagnóstico Monetário (T-18A) Antes da Implementação (T-18B)
 - **Contexto:** A conversão de `Double` para centavos (`Long`) mexe nos cálculos financeiros de todo o aplicativo e no banco de dados Room.
-- **Ação necessária:** O agente entregará em T-18A o documento completo de diagnóstico em `docs/plano-migracao-monetaria.md`. Você precisará ler e aprovar formalmente o plano antes de autorizar o início da codificação em T-18B.
+- **Ação necessária:** O agente entregará em T-18A o documento completo de diagnóstico em `docs/plano-migracao-monetaria.md`. Você precisará ler e aprovar formalmente o plano antes de autorizar o início da codificação em T-18B (**PARADA OBRIGATÓRIA**).
+
+---
+
+## 6. Registro de Ajustes v2.2
+
+Esta seção consolida e rastreia formalmente todos os 11 ajustes efetuados no Plano de Execução da Onda 2 na versão v2.2, em estrito alinhamento com as deliberações e comandos do usuário:
+
+1. **Atualização do Quadro de Situação da Onda 1 (Seção 1):**
+   - As tarefas **T-03** (remoção do SmartphoneSimulator da produção), **T-06c** (isolamento estrito de dados e travas de sync) e **T-07** (ativação de R8 e regras ProGuard) foram testadas pelo usuário no aparelho físico, passaram com sucesso e foram atualizadas para o status oficial ✅ **VERIFICADO**.
+   - A antiga Decisão 1 da Seção 5 (validação da Onda 1 no smartphone) foi removida por estar integralmente resolvida.
+   - Registrado formalmente que resta apenas o teste de 70 minutos da renovação do token da T-06, a ser confirmado pelo usuário no aparelho.
+
+2. **Rastreabilidade e Retificação Histórica da Tarefa T-06d (Seção 1):**
+   - Corrigido o commit oficial da T-06d para `5da367d` (*"Segurança: remove dados pessoais e senha dos documentos"*).
+   - Registrado que o commit `bc7453b` (*"docs: salvar backups CSV pre-limpeza da base Supabase"*) foi o commit anterior que indevidamente enviou exportações de dados ao repositório e NÃO corresponde à entrega da T-06d.
+   - Retificada a descrição da tarefa, eliminando a alegação incorreta de mascaramento de CSV e documentando a remoção total de dados pessoais, senhas e arquivos CSV do histórico do repositório.
+
+3. **Rastreabilidade Completa dos Commits da Tarefa T-06 (Seção 1):**
+   - Incluídos no quadro da Seção 1 os 4 commits executados no ciclo da T-06: `8d2641d`, `78f88d2`, `abfdda2` e `fa80a8e`.
+   - Registrado de forma transparente que o commit `78f88d2` (*"UI/Acessibilidade: corrige layout vertical do botão Consultar Correios em Meus Dados"*) representou uma alteração de layout extra realizada durante o ciclo.
+
+4. **Definição de Critério de Segurança vs. UX e Arquitetura de Erros na Tarefa T-26 (Seção 3.a):**
+   - Resolvida a contradição entre proteção anti-enumeração de usuários e mensagens claras ao entregador:
+     - No **LOGIN**: Mantida mensagem rigorosamente genérica para credenciais incorretas (*"E-mail ou senha incorretos. Verifique seus dados e tente novamente."*), sem revelar se o e-mail existe no banco, em estrita conformidade com a Seção 1.4 de `padroes-seguranca-ux.md`.
+     - No **CADASTRO** e em **E-MAIL NÃO CONFIRMADO**: Adotadas mensagens específicas (*"Já existe uma conta cadastrada com este e-mail. Faça login."* e *"Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou spam."*), aceitas como compromisso justificado de usabilidade e documentadas.
+   - Arquitetura desacoplada: `AuthErrorMapper.kt` deve retornar identificadores tipados de texto (`@StringRes Int` ou sealed type de erro), sendo expressamente proibido invocar `stringResource` fora de funções `@Composable`; a tela Compose (`AuthGateScreen`) é quem resolve e obtém a string localizada.
+
+5. **Blindagem e Suíte de Testes da Trava de Dono na Tarefa T-30 (Seção 3.f):**
+   - Inclusão formal de `SupabaseSyncAndMigrationTest.kt` e dos demais testes que constroem `SupabaseSyncManager` na lista de `files_expected`.
+   - Regra estrita de integridade: nos testes existentes, é permitida exclusivamente a adaptação da construção dos objetos (passando a instância obrigatória e não-nula de `DataOwnerStorage`); as asserções de teste permanecem RIGOROSAMENTE IDÊNTICAS linha por linha, com auditoria obrigatória do Agente Revisor Independente.
+   - Adicionado novo teste unitário cobrindo o cenário de nova instalação (banco de dados Room vazio, dono nulo/desconhecido no `DataOwnerStorage`, sincronização PULL permitida e o `ownerId` registrado no storage após o sucesso).
+
+6. **Blindagem contra Perda de Dados, Confirmação e Exportação na Tarefa T-10 (Seção 2.2 e 3.g):**
+   - Incorporada proteção fail-safe: se a chamada à RPC remota falhar (erro HTTP, timeout ou sem rede), NADA local é apagado (tabelas Room, preferências, metas e `DataOwnerStorage` intactos), com teste automatizado obrigatório cobrindo a falha e a preservação local.
+   - Implementação de confirmação reforçada na interface para ação irreversível (diálogo de alerta com exigência de digitação de palavra de segurança como 'EXCLUIR' ou confirmação em duas etapas).
+   - Oferta proativa de exportação de dados via SAF (JSON/CSV) antes de prosseguir com a exclusão definitiva.
+   - Roteiro de teste manual no aparelho físico restrito obrigatoriamente ao uso de contas de teste descartáveis (proibido testar com a conta real do usuário).
+
+7. **Divisão Granular da Tarefa T-14 em T-14a e T-14b (Seções 2.2 e 3.c):**
+   - Dividida em duas tarefas focadas e isoladas:
+     - **T-14a [ARQ-01A]:** Núcleo de Autenticação, Biometria e Sessão Segura (`GoogleAuthHelper`, `BiometricHelper`, `SupabaseClient`), com remoção de `testAuthHandler`, `testHardwareAvailable`, `resetForTesting`, `@Volatile var testStorage` e reflexão de `InMemorySessionStorage`, acompanhada de roteiro manual de login Google e biometria no aparelho.
+     - **T-14b [ARQ-01B]:** Clientes de Rede e Banco (`FipeNetworkClient`, `ViaCepNetworkClient`, `GiroCustoDatabase`), com remoção de variáveis públicas de mock e `resetForTesting`.
+   - Dependências e ordem ajustadas: T-14a executa primeiro e T-14b depende de T-14a; asserções de testes 100% idênticas conferidas pelo Revisor.
+
+8. **Inventário Exaustivo de Preferências no Diagnóstico da Tarefa T-28A (Seção 3.d.1):**
+   - Inclusão no diagnóstico do mapeamento minucioso de todo o conteúdo do arquivo `giro_custo_goals.xml` afetado por `prefs.edit().clear()` no método `resetAccountSpecificPreferences()` (as 12 metas diárias, semanais e mensais e a preferência global de tema `is_dark_theme`).
+   - Mapeamento de efeitos colaterais ao trocar de conta, incluindo a remoção de `last_sync_timestamp` em `giro_custo_sync_prefs` e quaisquer preferências residuais.
+
+9. **Roteiro Manual Completo de 9 Fluxos e Monitoramento de Logcat na Tarefa T-29 (Seção 3.e):**
+   - Especificação detalhada dos 9 fluxos essenciais a serem validados no APK `releaseCheck` minificado: (1) Login Google; (2) Login e-mail/senha; (3) Biometria; (4) Consulta de CEP (Consultar Correios); (5) Sincronização Supabase; (6) Tabela FIPE; (7) Mapa de postos; (8) Exclusão e Desfazer; (9) Instalação/abertura logo após atualização sobre a versão anterior sem desinstalação prévia.
+   - Inclusão do comando obrigatório de monitoramento no terminal durante os testes:
+     `adb logcat -d | grep -E "FATAL EXCEPTION|ClassNotFoundException|NoSuchMethodError|NoSuchFieldException|JsonDataException"`.
+
+10. **Reestruturação da Matriz Sequencial e Governança de Paradas Obrigatórias (Seção 4):**
+    - Atualizada a matriz de execução de 17 tarefas refletindo a separação de T-14a/T-14b, a inserção do diagnóstico T-28A e a implementação T-28B.
+    - Mantidas com destaque explícito as paradas obrigatórias que exigem autorização expressa do usuário antes de prosseguir: **T-17** (autorização para substituição de testes de modelo) e **T-18A** (aprovação formal do diagnóstico de migração monetária).
+
+11. **Formalização da Decisão do Usuário sobre Metas e Bifurcação em T-28A e T-28B (Seção 3.d e 4.2):**
+    - Registrada a escolha formal da **Opção B** pelo usuário (sincronizar metas na nuvem Supabase).
+    - Transformação da T-28 em:
+      - **T-28A [ARQ-06A]:** Diagnóstico, inventário e desenho técnico em `docs/design-metas-por-conta.md` (SEM CÓDIGO), decidindo e justificando os pontos (a) localização no Room/Supabase, (b) regra de conflito LWW e offline, (c) valores padrão, (d) migração de preferências locais legadas sem perdas, (e) isolamento por conta na troca de usuário, (f) impacto na exclusão de conta T-10 e na trava T-30, e (g) plano de testes. PARADA OBRIGATÓRIA para aprovação do desenho.
+      - **T-28B [DAT-03]:** Implementação no Room, Supabase e ViewModel, com script SQL com RLS (status ⛔ BLOQUEADO até execução no painel), dependente da conclusão da T-08 e da aprovação prévia do desenho da T-28A.
