@@ -36,15 +36,32 @@ android {
       storePassword = "android"
       keyAlias = "androiddebugkey"
       keyPassword = "android"
+      enableV1Signing = true
+      enableV2Signing = true
+    }
+    getByName("debug") {
+      enableV1Signing = true
+      enableV2Signing = true
     }
   }
 
   buildTypes {
     release {
       isCrunchPngs = false
-      isMinifyEnabled = false
+      isMinifyEnabled = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
+    }
+    create("releaseCheck") {
+      initWith(getByName("release"))
+      matchingFallbacks += listOf("release")
+      isMinifyEnabled = true
+      val localKeystore = file("${rootDir}/debug.keystore")
+      signingConfig = if (localKeystore.exists()) {
+        signingConfigs.getByName("debugConfig")
+      } else {
+        signingConfigs.getByName("debug")
+      }
     }
     debug {
       val localKeystore = file("${rootDir}/debug.keystore")
