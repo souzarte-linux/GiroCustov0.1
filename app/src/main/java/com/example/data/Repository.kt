@@ -741,7 +741,10 @@ class GiroCustoRepository(
 
     suspend fun hasAnyLocalData(): Boolean = withContext(ioDispatcher) {
         vehicleDao.getAllVehicles().isNotEmpty() ||
+        vehicleDao.getPendingVehicles().isNotEmpty() ||
+        partDao.getAllParts().isNotEmpty() ||
         recordDao.getAllRecords().isNotEmpty() ||
+        platformDao.getAllPlatforms().isNotEmpty() ||
         userProfileDao.getUserProfile() != null
     }
 
@@ -767,13 +770,15 @@ class GiroCustoRepository(
                 )
             )
         }
-        val syncManager = SupabaseSyncManager(db, client, dataOwnerStorage, ioDispatcher)
+        val storage = dataOwnerStorage ?: return SyncResult.Error(IllegalStateException("DataOwnerStorage não configurado no repositório"))
+        val syncManager = SupabaseSyncManager(db, client, storage, ioDispatcher)
         return syncManager.sync(userId)
     }
 
     suspend fun syncWithSupabase(userId: String): SyncResult {
         val client = SupabaseClient.getInstance()
-        val syncManager = SupabaseSyncManager(db, client, dataOwnerStorage, ioDispatcher)
+        val storage = dataOwnerStorage ?: return SyncResult.Error(IllegalStateException("DataOwnerStorage não configurado no repositório"))
+        val syncManager = SupabaseSyncManager(db, client, storage, ioDispatcher)
         return syncManager.sync(userId)
     }
 

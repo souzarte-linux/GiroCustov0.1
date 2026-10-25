@@ -168,6 +168,104 @@ class AccountIsolationAndSyncTest {
         assertEquals(0, fakeApi.getDailyRecordsCalls)
     }
 
+    @Test
+    fun testPushLocalChanges_whenOwnerIdNullAndLocalDataExists_blocksPushAndThrowsError() = runTest(testDispatcher) {
+        fakeStorage.clearDataOwner()
+        assertNull(fakeStorage.getDataOwnerId())
+        val syncManager = SupabaseSyncManager(db, fakeApi, fakeStorage)
+
+        // Insere veículo local (banco não está vazio, mas dono é desconhecido/nulo)
+        db.vehicleDao().insertVehicle(
+            Vehicle(
+                id = 1,
+                model = "Honda CG 160",
+                syncStatus = SyncStatus.PENDING_INSERT,
+                updatedAt = System.currentTimeMillis()
+            )
+        )
+
+        var thrownException: Throwable? = null
+        try {
+            syncManager.pushLocalChanges(userId = "user_A")
+        } catch (e: Throwable) {
+            thrownException = e
+        }
+
+        assertNotNull("Deve lançar exceção fail-safe ao tentar push com dono desconhecido e dados locais presentes", thrownException)
+        assertTrue(thrownException is DataOwnerMismatchException)
+        val mismatch = thrownException as DataOwnerMismatchException
+        assertNull("ownerId deve ser null pois o dono local é desconhecido", mismatch.ownerId)
+        assertEquals("user_A", mismatch.currentUserId)
+        assertEquals("PUSH", mismatch.operation)
+
+        // Prova absoluta: ZERO requisições à API REST do Supabase
+        assertEquals(0, fakeApi.upsertVehiclesCalls)
+        assertEquals(0, fakeApi.upsertDailyRecordsCalls)
+    }
+
+    @Test
+    fun testPullRemoteChanges_whenOwnerIdNullAndLocalDataExists_blocksPullAndThrowsError() = runTest(testDispatcher) {
+        fakeStorage.clearDataOwner()
+        assertNull(fakeStorage.getDataOwnerId())
+        val syncManager = SupabaseSyncManager(db, fakeApi, fakeStorage)
+
+        // Insere veículo local (banco não está vazio, mas dono é desconhecido/nulo)
+        db.vehicleDao().insertVehicle(
+            Vehicle(
+                id = 1,
+                model = "Honda CG 160",
+                syncStatus = SyncStatus.SYNCED,
+                updatedAt = System.currentTimeMillis()
+            )
+        )
+
+        var thrownException: Throwable? = null
+        try {
+            syncManager.pullRemoteChanges(userId = "user_A")
+        } catch (e: Throwable) {
+            thrownException = e
+        }
+
+        assertNotNull("Deve lançar exceção fail-safe ao tentar pull com dono desconhecido e dados locais presentes", thrownException)
+        assertTrue(thrownException is DataOwnerMismatchException)
+        val mismatch = thrownException as DataOwnerMismatchException
+        assertNull("ownerId deve ser null pois o dono local é desconhecido", mismatch.ownerId)
+        assertEquals("user_A", mismatch.currentUserId)
+        assertEquals("PULL", mismatch.operation)
+
+        // Prova absoluta: ZERO requisições à API REST do Supabase
+        assertEquals(0, fakeApi.getVehiclesCalls)
+        assertEquals(0, fakeApi.getDailyRecordsCalls)
+    }
+
+    @Test
+    fun testSync_whenOwnerIdNullAndLocalDataExists_returnsErrorResult() = runTest(testDispatcher) {
+        fakeStorage.clearDataOwner()
+        assertNull(fakeStorage.getDataOwnerId())
+        val syncManager = SupabaseSyncManager(db, fakeApi, fakeStorage)
+
+        db.vehicleDao().insertVehicle(
+            Vehicle(
+                id = 1,
+                model = "Honda CG 160",
+                syncStatus = SyncStatus.PENDING_INSERT,
+                updatedAt = System.currentTimeMillis()
+            )
+        )
+
+        val result = syncManager.sync("user_A")
+        assertTrue("Sync deve retornar SyncResult.Error devido à trava fail-safe", result is SyncResult.Error)
+        val err = (result as SyncResult.Error).error
+        assertTrue(err is DataOwnerMismatchException)
+        val mismatch = err as DataOwnerMismatchException
+        assertNull(mismatch.ownerId)
+        assertEquals("user_A", mismatch.currentUserId)
+
+        // Prova absoluta: ZERO requisições à API REST do Supabase
+        assertEquals(0, fakeApi.upsertVehiclesCalls)
+        assertEquals(0, fakeApi.getVehiclesCalls)
+    }
+
     // =========================================================================
     // 2. OS TRÊS CASOS DA PRIMEIRA EXECUÇÃO / DONO DESCONHECIDO (Condição 3)
     // =========================================================================
@@ -191,6 +289,70 @@ class AccountIsolationAndSyncTest {
         // Quando banco vazio, a guarda assume a conta logada
         fakeStorage.setDataOwnerId("user_B")
         assertEquals("user_B", fakeStorage.getDataOwnerId())
+    }
+
+    @Test
+    fun testFreshInstall_emptyDatabaseAndNullOwner_pullAllowedAndOwnerSavedToStorage() = runTest(testDispatcher) {
+        // Cenário de nova instalação: banco Room vazio, dono desconhecido/nulo no DataOwnerStorage
+        fakeStorage.clearDataOwner()
+        assertNull(fakeStorage.getDataOwnerId())
+        assertEquals(0, db.vehicleDao().getAllVehicles().size)
+
+        // Supabase possui dados remotos da conta autenticada
+        val remoteVehicle = VehicleDto(
+            id = "rem-veh-fresh",
+            userId = "user_fresh_install",
+            model = "Moto Nova Instalação",
+            averageConsumption = 42.0,
+            fuelType = "Gasolina",
+            monthlyFixedCosts = 80.0,
+            plannedWorkDays = 25,
+            currentOdometer = 1000.0,
+            active = true,
+            updatedAt = SupabaseMappers.toIsoString(System.currentTimeMillis())
+        )
+        fakeApi.remoteVehicles.add(remoteVehicle)
+
+        val syncManager = SupabaseSyncManager(db, fakeApi, fakeStorage)
+        // PULL deve ser permitido normalmente quando banco está vazio
+        syncManager.pullRemoteChanges("user_fresh_install")
+
+        // Veículo deve ter sido inserido no banco Room local
+        val localVehicles = db.vehicleDao().getAllVehicles()
+        assertEquals(1, localVehicles.size)
+        assertEquals("Moto Nova Instalação", localVehicles.first().model)
+
+        // Dono autenticado deve ter sido gravado no DataOwnerStorage após a conclusão
+        assertEquals("user_fresh_install", fakeStorage.getDataOwnerId())
+    }
+
+    @Test
+    fun testFreshInstall_emptyDatabaseAndNullOwner_syncAllowedAndOwnerSavedToStorage() = runTest(testDispatcher) {
+        // Cenário de nova instalação via sync completo
+        fakeStorage.clearDataOwner()
+        assertNull(fakeStorage.getDataOwnerId())
+        assertEquals(0, db.vehicleDao().getAllVehicles().size)
+
+        val remoteVehicle = VehicleDto(
+            id = "rem-veh-fresh-sync",
+            userId = "user_fresh_sync",
+            model = "Moto Fresh Sync",
+            averageConsumption = 39.0,
+            fuelType = "Gasolina",
+            monthlyFixedCosts = 90.0,
+            plannedWorkDays = 20,
+            currentOdometer = 2000.0,
+            active = true,
+            updatedAt = SupabaseMappers.toIsoString(System.currentTimeMillis())
+        )
+        fakeApi.remoteVehicles.add(remoteVehicle)
+
+        val syncManager = SupabaseSyncManager(db, fakeApi, fakeStorage)
+        val result = syncManager.sync("user_fresh_sync")
+
+        assertTrue("Sincronização deve ter sucesso em nova instalação", result is SyncResult.Success)
+        assertEquals(1, db.vehicleDao().getAllVehicles().size)
+        assertEquals("user_fresh_sync", fakeStorage.getDataOwnerId())
     }
 
     @Test
@@ -487,6 +649,7 @@ class FakeDataOwnerStorage(initialOwnerId: String? = null) : DataOwnerStorage {
  * REST API simulada com contagem de invocações para prova de bloqueio de requisições.
  */
 class CountingSupabaseRestApi : SupabaseRestApi {
+    val remoteVehicles = mutableListOf<VehicleDto>()
     var getVehiclesCalls = 0
     var upsertVehiclesCalls = 0
     var getDailyRecordsCalls = 0
@@ -494,7 +657,7 @@ class CountingSupabaseRestApi : SupabaseRestApi {
 
     override suspend fun getVehicles(select: String, updatedAtFilter: String?): List<VehicleDto> {
         getVehiclesCalls++
-        return emptyList()
+        return remoteVehicles.toList()
     }
 
     override suspend fun upsertVehicles(vehicles: List<VehicleDto>): List<VehicleDto> {

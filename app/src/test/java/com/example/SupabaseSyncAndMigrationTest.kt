@@ -1521,8 +1521,8 @@ class SupabaseSyncAndMigrationTest {
     @Test
     fun testPushLocalPendingRecordsToSupabase() = runTest {
         val fakeApi = FakeSupabaseRestApi()
-        val syncManager = SupabaseSyncManager(inMemoryDb, fakeApi)
         val userId = "user_test_push"
+        val syncManager = SupabaseSyncManager(inMemoryDb, fakeApi, FakeDataOwnerStorage(initialOwnerId = userId))
 
         // Insere veículo pendente local
         val localVehicle = Vehicle(
@@ -1585,8 +1585,8 @@ class SupabaseSyncAndMigrationTest {
     @Test
     fun testPullRemoteChanges_LWW_remoteNewerOverwritesPendingLocal() = runTest {
         val fakeApi = FakeSupabaseRestApi()
-        val syncManager = SupabaseSyncManager(inMemoryDb, fakeApi)
         val userId = "user_lww_1"
+        val syncManager = SupabaseSyncManager(inMemoryDb, fakeApi, FakeDataOwnerStorage(initialOwnerId = userId))
 
         // Estado local: alterado localmente com timestamp mais antigo
         val localVehicle = Vehicle(
@@ -1633,8 +1633,8 @@ class SupabaseSyncAndMigrationTest {
     @Test
     fun testPullRemoteChanges_LWW_localNewerPreservesPendingLocal() = runTest {
         val fakeApi = FakeSupabaseRestApi()
-        val syncManager = SupabaseSyncManager(inMemoryDb, fakeApi)
         val userId = "user_lww_2"
+        val syncManager = SupabaseSyncManager(inMemoryDb, fakeApi, FakeDataOwnerStorage(initialOwnerId = userId))
 
         // Estado local: alterado localmente com timestamp MAIS RECENTE
         val localVehicle = Vehicle(
@@ -1677,8 +1677,8 @@ class SupabaseSyncAndMigrationTest {
     @Test
     fun testPullRemoteChanges_syncedLocalAlwaysUpdatesFromRemote() = runTest {
         val fakeApi = FakeSupabaseRestApi()
-        val syncManager = SupabaseSyncManager(inMemoryDb, fakeApi)
         val userId = "user_lww_3"
+        val syncManager = SupabaseSyncManager(inMemoryDb, fakeApi, FakeDataOwnerStorage(initialOwnerId = userId))
 
         // Local está sincronizado (não tem pendências)
         val localVehicle = Vehicle(
@@ -1722,8 +1722,8 @@ class SupabaseSyncAndMigrationTest {
     @Test
     fun testSoftDeletePropagation() = runTest {
         val fakeApi = FakeSupabaseRestApi()
-        val syncManager = SupabaseSyncManager(inMemoryDb, fakeApi)
         val userId = "user_soft_delete"
+        val syncManager = SupabaseSyncManager(inMemoryDb, fakeApi, FakeDataOwnerStorage(initialOwnerId = userId))
 
         // 1. PULL de soft-delete remoto -> marca isDeleted = true localmente
         val localPart = VehiclePart(
@@ -1787,8 +1787,8 @@ class SupabaseSyncAndMigrationTest {
     @Test
     fun testReconciliationOfLocalRecordsWithoutRemoteId() = runTest {
         val fakeApi = FakeSupabaseRestApi()
-        val syncManager = SupabaseSyncManager(inMemoryDb, fakeApi)
         val userId = "user_reconcile"
+        val syncManager = SupabaseSyncManager(inMemoryDb, fakeApi, FakeDataOwnerStorage(initialOwnerId = userId))
 
         // Veículo ativo local sem remoteId prévio
         val localVehicle = Vehicle(
@@ -1832,8 +1832,8 @@ class SupabaseSyncAndMigrationTest {
     @Test
     fun testSyncFailurePreservesPendingState() = runTest {
         val fakeApi = FakeSupabaseRestApi().apply { shouldFail = true }
-        val syncManager = SupabaseSyncManager(inMemoryDb, fakeApi)
         val userId = "user_offline"
+        val syncManager = SupabaseSyncManager(inMemoryDb, fakeApi, FakeDataOwnerStorage(initialOwnerId = userId))
 
         val localVehicle = Vehicle(
             id = 1L,
@@ -1862,10 +1862,11 @@ class SupabaseSyncAndMigrationTest {
 
     @Test
     fun testVehicleAndPart_delete_sync_undo_sync_LWWProtection() = runTest {
-        val repository = GiroCustoRepository(inMemoryDb)
-        val fakeApi = FakeSupabaseRestApi()
-        val syncManager = SupabaseSyncManager(inMemoryDb, fakeApi)
         val userId = "user_lww_undo_test"
+        val dataOwnerStorage = FakeDataOwnerStorage(initialOwnerId = userId)
+        val repository = GiroCustoRepository(inMemoryDb, dataOwnerStorage)
+        val fakeApi = FakeSupabaseRestApi()
+        val syncManager = SupabaseSyncManager(inMemoryDb, fakeApi, dataOwnerStorage)
 
         // Estado inicial: Veículo e Peça inseridos no banco Room e sincronizados com a FakeSupabaseRestApi
         // (isDeleted = false, syncStatus = SYNCED, updatedAt = 1000L).

@@ -16,10 +16,10 @@ sealed class SyncResult {
 class SupabaseSyncManager(
     private val db: GiroCustoDatabase,
     private val restApi: SupabaseRestApi,
-    private val dataOwnerStorage: DataOwnerStorage? = null,
+    private val dataOwnerStorage: DataOwnerStorage,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
-    constructor(db: GiroCustoDatabase, client: SupabaseClient, dataOwnerStorage: DataOwnerStorage? = null, ioDispatcher: CoroutineDispatcher = Dispatchers.IO) : this(db, client.restApi, dataOwnerStorage, ioDispatcher)
+    constructor(db: GiroCustoDatabase, client: SupabaseClient, dataOwnerStorage: DataOwnerStorage, ioDispatcher: CoroutineDispatcher = Dispatchers.IO) : this(db, client.restApi, dataOwnerStorage, ioDispatcher)
     private val vehicleDao = db.vehicleDao()
     private val partDao = db.vehiclePartDao()
     private val recordDao = db.dailyRecordDao()
@@ -27,6 +27,15 @@ class SupabaseSyncManager(
     private val platformDao = db.platformDao()
     private val fuelRefillDao = db.fuelRefillDao()
     private val maintenanceRecordDao = db.maintenanceRecordDao()
+
+    internal suspend fun hasAnyLocalData(): Boolean {
+        return vehicleDao.getAllVehicles().isNotEmpty() ||
+                vehicleDao.getPendingVehicles().isNotEmpty() ||
+                partDao.getAllParts().isNotEmpty() ||
+                recordDao.getAllRecords().isNotEmpty() ||
+                platformDao.getAllPlatforms().isNotEmpty() ||
+                userProfileDao.getUserProfile() != null
+    }
 
     suspend fun sync(userId: String): SyncResult = withContext(ioDispatcher) {
         try {
@@ -37,6 +46,10 @@ class SupabaseSyncManager(
 
             // 2. PULL: Busca dados remotos do Supabase e aplica localmente (LWW)
             pullRemoteChanges(userId)
+
+            if (dataOwnerStorage.getDataOwnerId() == null) {
+                dataOwnerStorage.setDataOwnerId(userId)
+            }
 
             Log.d("SupabaseSyncManager", "Sincronização concluída com sucesso!")
             SyncResult.Success("Sincronização concluída com sucesso")
@@ -50,10 +63,17 @@ class SupabaseSyncManager(
     // PUSH (Local -> Nuvem)
     // =========================================================================
     internal suspend fun pushLocalChanges(userId: String) {
-        val ownerId = dataOwnerStorage?.getDataOwnerId()
+        val ownerId = dataOwnerStorage.getDataOwnerId()
         if (ownerId != null && ownerId != userId) {
             throw DataOwnerMismatchException(
                 ownerId = ownerId,
+                currentUserId = userId,
+                operation = "PUSH"
+            )
+        }
+        if (ownerId == null && hasAnyLocalData()) {
+            throw DataOwnerMismatchException(
+                ownerId = null,
                 currentUserId = userId,
                 operation = "PUSH"
             )
@@ -190,10 +210,17 @@ class SupabaseSyncManager(
     // PULL (Nuvem -> Local) com Resolução Last-Write-Wins (LWW)
     // =========================================================================
     internal suspend fun pullRemoteChanges(userId: String) {
-        val ownerId = dataOwnerStorage?.getDataOwnerId()
+        val ownerId = dataOwnerStorage.getDataOwnerId()
         if (ownerId != null && ownerId != userId) {
             throw DataOwnerMismatchException(
                 ownerId = ownerId,
+                currentUserId = userId,
+                operation = "PULL"
+            )
+        }
+        if (ownerId == null && hasAnyLocalData()) {
+            throw DataOwnerMismatchException(
+                ownerId = null,
                 currentUserId = userId,
                 operation = "PULL"
             )
@@ -377,6 +404,10 @@ class SupabaseSyncManager(
                     }
                 }
             }
+        }
+
+        if (dataOwnerStorage.getDataOwnerId() == null) {
+            dataOwnerStorage.setDataOwnerId(userId)
         }
     }
 }
