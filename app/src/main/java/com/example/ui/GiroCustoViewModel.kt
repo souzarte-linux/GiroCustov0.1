@@ -14,6 +14,8 @@ import com.example.util.BiometricHelper
 import com.example.util.GoogleAuthHelper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -61,16 +63,48 @@ data class FuelCostEstimationInfo(
     val displayText: String = ""
 )
 
-class GiroCustoViewModel(application: Application) : AndroidViewModel(application) {
+sealed class AccountConflictState {
+    abstract val pendingCount: Int
+
+    data class UnknownOwnerWithPending(
+        val currentUserId: String,
+        override val pendingCount: Int
+    ) : AccountConflictState()
+
+    data class KnownOwnerMismatchWithPending(
+        val previousOwnerId: String,
+        val currentUserId: String,
+        override val pendingCount: Int
+    ) : AccountConflictState()
+}
+
+class GiroCustoViewModel @JvmOverloads constructor(
+    application: Application,
+    val dataOwnerStorage: DataOwnerStorage = SharedPreferencesDataOwnerStorage(application),
+    val repository: GiroCustoRepository = GiroCustoRepository(GiroCustoDatabase.getDatabase(application), dataOwnerStorage)
+) : AndroidViewModel(application) {
     private val db = GiroCustoDatabase.getDatabase(application)
-    private val repository = GiroCustoRepository(db)
 
     // Supabase Cloud Auth & Sync
     private val supabaseClient = SupabaseClient.getInstance(application)
     val currentUser: StateFlow<AuthSession?> = supabaseClient.sessionState
 
+    private val syncMutex = Mutex()
+
     private val _syncState = MutableStateFlow(SyncState.IDLE)
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
+
+    private val _isAccountSwitching = MutableStateFlow(false)
+    val isAccountSwitching: StateFlow<Boolean> = _isAccountSwitching.asStateFlow()
+
+    private val _accountConflictState = MutableStateFlow<AccountConflictState?>(null)
+    val accountConflictState: StateFlow<AccountConflictState?> = _accountConflictState.asStateFlow()
+
+    private val _showDiscardDoubleConfirmationDialog = MutableStateFlow(false)
+    val showDiscardDoubleConfirmationDialog: StateFlow<Boolean> = _showDiscardDoubleConfirmationDialog.asStateFlow()
+
+    private val _showClaimDataConfirmationDialog = MutableStateFlow(false)
+    val showClaimDataConfirmationDialog: StateFlow<Boolean> = _showClaimDataConfirmationDialog.asStateFlow()
 
     private val syncPrefs = application.getSharedPreferences("giro_custo_sync_prefs", Context.MODE_PRIVATE)
 
@@ -815,36 +849,223 @@ class GiroCustoViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun triggerSync(onComplete: ((Boolean, String?) -> Unit)? = null) {
+    fun checkPendingChangesBeforeLogout(onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
+            val hasPending = repository.hasPendingSyncChanges()
+            onResult(hasPending)
+        }
+    }
+
+    fun openDiscardConfirmation() {
+        _showDiscardDoubleConfirmationDialog.value = true
+    }
+
+    fun dismissDiscardConfirmation() {
+        _showDiscardDoubleConfirmationDialog.value = false
+    }
+
+    fun openClaimDataConfirmation() {
+        _showClaimDataConfirmationDialog.value = true
+    }
+
+    fun dismissClaimDataConfirmation() {
+        _showClaimDataConfirmationDialog.value = false
+    }
+
+    fun resolveConflictReturnToPreviousAccount() {
+        _accountConflictState.value = null
+        _showDiscardDoubleConfirmationDialog.value = false
+        _showClaimDataConfirmationDialog.value = false
+        logout()
+    }
+
+    fun confirmDiscardData(onComplete: () -> Unit = {}) {
+        _showDiscardDoubleConfirmationDialog.value = false
+        val currentUserId = supabaseClient.currentUserId ?: return
+        viewModelScope.launch {
+            syncMutex.withLock {
+                _isAccountSwitching.value = true
+                _syncState.value = SyncState.SYNCING
+                try {
+                    repository.clearAllLocalData()
+                    resetAccountSpecificPreferences()
+                    dataOwnerStorage.setDataOwnerId(currentUserId)
+                    _accountConflictState.value = null
+                    performSyncInternal(currentUserId, null)
+                    onComplete()
+                } finally {
+                    _isAccountSwitching.value = false
+                }
+            }
+        }
+    }
+
+    fun confirmClaimData(onComplete: () -> Unit = {}) {
+        _showClaimDataConfirmationDialog.value = false
+        val currentUserId = supabaseClient.currentUserId ?: return
+        viewModelScope.launch {
+            syncMutex.withLock {
+                _isAccountSwitching.value = true
+                _syncState.value = SyncState.SYNCING
+                try {
+                    dataOwnerStorage.setDataOwnerId(currentUserId)
+                    _accountConflictState.value = null
+                    performSyncInternal(currentUserId, null)
+                    onComplete()
+                } finally {
+                    _isAccountSwitching.value = false
+                }
+            }
+        }
+    }
+
+    private fun resetAccountSpecificPreferences() {
+        syncPrefs.edit().remove("last_sync_timestamp").apply()
+        _lastSyncTime.value = null
+
+        val dark = prefs.getBoolean("is_dark_theme", true)
+        prefs.edit().clear().putBoolean("is_dark_theme", dark).apply()
+
+        dailyGoalGross.value = 200.0
+        dailyGoalNet.value = 130.0
+        dailyGoalKm.value = 100.0
+        dailyGoalDeliveries.value = 15
+        weeklyGoalGross.value = 1200.0
+        weeklyGoalNet.value = 800.0
+        weeklyGoalKm.value = 600.0
+        weeklyGoalDeliveries.value = 90
+        monthlyGoalGross.value = 5000.0
+        monthlyGoalNet.value = 3200.0
+        monthlyGoalKm.value = 2500.0
+        monthlyGoalDeliveries.value = 400
+
+        clearViaCepState()
+        clearFipe()
+    }
+
+    fun triggerSync(onComplete: ((Boolean, String?) -> Unit)? = null) {
+        if (!supabaseClient.isAuthenticated) {
+            _syncState.value = SyncState.IDLE
+            onComplete?.invoke(false, "Usuário não autenticado")
+            return
+        }
+
+        _syncState.value = SyncState.SYNCING
+        _syncErrorMessage.value = null
+
+        viewModelScope.launch {
+            executeAccountSyncOrTransition(onComplete)
+        }
+    }
+
+    private suspend fun executeAccountSyncOrTransition(onComplete: ((Boolean, String?) -> Unit)? = null) {
+        syncMutex.withLock {
             if (!supabaseClient.isAuthenticated) {
                 _syncState.value = SyncState.IDLE
                 onComplete?.invoke(false, "Usuário não autenticado")
-                return@launch
+                return
             }
 
-            _syncState.value = SyncState.SYNCING
-            _syncErrorMessage.value = null
+            val currentUserId = supabaseClient.currentUserId
+            if (currentUserId.isNullOrBlank()) {
+                _syncState.value = SyncState.ERROR
+                val err = "ID do usuário não encontrado na sessão ativa"
+                _syncErrorMessage.value = err
+                onComplete?.invoke(false, err)
+                return
+            }
 
-            val result = repository.syncCurrentSession()
-            when (result) {
-                is SyncResult.Success -> {
-                    val now = System.currentTimeMillis()
-                    _lastSyncTime.value = now
-                    syncPrefs.edit().putLong("last_sync_timestamp", now).apply()
-                    _syncState.value = SyncState.SUCCESS
-                    onComplete?.invoke(true, null)
+            val ownerId = dataOwnerStorage.getDataOwnerId()
+
+            // Caso 1: Dono coincide (fluxo normal do mesmo usuário)
+            if (ownerId == currentUserId) {
+                performSyncInternal(currentUserId, onComplete)
+                return
+            }
+
+            // Caso 2: Dono desconhecido (ownerId == null)
+            if (ownerId == null) {
+                val hasData = repository.hasAnyLocalData()
+                if (!hasData) {
+                    dataOwnerStorage.setDataOwnerId(currentUserId)
+                    performSyncInternal(currentUserId, onComplete)
+                    return
                 }
-                is SyncResult.Error -> {
-                    val err = result.error
-                    val isOffline = err is java.net.UnknownHostException ||
-                            err is java.net.ConnectException ||
-                            err is java.net.SocketTimeoutException
-                    _syncState.value = if (isOffline) SyncState.OFFLINE else SyncState.ERROR
-                    val msg = err.localizedMessage ?: err.message ?: "Erro na sincronização"
-                    _syncErrorMessage.value = msg
-                    onComplete?.invoke(false, msg)
+
+                val hasPending = repository.hasPendingSyncChanges()
+                if (!hasPending) {
+                    switchAccountCleanly(currentUserId, onComplete)
+                    return
+                } else {
+                    val count = repository.countPendingChanges()
+                    _accountConflictState.value = AccountConflictState.UnknownOwnerWithPending(
+                        currentUserId = currentUserId,
+                        pendingCount = count
+                    )
+                    _syncState.value = SyncState.IDLE
+                    onComplete?.invoke(false, "Conflito de dados locais detectado")
+                    return
                 }
+            }
+
+            // Caso 3: Troca de conta entre donos diferentes (ownerId != currentUserId)
+            val hasPending = repository.hasPendingSyncChanges()
+            if (!hasPending) {
+                switchAccountCleanly(currentUserId, onComplete)
+                return
+            } else {
+                val count = repository.countPendingChanges()
+                _accountConflictState.value = AccountConflictState.KnownOwnerMismatchWithPending(
+                    previousOwnerId = ownerId,
+                    currentUserId = currentUserId,
+                    pendingCount = count
+                )
+                _syncState.value = SyncState.IDLE
+                onComplete?.invoke(false, "Lançamentos pendentes pertencem a outra conta")
+                return
+            }
+        }
+    }
+
+    private suspend fun switchAccountCleanly(newUserId: String, onComplete: ((Boolean, String?) -> Unit)?) {
+        _isAccountSwitching.value = true
+        _syncState.value = SyncState.SYNCING
+        try {
+            repository.clearAllLocalData()
+            resetAccountSpecificPreferences()
+            dataOwnerStorage.setDataOwnerId(newUserId)
+            performSyncInternal(newUserId, onComplete)
+        } finally {
+            _isAccountSwitching.value = false
+        }
+    }
+
+    private suspend fun performSyncInternal(userId: String, onComplete: ((Boolean, String?) -> Unit)?) {
+        _syncState.value = SyncState.SYNCING
+        _syncErrorMessage.value = null
+
+        val result = repository.syncCurrentSession()
+        when (result) {
+            is SyncResult.Success -> {
+                val now = System.currentTimeMillis()
+                _lastSyncTime.value = now
+                syncPrefs.edit().putLong("last_sync_timestamp", now).apply()
+                _syncState.value = SyncState.SUCCESS
+                onComplete?.invoke(true, null)
+            }
+            is SyncResult.Error -> {
+                val err = result.error
+                val isOffline = err is java.net.UnknownHostException ||
+                        err is java.net.ConnectException ||
+                        err is java.net.SocketTimeoutException
+                _syncState.value = if (isOffline) SyncState.OFFLINE else SyncState.ERROR
+                val msg = if (err is DataOwnerMismatchException) {
+                    "Sincronização pausada por segurança: os registros salvos neste aparelho pertencem a outra conta. Entre com a conta proprietária para sincronizá-los ou descarte os dados locais."
+                } else {
+                    err.localizedMessage ?: err.message ?: "Erro na sincronização"
+                }
+                _syncErrorMessage.value = msg
+                onComplete?.invoke(false, msg)
             }
         }
     }

@@ -6,6 +6,7 @@ import com.example.network.supabase.AuthSession
 import com.example.network.supabase.SupabaseClient
 import com.example.network.supabase.SupabaseSyncManager
 import com.example.network.supabase.SyncResult
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -14,7 +15,11 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
-class GiroCustoRepository(private val db: GiroCustoDatabase) {
+class GiroCustoRepository(
+    private val db: GiroCustoDatabase,
+    val dataOwnerStorage: DataOwnerStorage? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) {
     private val vehicleDao = db.vehicleDao()
     private val partDao = db.vehiclePartDao()
     private val recordDao = db.dailyRecordDao()
@@ -58,6 +63,8 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
     }
 
     suspend fun getVehicle(): Vehicle? = vehicleDao.getActiveVehicle()
+    suspend fun getAllVehicles(): List<Vehicle> = vehicleDao.getAllVehicles()
+    suspend fun getAllRecords(): List<DailyRecord> = recordDao.getAllRecords()
 
     suspend fun saveVehicle(vehicle: Vehicle) {
         if (vehicle.id == 0L) {
@@ -452,7 +459,7 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
     }
 
     suspend fun clearAllData() {
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             db.clearAllTables()
         }
     }
@@ -718,6 +725,36 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
     // MÉTODOS DE SINCRONIZAÇÃO COM SUPABASE
     // =========================================================================
 
+    suspend fun clearAllLocalData() = withContext(ioDispatcher) {
+        db.clearAllTables()
+    }
+
+    suspend fun hasPendingSyncChanges(): Boolean = withContext(ioDispatcher) {
+        vehicleDao.getPendingVehicles().isNotEmpty() ||
+        partDao.getPendingParts().isNotEmpty() ||
+        recordDao.getPendingRecords().isNotEmpty() ||
+        fuelRefillDao.getPendingRefills().isNotEmpty() ||
+        maintenanceRecordDao.getPendingRecords().isNotEmpty() ||
+        platformDao.getPendingPlatforms().isNotEmpty() ||
+        userProfileDao.getPendingUserProfile() != null
+    }
+
+    suspend fun hasAnyLocalData(): Boolean = withContext(ioDispatcher) {
+        vehicleDao.getAllVehicles().isNotEmpty() ||
+        recordDao.getAllRecords().isNotEmpty() ||
+        userProfileDao.getUserProfile() != null
+    }
+
+    suspend fun countPendingChanges(): Int = withContext(ioDispatcher) {
+        vehicleDao.getPendingVehicles().size +
+        partDao.getPendingParts().size +
+        recordDao.getPendingRecords().size +
+        fuelRefillDao.getPendingRefills().size +
+        maintenanceRecordDao.getPendingRecords().size +
+        platformDao.getPendingPlatforms().size +
+        (if (userProfileDao.getPendingUserProfile() != null) 1 else 0)
+    }
+
     suspend fun syncWithSupabase(userId: String, authToken: String): SyncResult {
         val client = SupabaseClient.getInstance()
         if (authToken.isNotBlank()) {
@@ -730,13 +767,13 @@ class GiroCustoRepository(private val db: GiroCustoDatabase) {
                 )
             )
         }
-        val syncManager = SupabaseSyncManager(db, client)
+        val syncManager = SupabaseSyncManager(db, client, dataOwnerStorage, ioDispatcher)
         return syncManager.sync(userId)
     }
 
     suspend fun syncWithSupabase(userId: String): SyncResult {
         val client = SupabaseClient.getInstance()
-        val syncManager = SupabaseSyncManager(db, client)
+        val syncManager = SupabaseSyncManager(db, client, dataOwnerStorage, ioDispatcher)
         return syncManager.sync(userId)
     }
 

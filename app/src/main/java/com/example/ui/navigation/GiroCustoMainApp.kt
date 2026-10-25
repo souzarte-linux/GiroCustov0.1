@@ -27,6 +27,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.clickable
+import com.example.ui.AccountConflictState
 import com.example.ui.GiroCustoViewModel
 import com.example.ui.components.CloudSyncTopBarIcon
 import com.example.ui.screens.CloudSyncScreen
@@ -63,6 +65,10 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
     val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
+    val accountConflict by viewModel.accountConflictState.collectAsStateWithLifecycle()
+    val showDiscardConfirm by viewModel.showDiscardDoubleConfirmationDialog.collectAsStateWithLifecycle()
+    val showClaimConfirm by viewModel.showClaimDataConfirmationDialog.collectAsStateWithLifecycle()
+    val isSwitchingAccount by viewModel.isAccountSwitching.collectAsStateWithLifecycle()
 
     // Configuração de Paleta de Cores do GiroCusto (Professional Dark charcoal and Emerald green theme, or soft slate light theme)
     val customColorScheme = if (isDark) {
@@ -257,6 +263,155 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
                                 GiroTab.RELATORIOS -> ReportsScreen(viewModel, vehicle, parts, records, maintenanceRecords)
                                 GiroTab.HISTORICO -> HistoryScreen(viewModel, vehicle, records)
                             }
+                        }
+
+                        // Overlay de carregamento durante troca de conta (nunca projeta dados da conta anterior)
+                        if (isSwitchingAccount) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.95f))
+                                    .clickable(enabled = true, onClick = {}),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                                    Text(
+                                        text = "Carregando dados da nova conta...",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onBackground
+                                    )
+                                }
+                            }
+                        }
+
+                        // Diálogo central de resolução de conflito de dados locais
+                        if (accountConflict != null) {
+                            val conflict = accountConflict
+                            AlertDialog(
+                                onDismissRequest = { /* Bloqueante: exige decisão do usuário */ },
+                                title = {
+                                    Text(
+                                        text = if (conflict is AccountConflictState.UnknownOwnerWithPending)
+                                            "Lançamentos não sincronizados detectados"
+                                        else
+                                            "Lançamentos de outra conta detectados",
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                },
+                                text = {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(
+                                            text = "Este celular contém ${conflict?.pendingCount ?: 0} lançamento(s) que ainda não foram sincronizados com a nuvem. Se você continuar na conta atual sem sincronizar, esses registros não enviados poderão ser perdidos.",
+                                            fontSize = 14.sp
+                                        )
+                                        Text(
+                                            text = "O que deseja fazer?",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                },
+                                confirmButton = {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Button(
+                                            onClick = { viewModel.resolveConflictReturnToPreviousAccount() },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Voltar e entrar com a conta anterior")
+                                        }
+                                        if (conflict is AccountConflictState.UnknownOwnerWithPending) {
+                                            OutlinedButton(
+                                                onClick = { viewModel.openClaimDataConfirmation() },
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Text("Estes dados são meus, usar nesta conta")
+                                            }
+                                        }
+                                        OutlinedButton(
+                                            onClick = { viewModel.openDiscardConfirmation() },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = ButtonDefaults.outlinedButtonColors(
+                                                contentColor = MaterialTheme.colorScheme.error
+                                            )
+                                        ) {
+                                            Text("Descartar dados")
+                                        }
+                                    }
+                                },
+                                dismissButton = {}
+                            )
+                        }
+
+                        // Confirmação dupla para descarte permanente
+                        if (showDiscardConfirm) {
+                            AlertDialog(
+                                onDismissRequest = { viewModel.dismissDiscardConfirmation() },
+                                title = {
+                                    Text(
+                                        text = "Confirmação de Descarte Permanente",
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                },
+                                text = {
+                                    Text(
+                                        text = "Tem certeza absoluta? Os dados não sincronizados serão excluídos deste aparelho de forma permanente e não poderão ser recuperados.",
+                                        fontSize = 14.sp
+                                    )
+                                },
+                                confirmButton = {
+                                    Button(
+                                        onClick = { viewModel.confirmDiscardData() },
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                                    ) {
+                                        Text("Sim, descartar permanentemente")
+                                    }
+                                },
+                                dismissButton = {
+                                    OutlinedButton(onClick = { viewModel.dismissDiscardConfirmation() }) {
+                                        Text("Cancelar")
+                                    }
+                                }
+                            )
+                        }
+
+                        // Confirmação para apropriação dos dados ("Estes dados são meus")
+                        if (showClaimConfirm) {
+                            AlertDialog(
+                                onDismissRequest = { viewModel.dismissClaimDataConfirmation() },
+                                title = {
+                                    Text(
+                                        text = "Vincular dados à conta atual?",
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                },
+                                text = {
+                                    Text(
+                                        text = "Deseja vincular todos os lançamentos locais à conta atual e enviá-los para a sua nuvem no Supabase?",
+                                        fontSize = 14.sp
+                                    )
+                                },
+                                confirmButton = {
+                                    Button(
+                                        onClick = { viewModel.confirmClaimData() }
+                                    ) {
+                                        Text("Sim, vincular e sincronizar")
+                                    }
+                                },
+                                dismissButton = {
+                                    OutlinedButton(onClick = { viewModel.dismissClaimDataConfirmation() }) {
+                                        Text("Cancelar")
+                                    }
+                                }
+                            )
                         }
                     }
                 }

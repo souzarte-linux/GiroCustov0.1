@@ -67,6 +67,7 @@ fun CloudSyncScreen(
     val vehicle by viewModel.vehicle.collectAsStateWithLifecycle()
 
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showPendingLogoutWarningDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -152,10 +153,72 @@ fun CloudSyncScreen(
                         }
                     }
                 },
-                onLogoutClick = { showLogoutDialog = true },
+                onLogoutClick = {
+                    viewModel.checkPendingChangesBeforeLogout { hasPending ->
+                        if (hasPending) {
+                            showPendingLogoutWarningDialog = true
+                        } else {
+                            showLogoutDialog = true
+                        }
+                    }
+                },
                 formatLastSyncTime = { viewModel.formatLastSyncTime(it) }
             )
         }
+    }
+
+    // DIÁLOGO DE AVISO DE PENDÊNCIAS ANTES DO LOGOUT
+    if (showPendingLogoutWarningDialog) {
+        AlertDialog(
+            onDismissRequest = { showPendingLogoutWarningDialog = false },
+            title = {
+                Text(
+                    text = "Lançamentos Pendentes Detectados",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Você possui lançamentos salvos neste celular que ainda não foram sincronizados com a nuvem. Se sair agora e outro motorista acessar o aparelho, seus lançamentos poderão ser descartados. Deseja sincronizar antes de sair?",
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPendingLogoutWarningDialog = false
+                        viewModel.triggerSync { success, err ->
+                            if (success) {
+                                Toast.makeText(context, "Sincronizado com sucesso! Agora você pode sair com segurança.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, err ?: "Falha ao sincronizar", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                ) {
+                    Text("Sincronizar Agora")
+                }
+            },
+            dismissButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            showPendingLogoutWarningDialog = false
+                            viewModel.logoutSupabase()
+                            Toast.makeText(context, "Conta desconectada.", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Sair Mesmo Assim")
+                    }
+                    OutlinedButton(onClick = { showPendingLogoutWarningDialog = false }) {
+                        Text("Cancelar")
+                    }
+                }
+            }
+        )
     }
 
     // DIÁLOGO DE CONFIRMAÇÃO DE LOGOUT

@@ -3,6 +3,7 @@ package com.example.network.supabase
 import android.util.Log
 import androidx.room.withTransaction
 import com.example.data.*
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -14,9 +15,11 @@ sealed class SyncResult {
 
 class SupabaseSyncManager(
     private val db: GiroCustoDatabase,
-    private val restApi: SupabaseRestApi
+    private val restApi: SupabaseRestApi,
+    private val dataOwnerStorage: DataOwnerStorage? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
-    constructor(db: GiroCustoDatabase, client: SupabaseClient) : this(db, client.restApi)
+    constructor(db: GiroCustoDatabase, client: SupabaseClient, dataOwnerStorage: DataOwnerStorage? = null, ioDispatcher: CoroutineDispatcher = Dispatchers.IO) : this(db, client.restApi, dataOwnerStorage, ioDispatcher)
     private val vehicleDao = db.vehicleDao()
     private val partDao = db.vehiclePartDao()
     private val recordDao = db.dailyRecordDao()
@@ -25,7 +28,7 @@ class SupabaseSyncManager(
     private val fuelRefillDao = db.fuelRefillDao()
     private val maintenanceRecordDao = db.maintenanceRecordDao()
 
-    suspend fun sync(userId: String): SyncResult = withContext(Dispatchers.IO) {
+    suspend fun sync(userId: String): SyncResult = withContext(ioDispatcher) {
         try {
             Log.d("SupabaseSyncManager", "Iniciando sincronização completa para userId: $userId")
 
@@ -46,7 +49,15 @@ class SupabaseSyncManager(
     // =========================================================================
     // PUSH (Local -> Nuvem)
     // =========================================================================
-    private suspend fun pushLocalChanges(userId: String) {
+    internal suspend fun pushLocalChanges(userId: String) {
+        val ownerId = dataOwnerStorage?.getDataOwnerId()
+        if (ownerId != null && ownerId != userId) {
+            throw DataOwnerMismatchException(
+                ownerId = ownerId,
+                currentUserId = userId,
+                operation = "PUSH"
+            )
+        }
         // --- 1. VEÍCULOS ---
         val pendingVehicles = vehicleDao.getPendingVehicles()
         if (pendingVehicles.isNotEmpty()) {
@@ -178,7 +189,15 @@ class SupabaseSyncManager(
     // =========================================================================
     // PULL (Nuvem -> Local) com Resolução Last-Write-Wins (LWW)
     // =========================================================================
-    private suspend fun pullRemoteChanges(userId: String) {
+    internal suspend fun pullRemoteChanges(userId: String) {
+        val ownerId = dataOwnerStorage?.getDataOwnerId()
+        if (ownerId != null && ownerId != userId) {
+            throw DataOwnerMismatchException(
+                ownerId = ownerId,
+                currentUserId = userId,
+                operation = "PULL"
+            )
+        }
         // --- 1. VEÍCULOS ---
         val remoteVehicles = restApi.getVehicles()
         db.withTransaction {
