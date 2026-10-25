@@ -514,14 +514,6 @@ class GiroCustoViewModel @JvmOverloads constructor(
         }
     }
 
-    fun signInWithPhone(phone: String, otpCode: String = "", onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
-        viewModelScope.launch {
-            _authUiState.value = AuthUiState.Loading
-            _authUiState.value = AuthUiState.Error("Login por SMS em homologação.")
-            onResult(false, "Login por SMS em homologação.")
-        }
-    }
-
     fun signInWithGoogle(context: Context, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
         viewModelScope.launch {
             _authUiState.value = AuthUiState.Loading
