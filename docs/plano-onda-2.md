@@ -42,7 +42,7 @@ A Onda 1 teve como meta primordial a blindagem imediata contra riscos críticos 
    - O `GiroCustoRepository` recebeu métodos atômicos de contagem de pendências (`countPendingChanges`), verificação de dados locais (`hasAnyLocalData`) e limpeza de tabelas (`clearAllLocalData`).
    - **Impacto direto:** 
      - A tarefa **T-10 (Exclusão de Conta)** agora precisa interagir compulsoriamente com o `DataOwnerStorage`, a limpeza de tabelas locais e a exclusão de metas (T-28B), além de implementar proteção fail-safe (se o servidor falhar, nada local é apagado), confirmação reforçada e oferta de exportação prévia para não deixar o aparelho em estado inconsistente ou bloqueado.
-     - A tarefa **T-08 (Índices Room e Migration v13)** coordena a estrutura do banco Room com a introdução das metas persistidas na nuvem (T-28B) e com a futura migração monetária para centavos (T-18B).
+     - A tarefa **T-08 (Índices Room e Migration v13)** coordena a estrutura do banco Room com a introdução das metas persistidas na nuvem (T-28B, v14 com schema 14.json) e com a futura migração monetária para centavos (T-18B, v15 com schema 15.json).
      - A tarefa **T-28 (Metas por Conta)** passa a ter implementação (T-28B) vinculada à Opção B (sincronização na nuvem), precedida de desenho e inventário de preferências (T-28A).
      - A tarefa **T-14** é desacoplada em **T-14a** (Auth/Biometria/Sessão) e **T-14b** (Clientes de Rede/Room) para menor risco e foco cirúrgico na auditoria.
 
@@ -53,6 +53,9 @@ A Onda 1 teve como meta primordial a blindagem imediata contra riscos críticos 
 
 3. **Crescimento do `GiroCustoViewModel.kt`:**
    - Com as regras de biometria, fallback seguro, mitigação de concorrência e máquina de estados de troca de conta, o ViewModel alcançou **1.572 linhas**. A tarefa de decomposição estrutural (**T-20**) ganhou urgência arquitetural aumentada para a Onda 3.
+
+> [!IMPORTANT]
+> **Nota Global de Versionamento e Sequenciamento do Room:** O número de versão de cada migração deve ser estritamente conferido contra o número real da versão atual do banco de dados no momento da execução. A ordem sequencial obrigatória de execução das tarefas que alteram o banco Room é: **T-08** (v12 -> v13, schema `13.json`), depois **T-28B** (v13 -> v14, schema `14.json`), e depois **T-18B** (v14 -> v15, schema `15.json`). Nenhuma tarefa pode pular versões ou duplicar números de schema.
 
 ---
 
@@ -468,12 +471,12 @@ A Onda 1 teve como meta primordial a blindagem imediata contra riscos críticos 
   "to_agent": "backend",
   "task_type": "implementacao",
   "risk": "alto",
-  "title": "Implementar migração dos campos monetários para centavos (Long) com base no plano aprovado",
+  "title": "Implementar migração dos campos monetários para centavos (Long) com base no plano aprovado (Room v15)",
   "context": "Execução da migração planejada em T-18A para eliminar erros de ponto flutuante em valores monetários.",
   "root_cause_evidence": "Entities.kt:19, 41, 65, 69, 71, 74, 191, 194, 214",
   "acceptance_criteria": [
     "Modelo de centavos (Long) implementado nas entidades Room com utilitários de conversão segura (CurrencyUtils.kt)",
-    "Migração Room MIGRATION_13_14 criada e testada com MigrationTestHelper",
+    "Migração Room MIGRATION_14_15 criada e testada com runMigrationsAndValidate do MigrationTestHelper",
     "Mappers do Supabase compatibilizados sem quebra de registros remotos",
     "Testes unitários cobrindo operações matemáticas financeiras sem perda de centavos",
     "Entregar roteiro manual no aparelho para validação de relatórios e lançamentos (status máximo 🟡 sem teste no aparelho)"
@@ -484,7 +487,7 @@ A Onda 1 teve como meta primordial a blindagem imediata contra riscos críticos 
     "app/src/main/java/com/example/network/supabase/SupabaseMappers.kt",
     "app/src/main/java/com/example/util/CurrencyUtils.kt",
     "app/src/main/java/com/example/ui/GiroCustoViewModel.kt",
-    "app/schemas/com.example.data.GiroCustoDatabase/14.json"
+    "app/schemas/com.example.data.GiroCustoDatabase/15.json"
   ],
   "out_of_scope": ["Conversão de odômetro e consumo médio (permanecem Float/Double)"],
   "verification": [
@@ -492,7 +495,7 @@ A Onda 1 teve como meta primordial a blindagem imediata contra riscos críticos 
     "./gradlew assembleReleaseCheck"
   ],
   "required_reviewers": ["arquiteto", "backend", "revisor"],
-  "depends_on": ["T-18A", "T-08"]
+  "depends_on": ["T-18A", "T-08", "T-28B"]
 }
 ```
 
@@ -503,11 +506,11 @@ A Onda 1 teve como meta primordial a blindagem imediata contra riscos críticos 
   "to_agent": "arquiteto",
   "task_type": "diagnostico",
   "risk": "baixo",
-  "title": "Formalizar integridade de schemas Room v13+ e documentar histórico de banco",
-  "context": "Garantir que todo schema futuro seja versionado compulsoriamente e proibir em definitivo fallbackToDestructiveMigration.",
+  "title": "Formalizar integridade de schemas Room (versões 13, 14 e 15) e documentar histórico de banco",
+  "context": "Garantir que todo schema futuro seja versionado compulsoriamente (incluindo as versões 13 da T-08, 14 da T-28B e 15 da T-18B) e proibir em definitivo fallbackToDestructiveMigration.",
   "root_cause_evidence": "app/schemas/com.example.data.GiroCustoDatabase/ (ausência de 1, 4, 5, 6, 7 no Git)",
   "acceptance_criteria": [
-    "Documentação em docs/database-schemas.md explicando a evolução histórica 1->13",
+    "Documentação em docs/database-schemas.md explicando a evolução histórica completa das versões do banco (1->12 legadas, 12->13 na T-08, 13->14 na T-28B e 14->15 na T-18B)",
     "Regra automatizada impedindo build caso schemaVersion != schemas JSON exportados",
     "Garantia absoluta de manutenção de exportSchema = true"
   ],
@@ -520,7 +523,7 @@ A Onda 1 teve como meta primordial a blindagem imediata contra riscos críticos 
     "./gradlew testDebugUnitTest lintDebug"
   ],
   "required_reviewers": ["arquiteto", "revisor"],
-  "depends_on": ["T-08"]
+  "depends_on": ["T-08", "T-28B", "T-18B"]
 }
 ```
 
@@ -832,7 +835,7 @@ As sete novas tarefas identificadas durante a auditoria e os testes da Onda 1 fo
     2. A preferência global de tema visual `is_dark_theme` (que estava indevidamente acoplada no mesmo arquivo de metas, exigindo leitura e regravação manual para não ser perdida).
     3. Mapear o que mais é apagado ou afetado sem querer ao alternar de conta no fluxo `resetAccountSpecificPreferences()` (ex.: `last_sync_timestamp` em `giro_custo_sync_prefs` e quaisquer preferências residuais).
 - **Especificações Obrigatórias do Desenho (`docs/design-metas-por-conta.md`):**
-  - **(a) Onde guardar as metas:** Decidir e justificar se as metas devem ser colunas adicionais na tabela `user_profile` ou uma tabela dedicada `user_goals` (análise de cardinalidade 1:1, performance de sync e concorrência); definir o schema no Room (migration coordenada com a versão 13 da T-08 e futura conversão para centavos em T-18B); definir o schema no Supabase (script SQL com políticas RLS restritas ao dono `auth.uid() = user_id`, status inicial ⛔ BLOQUEADO até execução no painel); e desenhar o fluxo no `SupabaseSyncManager`.
+  - **(a) Onde guardar as metas:** Decidir e justificar se as metas devem ser colunas adicionais na tabela `user_profile` ou uma tabela dedicada `user_goals` (análise de cardinalidade 1:1, performance de sync e concorrência); definir o schema no Room (migration MIGRATION_13_14 e schema 14.json, coordenada com a versão 13 da T-08 e preparando o banco para a futura conversão monetária em T-18B na versão 15); definir o schema no Supabase (script SQL com políticas RLS restritas ao dono `auth.uid() = user_id`, status inicial ⛔ BLOQUEADO até execução no painel); e desenhar o fluxo no `SupabaseSyncManager`.
   - **(b) Regra de conflito e offline:** Definir regra de resolução Last-Write-Wins (LWW) baseada em timestamp `updatedAt` / `updated_at`; garantir que o motorista possa alterar suas metas 100% offline, enfileirando para sincronização posterior com status pendente.
   - **(c) Valores padrão:** Especificar valores padrão de fábrica caso a conta nunca tenha configurado metas (R$ 200 bruto, R$ 130 líquido, 100 km, 15 entregas diárias; proporcionalidade semanal e mensal).
   - **(d) Migração transparente de preferências locais:** Projetar a migração segura das metas atualmente armazenadas em `giro_custo_goals.xml` para a nova entidade no primeiro boot após o update, garantindo que nenhum motorista perca suas metas atuais.
@@ -884,11 +887,13 @@ As sete novas tarefas identificadas durante a auditoria e os testes da Onda 1 fo
   "to_agent": "backend",
   "task_type": "implementacao",
   "risk": "alto",
-  "title": "Implementar persistência de metas no Room e sincronização Supabase com resolução LWW",
+  "title": "Implementar persistência de metas no Room (v14) e sincronização Supabase com resolução LWW",
   "context": "Implementar as entidades, DAOs, sincronização e mappers de metas com base no desenho técnico aprovado na T-28A, eliminando a dependência volátil do SharedPreferences.",
   "root_cause_evidence": "GiroCustoViewModel.kt:407-420, 922-944, 1141-1154",
   "acceptance_criteria": [
     "Implementar modelo de persistência de metas no Room conforme especificação aprovada em T-28A",
+    "Criar migração Room MIGRATION_13_14 e testar compulsoriamente com runMigrationsAndValidate do MigrationTestHelper para assegurar conformidade do schema 14",
+    "Exportação do schema 14.json gerada e versionada em app/schemas/com.example.data.GiroCustoDatabase/14.json",
     "Criar script SQL em supabase/migrations/20261026_user_goals.sql com políticas RLS restritas ao dono (auth.uid() = user_id) e documentar em supabase/README.md (Status do script: ⛔ BLOQUEADO até execução no painel web)",
     "Implementar rotinas de PUSH e PULL no SupabaseSyncManager com resolução de conflitos Last-Write-Wins (LWW) via updatedAt",
     "Migrar automaticamente as metas salvas anteriormente em giro_custo_goals.xml para o novo modelo persistido no primeiro boot, garantindo perda zero",
@@ -905,6 +910,7 @@ As sete novas tarefas identificadas durante a auditoria e os testes da Onda 1 fo
     "app/src/main/java/com/example/network/supabase/SupabaseMappers.kt",
     "app/src/main/java/com/example/network/supabase/SupabaseSyncManager.kt",
     "app/src/main/java/com/example/ui/GiroCustoViewModel.kt",
+    "app/schemas/com.example.data.GiroCustoDatabase/14.json",
     "supabase/migrations/20261026_user_goals.sql",
     "supabase/README.md",
     "app/src/test/java/com/example/UserGoalsSyncTest.kt"
@@ -1059,7 +1065,7 @@ A ordem proposta para a execução da Onda 2 foi estruturada respeitando:
 | **6º** | **T-29** | DevOps/R8 | Alto | DevOps | T-07 | Aperto cirúrgico das regras de keep do ProGuard/R8, teste em `releaseCheck` e roteiro manual de 9 fluxos com comando de logcat. |
 | **7º** | **T-28A** | Diagnóstico | Médio | Arquiteto | T-06c | Diagnóstico, inventário de preferências e desenho técnico para sincronização de metas na nuvem (Opção B) em `docs/design-metas-por-conta.md` (SEM CÓDIGO). **PARADA OBRIGATÓRIA**: aguarda aprovação do usuário. |
 | **8º** | **T-08** | Dados | Alto | Backend | - | Índices Room nas 7 tabelas e Migration v13 com `runMigrationsAndValidate`. |
-| **9º** | **T-28B** | Implementação/Dados | Alto | Backend | T-28A (Aprovado), T-08 | Implementação das metas sincronizadas na nuvem (Room, Supabase SQL, Sync, ViewModel), preservando preferências legadas (Status SQL: ⛔ BLOQUEADO até execução no painel). |
+| **9º** | **T-28B** | Implementação/Dados | Alto | Backend | T-28A (Aprovado), T-08 | Implementação das metas sincronizadas na nuvem (Room v14 com MIGRATION_13_14 e schema 14.json, Supabase SQL, Sync, ViewModel), preservando preferências legadas (Status SQL: ⛔ BLOQUEADO até execução no painel). |
 | **10º** | **T-09** | Performance | Alto | Frontend | - | Chaves estáveis (`key`) em todas as LazyColumns. |
 | **11º** | **T-10** | Segurança/LGPD | Alto | Segurança | T-06c, T-30, T-28B | Exclusão de conta via RPC Supabase com limpeza local, `DataOwnerStorage` e metas (falha no servidor não apaga nada local, confirmação reforçada, oferta de exportação e teste com conta descartável) (Status SQL: ⛔ BLOQUEADO até execução no painel). |
 | **12º** | **T-11** | UX/Privacidade | Médio | Frontend | - | Diálogo explicativo de rationale prévia antes de solicitar permissão de GPS. |
@@ -1080,7 +1086,7 @@ A **Tarefa T-18** permanece estritamente dividida em duas etapas com controle de
 2. **PARADA OBRIGATÓRIA:**
    - O Orquestrador submete o plano monetário ao proprietário do projeto e aguarda sua aprovação expressa.
 3. **T-18B [DAT-01B] (Implementação da Migração Monetária):**
-   - Somente após a aprovação formal do usuário, a migração do Room (v14) e conversão para centavos (`Long`) é implementada.
+   - Somente após a aprovação formal do usuário, a migração do Room (v15 com MIGRATION_14_15 e schema 15.json) e conversão para centavos (`Long`) é implementada.
 
 As demais tarefas da Onda 3 seguem a ordem: **T-19** (schemas Room), **T-20** (decomposição de Profile, FuelRefills, History e ViewModel), **T-21** (strings Dashboard/Launch), **T-22** (remoção de libs de IA), **T-23** (limpeza de colors.xml), **T-24** (telas secundárias) e **T-25** (conclusão de strings).
 
@@ -1093,7 +1099,7 @@ As validações manuais das tarefas da Onda 1 no smartphone físico (T-03, T-06c
 Abaixo estão listadas, de forma transparente e objetiva, as decisões e aprovações que dependem exclusivamente de você antes ou durante a execução da Onda 2:
 
 ### Decisão 1: Aprovação do Desenho Técnico de Metas por Conta (T-28A) Antes da Implementação (T-28B)
-- **Contexto:** A Opção B (sincronizar metas na nuvem) foi escolhida para que as metas acompanhem o motorista ao trocar de aparelho. A tarefa T-28A elaborará o documento técnico completo `docs/design-metas-por-conta.md` (SEM CÓDIGO) contemplando o inventário das preferências, a escolha entre colunas em `user_profile` vs. tabela `user_goals`, migrations Room v13, scripts Supabase com RLS, regras de conflito LWW, valores padrão, migração de dados legados e impacto na T-10 e T-30.
+- **Contexto:** A Opção B (sincronizar metas na nuvem) foi escolhida para que as metas acompanhem o motorista ao trocar de aparelho. A tarefa T-28A elaborará o documento técnico completo `docs/design-metas-por-conta.md` (SEM CÓDIGO) contemplando o inventário das preferências, a escolha entre colunas em `user_profile` vs. tabela `user_goals`, migration Room MIGRATION_13_14 (schema 14.json), scripts Supabase com RLS, regras de conflito LWW, valores padrão, migração de dados legados e impacto na T-10 e T-30.
 - **Ação necessária:** Ler o documento técnico entregue em T-28A e aprovar formalmente no chat para liberar o início da implementação em T-28B (**PARADA OBRIGATÓRIA**).
 
 ---
@@ -1177,3 +1183,12 @@ Esta seção consolida e rastreia formalmente todos os 11 ajustes efetuados no P
     - Transformação da T-28 em:
       - **T-28A [ARQ-06A]:** Diagnóstico, inventário e desenho técnico em `docs/design-metas-por-conta.md` (SEM CÓDIGO), decidindo e justificando os pontos (a) localização no Room/Supabase, (b) regra de conflito LWW e offline, (c) valores padrão, (d) migração de preferências locais legadas sem perdas, (e) isolamento por conta na troca de usuário, (f) impacto na exclusão de conta T-10 e na trava T-30, e (g) plano de testes. PARADA OBRIGATÓRIA para aprovação do desenho.
       - **T-28B [DAT-03]:** Implementação no Room, Supabase e ViewModel, com script SQL com RLS (status ⛔ BLOQUEADO até execução no painel), dependente da conclusão da T-08 e da aprovação prévia do desenho da T-28A.
+
+12. **Resolução de Conflito de Versão do Banco Room no Plano (T-08, T-28B, T-18B, T-19):**
+    - Identificado e corrigido o conflito de versão do banco: a tarefa T-28B (implementação de metas, ordem 9) altera o Room antes da T-18B (migração monetária na Onda 3), não podendo ambas utilizarem a versão 14.
+    - **T-08:** Mantida na versão 13 (`MIGRATION_12_13`, schema `13.json`) para índices nas 7 tabelas.
+    - **T-28B:** Alocada para a versão 14 do Room (`MIGRATION_13_14`, schema `14.json`). Inclusão nos critérios da migração e validação com `runMigrationsAndValidate`, e inclusão de `app/schemas/com.example.data.GiroCustoDatabase/14.json` em `files_expected`.
+    - **T-18B:** Atualizada para a versão 15 do Room (`MIGRATION_14_15`, schema `15.json`), atualizando critérios de aceite, `files_expected` (`15.json`), Seção 4.3 e dependências formais (`depends_on: ["T-18A", "T-08", "T-28B"]`).
+    - **T-19:** Ajustada a documentação de histórico de schemas para abranger explicitamente as versões 13, 14 e 15 (`1->15`), dependendo de T-08, T-28B e T-18B.
+    - **Nota Global de Versionamento:** Inserida nota destacada na Seção 2.1 determinando que o número de cada migração seja conferido contra o número real da versão atual do banco no momento da execução, sendo a ordem sequencial estrita de execução das tarefas de banco: T-08, depois T-28B, depois T-18B.
+
