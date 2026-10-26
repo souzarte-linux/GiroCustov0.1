@@ -230,7 +230,7 @@ Execute rigorosamente os 9 fluxos a seguir no aplicativo instalado no celular:
 
 ### 8. Commit e sincronização
 
-- **Identificação do Commit:** `build(r8): aperto cirurgico das regras ProGuard e validacao em releaseCheck (T-29)`
-- **Status do Commit:** Pendente de execução pelo Agente DevOps após a emissão deste relatório.
-- **Status do Push:** Será sincronizado com `git push origin main`.
+- **Identificação do Commit:** Commit 42dbb17
+- **Status do Commit:** Concluído com sucesso (mensagem: `build(r8): aperto cirurgico das regras ProGuard e validacao em releaseCheck (T-29)`).
+- **Status do Push:** Sincronizado e enviado com sucesso ao repositório remoto (`0d62142..42dbb17  main -> main`).
 - **Status de Homologação:** 🟡 **IMPLEMENTADO, NÃO VERIFICADO NO APARELHO** (código, testes unitários, lint e compilação R8 100% aprovados; aguardando execução dos 9 fluxos no aparelho físico pelo usuário).
