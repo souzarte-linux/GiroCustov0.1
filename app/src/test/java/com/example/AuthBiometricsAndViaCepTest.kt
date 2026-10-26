@@ -145,7 +145,7 @@ class AuthBiometricsAndViaCepTest {
         }
         BiometricHelper.clearBiometrics(context)
         BiometricHelper.setHardwareProvider(null)
-        ViaCepNetworkClient.testApi = null
+        ViaCepNetworkClient.setInstance(null)
 
         // Instancia ViewModel diretamente para isolamento determinístico
         val app = ApplicationProvider.getApplicationContext<Application>()
@@ -155,7 +155,7 @@ class AuthBiometricsAndViaCepTest {
 
     @After
     fun tearDown() {
-        ViaCepNetworkClient.testApi = null
+        ViaCepNetworkClient.setInstance(null)
         GoogleAuthHelper.setAuthHandler(null)
         supabaseClient.testAuthApi = null
         supabaseClient.testRestApi = null
@@ -254,7 +254,7 @@ class AuthBiometricsAndViaCepTest {
     @Test
     fun testViaCep_invalidFormat_lessThan8Digits_noNetworkCall() = runTest(testDispatcher) {
         var networkCalled = false
-        ViaCepNetworkClient.testApi = object : ViaCepApi {
+        ViaCepNetworkClient.setApi(object : ViaCepApi {
             override suspend fun getAddressByCep(cep: String): Response<ViaCepResponse> {
                 networkCalled = true
                 return Response.success(ViaCepResponse(cep = cep))
@@ -264,7 +264,7 @@ class AuthBiometricsAndViaCepTest {
                 networkCalled = true
                 return Response.success(ViaCepResponse(cep = cep))
             }
-        }
+        })
 
         // Teste com 3 dígitos
         viewModel.searchCep("123")
@@ -299,7 +299,7 @@ class AuthBiometricsAndViaCepTest {
             ddd = "11"
         )
 
-        ViaCepNetworkClient.testApi = object : ViaCepApi {
+        ViaCepNetworkClient.setApi(object : ViaCepApi {
             override suspend fun getAddressByCep(cep: String): Response<ViaCepResponse> {
                 assertEquals("01310100", cep)
                 return Response.success(expectedAddress)
@@ -308,7 +308,7 @@ class AuthBiometricsAndViaCepTest {
             override suspend fun getAddress(cep: String): Response<ViaCepResponse> {
                 return Response.success(expectedAddress)
             }
-        }
+        })
 
         viewModel.searchCep("01310-100")
         runCurrent()
@@ -325,7 +325,7 @@ class AuthBiometricsAndViaCepTest {
 
     @Test
     fun testViaCep_nonExistentCep_returnsErrorBoolean() = runTest(testDispatcher) {
-        ViaCepNetworkClient.testApi = object : ViaCepApi {
+        ViaCepNetworkClient.setApi(object : ViaCepApi {
             override suspend fun getAddressByCep(cep: String): Response<ViaCepResponse> {
                 return Response.success(ViaCepResponse(erroRaw = true))
             }
@@ -333,7 +333,7 @@ class AuthBiometricsAndViaCepTest {
             override suspend fun getAddress(cep: String): Response<ViaCepResponse> {
                 return Response.success(ViaCepResponse(erroRaw = true))
             }
-        }
+        })
 
         viewModel.searchCep("99999-999")
         runCurrent()
@@ -345,7 +345,7 @@ class AuthBiometricsAndViaCepTest {
 
     @Test
     fun testViaCep_nonExistentCep_returnsErrorString() = runTest(testDispatcher) {
-        ViaCepNetworkClient.testApi = object : ViaCepApi {
+        ViaCepNetworkClient.setApi(object : ViaCepApi {
             override suspend fun getAddressByCep(cep: String): Response<ViaCepResponse> {
                 return Response.success(ViaCepResponse(erroRaw = "true"))
             }
@@ -353,7 +353,7 @@ class AuthBiometricsAndViaCepTest {
             override suspend fun getAddress(cep: String): Response<ViaCepResponse> {
                 return Response.success(ViaCepResponse(erroRaw = "true"))
             }
-        }
+        })
 
         viewModel.searchCep("99999-999")
         runCurrent()
@@ -365,7 +365,7 @@ class AuthBiometricsAndViaCepTest {
 
     @Test
     fun testViaCep_timeoutException() = runTest(testDispatcher) {
-        ViaCepNetworkClient.testApi = object : ViaCepApi {
+        ViaCepNetworkClient.setApi(object : ViaCepApi {
             override suspend fun getAddressByCep(cep: String): Response<ViaCepResponse> {
                 throw SocketTimeoutException("Conexão expirou")
             }
@@ -373,7 +373,7 @@ class AuthBiometricsAndViaCepTest {
             override suspend fun getAddress(cep: String): Response<ViaCepResponse> {
                 throw SocketTimeoutException("Conexão expirou")
             }
-        }
+        })
 
         viewModel.searchCep("01310-100")
         runCurrent()
@@ -385,7 +385,7 @@ class AuthBiometricsAndViaCepTest {
 
     @Test
     fun testViaCep_ioException_networkFailure() = runTest(testDispatcher) {
-        ViaCepNetworkClient.testApi = object : ViaCepApi {
+        ViaCepNetworkClient.setApi(object : ViaCepApi {
             override suspend fun getAddressByCep(cep: String): Response<ViaCepResponse> {
                 throw IOException("Network unreachable")
             }
@@ -393,7 +393,7 @@ class AuthBiometricsAndViaCepTest {
             override suspend fun getAddress(cep: String): Response<ViaCepResponse> {
                 throw IOException("Network unreachable")
             }
-        }
+        })
 
         viewModel.searchCep("01310-100")
         runCurrent()
@@ -405,7 +405,7 @@ class AuthBiometricsAndViaCepTest {
 
     @Test
     fun testViaCep_httpError500() = runTest(testDispatcher) {
-        ViaCepNetworkClient.testApi = object : ViaCepApi {
+        ViaCepNetworkClient.setApi(object : ViaCepApi {
             override suspend fun getAddressByCep(cep: String): Response<ViaCepResponse> {
                 val errorBody = "Internal Server Error".toResponseBody("text/plain".toMediaTypeOrNull())
                 return Response.error(500, errorBody)
@@ -415,7 +415,7 @@ class AuthBiometricsAndViaCepTest {
                 val errorBody = "Internal Server Error".toResponseBody("text/plain".toMediaTypeOrNull())
                 return Response.error(500, errorBody)
             }
-        }
+        })
 
         viewModel.searchCep("01310-100")
         runCurrent()

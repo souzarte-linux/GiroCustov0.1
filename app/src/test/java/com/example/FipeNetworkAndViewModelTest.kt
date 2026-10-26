@@ -61,7 +61,7 @@ class FipeNetworkAndViewModelTest {
 
         supabaseClient = SupabaseClient.resetForTesting(context)
         supabaseClient.setAuthSession(null)
-        FipeNetworkClient.testApi = null
+        FipeNetworkClient.setInstance(null)
 
         val app = ApplicationProvider.getApplicationContext<Application>()
         viewModel = GiroCustoViewModel(app)
@@ -69,7 +69,7 @@ class FipeNetworkAndViewModelTest {
 
     @After
     fun tearDown() {
-        FipeNetworkClient.testApi = null
+        FipeNetworkClient.setInstance(null)
         supabaseClient.setAuthSession(null)
         db.close()
     }
@@ -188,7 +188,7 @@ class FipeNetworkAndViewModelTest {
             FipeItemDto(nome = "Yamaha", codigoRaw = "60")
         )
 
-        FipeNetworkClient.testApi = object : FipeApi {
+        FipeNetworkClient.setApi(object : FipeApi {
             override suspend fun getMarcas(tipo: String): Response<List<FipeItemDto>> {
                 assertEquals("motos", tipo)
                 return Response.success(fakeMarcas)
@@ -196,7 +196,7 @@ class FipeNetworkAndViewModelTest {
             override suspend fun getModelos(tipo: String, marcaId: String): Response<FipeModelsResponseDto> = throw NotImplementedError()
             override suspend fun getAnos(tipo: String, marcaId: String, modeloId: String): Response<List<FipeItemDto>> = throw NotImplementedError()
             override suspend fun getDetail(tipo: String, marcaId: String, modeloId: String, anoId: String): Response<FipeDetailDto> = throw NotImplementedError()
-        }
+        })
 
         viewModel.loadFipeMarcas("motos")
 
@@ -210,14 +210,14 @@ class FipeNetworkAndViewModelTest {
 
     @Test
     fun testLoadFipeMarcas_timeoutException() = runTest(testDispatcher) {
-        FipeNetworkClient.testApi = object : FipeApi {
+        FipeNetworkClient.setApi(object : FipeApi {
             override suspend fun getMarcas(tipo: String): Response<List<FipeItemDto>> {
                 throw SocketTimeoutException("Timed out")
             }
             override suspend fun getModelos(tipo: String, marcaId: String): Response<FipeModelsResponseDto> = throw NotImplementedError()
             override suspend fun getAnos(tipo: String, marcaId: String, modeloId: String): Response<List<FipeItemDto>> = throw NotImplementedError()
             override suspend fun getDetail(tipo: String, marcaId: String, modeloId: String, anoId: String): Response<FipeDetailDto> = throw NotImplementedError()
-        }
+        })
 
         viewModel.loadFipeMarcas("carros")
 
@@ -229,14 +229,14 @@ class FipeNetworkAndViewModelTest {
 
     @Test
     fun testLoadFipeMarcas_ioException_offline() = runTest(testDispatcher) {
-        FipeNetworkClient.testApi = object : FipeApi {
+        FipeNetworkClient.setApi(object : FipeApi {
             override suspend fun getMarcas(tipo: String): Response<List<FipeItemDto>> {
                 throw IOException("No internet connection")
             }
             override suspend fun getModelos(tipo: String, marcaId: String): Response<FipeModelsResponseDto> = throw NotImplementedError()
             override suspend fun getAnos(tipo: String, marcaId: String, modeloId: String): Response<List<FipeItemDto>> = throw NotImplementedError()
             override suspend fun getDetail(tipo: String, marcaId: String, modeloId: String, anoId: String): Response<FipeDetailDto> = throw NotImplementedError()
-        }
+        })
 
         viewModel.loadFipeMarcas("carros")
 
@@ -247,7 +247,7 @@ class FipeNetworkAndViewModelTest {
 
     @Test
     fun testLoadFipeMarcas_httpError500() = runTest(testDispatcher) {
-        FipeNetworkClient.testApi = object : FipeApi {
+        FipeNetworkClient.setApi(object : FipeApi {
             override suspend fun getMarcas(tipo: String): Response<List<FipeItemDto>> {
                 val errorBody = "Internal Server Error".toResponseBody("text/plain".toMediaTypeOrNull())
                 return Response.error(500, errorBody)
@@ -255,7 +255,7 @@ class FipeNetworkAndViewModelTest {
             override suspend fun getModelos(tipo: String, marcaId: String): Response<FipeModelsResponseDto> = throw NotImplementedError()
             override suspend fun getAnos(tipo: String, marcaId: String, modeloId: String): Response<List<FipeItemDto>> = throw NotImplementedError()
             override suspend fun getDetail(tipo: String, marcaId: String, modeloId: String, anoId: String): Response<FipeDetailDto> = throw NotImplementedError()
-        }
+        })
 
         viewModel.loadFipeMarcas("carros")
 
@@ -276,7 +276,7 @@ class FipeNetworkAndViewModelTest {
             )
         )
 
-        FipeNetworkClient.testApi = object : FipeApi {
+        FipeNetworkClient.setApi(object : FipeApi {
             override suspend fun getMarcas(tipo: String): Response<List<FipeItemDto>> = throw NotImplementedError()
             override suspend fun getModelos(tipo: String, marcaId: String): Response<FipeModelsResponseDto> {
                 assertEquals("motos", tipo)
@@ -285,7 +285,7 @@ class FipeNetworkAndViewModelTest {
             }
             override suspend fun getAnos(tipo: String, marcaId: String, modeloId: String): Response<List<FipeItemDto>> = throw NotImplementedError()
             override suspend fun getDetail(tipo: String, marcaId: String, modeloId: String, anoId: String): Response<FipeDetailDto> = throw NotImplementedError()
-        }
+        })
 
         viewModel.loadFipeModelos("motos", "59")
 
@@ -300,7 +300,7 @@ class FipeNetworkAndViewModelTest {
     @Test
     fun testLoadFipeModelos_blankBrand_doesNotCallNetwork() = runTest(testDispatcher) {
         var networkCalled = false
-        FipeNetworkClient.testApi = object : FipeApi {
+        FipeNetworkClient.setApi(object : FipeApi {
             override suspend fun getMarcas(tipo: String): Response<List<FipeItemDto>> = throw NotImplementedError()
             override suspend fun getModelos(tipo: String, marcaId: String): Response<FipeModelsResponseDto> {
                 networkCalled = true
@@ -308,7 +308,7 @@ class FipeNetworkAndViewModelTest {
             }
             override suspend fun getAnos(tipo: String, marcaId: String, modeloId: String): Response<List<FipeItemDto>> = throw NotImplementedError()
             override suspend fun getDetail(tipo: String, marcaId: String, modeloId: String, anoId: String): Response<FipeDetailDto> = throw NotImplementedError()
-        }
+        })
 
         viewModel.loadFipeModelos("carros", "  ")
         assertFalse(networkCalled)
@@ -322,7 +322,7 @@ class FipeNetworkAndViewModelTest {
             FipeItemDto(nome = "2022 Gasolina", codigoRaw = "2022-1")
         )
 
-        FipeNetworkClient.testApi = object : FipeApi {
+        FipeNetworkClient.setApi(object : FipeApi {
             override suspend fun getMarcas(tipo: String): Response<List<FipeItemDto>> = throw NotImplementedError()
             override suspend fun getModelos(tipo: String, marcaId: String): Response<FipeModelsResponseDto> = throw NotImplementedError()
             override suspend fun getAnos(tipo: String, marcaId: String, modeloId: String): Response<List<FipeItemDto>> {
@@ -332,7 +332,7 @@ class FipeNetworkAndViewModelTest {
                 return Response.success(fakeAnos)
             }
             override suspend fun getDetail(tipo: String, marcaId: String, modeloId: String, anoId: String): Response<FipeDetailDto> = throw NotImplementedError()
-        }
+        })
 
         viewModel.loadFipeAnos("carros", "59", "101")
 
@@ -355,7 +355,7 @@ class FipeNetworkAndViewModelTest {
             codigoFipe = "014091-0"
         )
 
-        FipeNetworkClient.testApi = object : FipeApi {
+        FipeNetworkClient.setApi(object : FipeApi {
             override suspend fun getMarcas(tipo: String): Response<List<FipeItemDto>> = throw NotImplementedError()
             override suspend fun getModelos(tipo: String, marcaId: String): Response<FipeModelsResponseDto> = throw NotImplementedError()
             override suspend fun getAnos(tipo: String, marcaId: String, modeloId: String): Response<List<FipeItemDto>> = throw NotImplementedError()
@@ -366,7 +366,7 @@ class FipeNetworkAndViewModelTest {
                 assertEquals("2021-1", anoId)
                 return Response.success(fakeDetail)
             }
-        }
+        })
 
         viewModel.loadFipeDetail("carros", "59", "101", "2021-1")
 
@@ -382,12 +382,12 @@ class FipeNetworkAndViewModelTest {
     @Test
     fun testClearFipe_resetsAllStates() = runTest(testDispatcher) {
         val fakeMarcas = listOf(FipeItemDto(nome = "Honda", codigoRaw = "59"))
-        FipeNetworkClient.testApi = object : FipeApi {
+        FipeNetworkClient.setApi(object : FipeApi {
             override suspend fun getMarcas(tipo: String): Response<List<FipeItemDto>> = Response.success(fakeMarcas)
             override suspend fun getModelos(tipo: String, marcaId: String): Response<FipeModelsResponseDto> = throw NotImplementedError()
             override suspend fun getAnos(tipo: String, marcaId: String, modeloId: String): Response<List<FipeItemDto>> = throw NotImplementedError()
             override suspend fun getDetail(tipo: String, marcaId: String, modeloId: String, anoId: String): Response<FipeDetailDto> = throw NotImplementedError()
-        }
+        })
 
         viewModel.loadFipeMarcas("motos")
         assertTrue(viewModel.fipeMarcas.value.isNotEmpty())

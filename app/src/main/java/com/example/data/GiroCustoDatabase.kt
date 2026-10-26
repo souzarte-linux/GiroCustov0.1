@@ -1,6 +1,7 @@
 package com.example.data
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -200,8 +201,18 @@ abstract class GiroCustoDatabase : RoomDatabase() {
             }
         }
 
-        fun setTestDatabase(db: GiroCustoDatabase) {
-            INSTANCE = db
+        @VisibleForTesting(otherwise = VisibleForTesting.NONE)
+        fun setTestDatabase(db: GiroCustoDatabase?) {
+            synchronized(this) {
+                INSTANCE = db
+            }
+        }
+
+        @VisibleForTesting(otherwise = VisibleForTesting.NONE)
+        fun resetForTesting() {
+            synchronized(this) {
+                INSTANCE = null
+            }
         }
     }
 }
