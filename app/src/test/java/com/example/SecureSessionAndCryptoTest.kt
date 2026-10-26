@@ -16,6 +16,7 @@ import com.example.ui.GiroCustoViewModel
 import com.example.util.AndroidKeyStoreHelper
 import com.example.util.BiometricHelper
 import com.example.util.BiometricProtectionLevel
+import com.example.util.FakeBiometricHardwareProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -61,9 +62,8 @@ class SecureSessionAndCryptoTest {
         context.getSharedPreferences("giro_custo_supabase_auth", Context.MODE_PRIVATE).edit().clear().commit()
         context.getSharedPreferences("giro_custo_secure_session", Context.MODE_PRIVATE).edit().clear().commit()
         BiometricHelper.clearBiometrics(context)
-        BiometricHelper.testHardwareAvailable = null
-        BiometricHelper.testProtectionLevel = null
-        SupabaseClient.testStorage = null
+        BiometricHelper.setHardwareProvider(null)
+        SupabaseClient.setInstance(null)
     }
 
     @After
@@ -72,9 +72,8 @@ class SecureSessionAndCryptoTest {
         context.getSharedPreferences("giro_custo_supabase_auth", Context.MODE_PRIVATE).edit().clear().commit()
         context.getSharedPreferences("giro_custo_secure_session", Context.MODE_PRIVATE).edit().clear().commit()
         BiometricHelper.clearBiometrics(context)
-        BiometricHelper.testHardwareAvailable = null
-        BiometricHelper.testProtectionLevel = null
-        SupabaseClient.testStorage = null
+        BiometricHelper.setHardwareProvider(null)
+        SupabaseClient.setInstance(null)
     }
 
     // =========================================================================
@@ -197,15 +196,17 @@ class SecureSessionAndCryptoTest {
 
     @Test
     fun testBiometricProtectionLevel_classificationAndNotification() {
-        BiometricHelper.testProtectionLevel = BiometricProtectionLevel.STRONG
+        val provider = FakeBiometricHardwareProvider(protectionLevel = BiometricProtectionLevel.STRONG, isHardwareAvailable = true)
+        BiometricHelper.setHardwareProvider(provider)
         assertEquals(BiometricProtectionLevel.STRONG, BiometricHelper.getProtectionLevel(context))
 
-        BiometricHelper.testProtectionLevel = BiometricProtectionLevel.WEAK
+        provider.protectionLevel = BiometricProtectionLevel.WEAK
         assertEquals(BiometricProtectionLevel.WEAK, BiometricHelper.getProtectionLevel(context))
         // Mesmo em nível fraco, o hardware ainda é considerado disponível para manter o bloqueio
         assertTrue(BiometricHelper.isBiometricHardwareAvailable(context))
 
-        BiometricHelper.testProtectionLevel = BiometricProtectionLevel.NONE
+        provider.protectionLevel = BiometricProtectionLevel.NONE
+        provider.isHardwareAvailable = false
         assertEquals(BiometricProtectionLevel.NONE, BiometricHelper.getProtectionLevel(context))
     }
 
@@ -261,8 +262,8 @@ class SecureSessionAndCryptoTest {
         )
         storage.saveSession(initialSession)
 
-        SupabaseClient.testStorage = storage
-        val client = SupabaseClient.resetForTesting(context)
+        val client = SupabaseClient(context, storage = storage)
+        SupabaseClient.setInstance(client)
 
         var refreshCallCount = 0
         client.testAuthApi = object : SupabaseAuthApi {
@@ -333,8 +334,7 @@ class SecureSessionAndCryptoTest {
         assertNull(storage.getSavedUserEmail())
 
         // 3. Com sessão ausente, restoreSavedSession() falha e direciona ao login
-        SupabaseClient.testStorage = storage
-        val client = SupabaseClient.resetForTesting(context)
+        val client = SupabaseClient(context, storage = storage)
         assertFalse(client.restoreSavedSession())
         assertNull(client.currentAccessToken)
         assertFalse(client.isAuthenticated)

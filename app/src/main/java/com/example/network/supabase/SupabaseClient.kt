@@ -1,5 +1,6 @@
 package com.example.network.supabase
 
+import androidx.annotation.VisibleForTesting
 import android.content.Context
 import android.content.SharedPreferences
 import com.example.BuildConfig
@@ -18,7 +19,7 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-class SupabaseClient private constructor(
+class SupabaseClient(
     context: Context? = null,
     internal var storage: SecureSessionStorage = createDefaultStorage(context)
 ) {
@@ -276,13 +277,9 @@ class SupabaseClient private constructor(
 
     companion object {
         @Volatile
-        var testStorage: SecureSessionStorage? = null
-
-        @Volatile
         private var INSTANCE: SupabaseClient? = null
 
         fun createDefaultStorage(context: Context?): SecureSessionStorage {
-            testStorage?.let { return it }
             val appContext = context?.applicationContext ?: context
             return if (appContext != null) {
                 val sec = EncryptedSharedPreferencesStorage(appContext)
@@ -296,7 +293,7 @@ class SupabaseClient private constructor(
         fun getInstance(context: Context? = null): SupabaseClient {
             val existing = INSTANCE
             if (existing != null) {
-                if (existing.storage is AbsentSessionStorage && context != null && testStorage == null) {
+                if (existing.storage is AbsentSessionStorage && context != null) {
                     val sec = EncryptedSharedPreferencesStorage(context.applicationContext)
                     sec.migrateLegacySessionIfPresent()
                     existing.storage = sec
@@ -312,17 +309,10 @@ class SupabaseClient private constructor(
             }
         }
 
-        fun resetForTesting(context: Context? = null): SupabaseClient {
-            return synchronized(this) {
-                val storage = testStorage ?: run {
-                    try {
-                        val clazz = Class.forName("com.example.network.supabase.InMemorySessionStorage")
-                        clazz.getDeclaredConstructor().newInstance() as SecureSessionStorage
-                    } catch (_: Throwable) {
-                        createDefaultStorage(context?.applicationContext)
-                    }
-                }
-                SupabaseClient(context?.applicationContext, storage = storage).also { INSTANCE = it }
+        @VisibleForTesting(otherwise = VisibleForTesting.NONE)
+        fun setInstance(client: SupabaseClient?) {
+            synchronized(this) {
+                INSTANCE = client
             }
         }
     }

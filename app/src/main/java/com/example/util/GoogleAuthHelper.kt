@@ -1,6 +1,7 @@
 package com.example.util
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -25,16 +26,25 @@ data class GoogleAuthResult(
 )
 
 /**
+ * Manipulador de autenticação Google via Credential Manager.
+ * Permite desacoplamento e injeção controlada de dependência.
+ */
+fun interface GoogleAuthHandler {
+    suspend fun authenticate(context: Context, serverClientId: String): Result<GoogleAuthResult>
+}
+
+/**
  * Helper para fluxo nativo de autenticação com o Google usando Credential Manager e Google ID.
  * Implementa geração de Nonce com hash SHA-256 e tratamento de exceções em Português Brasileiro.
  */
 object GoogleAuthHelper {
 
-    /**
-     * Hook de teste para simulação e mocks em testes unitários sem acionar o CredentialManager real.
-     */
-    @Volatile
-    var testAuthHandler: (suspend (Context) -> Result<GoogleAuthResult>)? = null
+    private var authHandler: GoogleAuthHandler? = null
+
+    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
+    fun setAuthHandler(handler: GoogleAuthHandler?) {
+        this.authHandler = handler
+    }
 
     /**
      * Gera um nonce aleatório seguro.
@@ -58,8 +68,8 @@ object GoogleAuthHelper {
         context: Context,
         serverClientId: String = BuildConfig.GOOGLE_WEB_CLIENT_ID
     ): Result<GoogleAuthResult> {
-        testAuthHandler?.let { handler ->
-            return handler(context)
+        authHandler?.let { handler ->
+            return handler.authenticate(context, serverClientId)
         }
 
         if (serverClientId.isBlank()) {

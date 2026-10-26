@@ -9,6 +9,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.*
 import com.example.network.supabase.AuthSession
+import com.example.network.supabase.InMemorySessionStorage
 import com.example.network.supabase.SupabaseClient
 import com.example.network.viacep.ViaCepApi
 import com.example.network.viacep.ViaCepNetworkClient
@@ -26,6 +27,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import com.example.util.BiometricAvailability
 import com.example.util.BiometricHelper
+import com.example.util.FakeBiometricHardwareProvider
 import com.example.util.GoogleAuthHelper
 import com.example.util.GoogleAuthResult
 import com.example.util.BrazilianCepVisualTransformation
@@ -87,7 +89,8 @@ class AuthBiometricsAndViaCepTest {
         repository = GiroCustoRepository(db)
 
         // Limpa estado anterior de Supabase e Biometria
-        supabaseClient = SupabaseClient.resetForTesting(context)
+        supabaseClient = SupabaseClient(context, InMemorySessionStorage())
+        SupabaseClient.setInstance(supabaseClient)
         supabaseClient.setAuthSession(null)
         supabaseClient.testAuthApi = object : com.example.network.supabase.SupabaseAuthApi {
             override suspend fun signUp(request: com.example.network.supabase.AuthRequest): Response<com.example.network.supabase.AuthResponse> =
@@ -141,7 +144,7 @@ class AuthBiometricsAndViaCepTest {
             override suspend fun deleteMaintenanceRecord(idFilter: String): retrofit2.Response<Unit> = retrofit2.Response.success(Unit)
         }
         BiometricHelper.clearBiometrics(context)
-        BiometricHelper.testHardwareAvailable = null
+        BiometricHelper.setHardwareProvider(null)
         ViaCepNetworkClient.testApi = null
 
         // Instancia ViewModel diretamente para isolamento determinístico
@@ -153,13 +156,13 @@ class AuthBiometricsAndViaCepTest {
     @After
     fun tearDown() {
         ViaCepNetworkClient.testApi = null
-        GoogleAuthHelper.testAuthHandler = null
+        GoogleAuthHelper.setAuthHandler(null)
         supabaseClient.testAuthApi = null
         supabaseClient.testRestApi = null
         supabaseClient.setAuthSession(null)
         BiometricHelper.clearBiometrics(context)
-        BiometricHelper.testHardwareAvailable = null
-        SupabaseClient.resetForTesting(context)
+        BiometricHelper.setHardwareProvider(null)
+        SupabaseClient.setInstance(null)
         viewModelStore.clear()
         Dispatchers.resetMain()
         db.close()
@@ -920,7 +923,7 @@ class AuthBiometricsAndViaCepTest {
         assertTrue(supabaseClient.hasSavedSession())
 
         // 2. Configura biometria com hardware disponível e ativada pelo usuário
-        BiometricHelper.testHardwareAvailable = true
+        BiometricHelper.setHardwareProvider(FakeBiometricHardwareProvider(isHardwareAvailable = true))
         BiometricHelper.setBiometricEnabled(context, true, "motorista01@girocusto.com")
         assertTrue(BiometricHelper.canUnlockWithBiometrics(context))
 
@@ -946,7 +949,7 @@ class AuthBiometricsAndViaCepTest {
             userEmail = "carlos.tc02@girocusto.com"
         )
         supabaseClient.setAuthSession(realSession)
-        BiometricHelper.testHardwareAvailable = true
+        BiometricHelper.setHardwareProvider(FakeBiometricHardwareProvider(isHardwareAvailable = true))
         BiometricHelper.setBiometricEnabled(context, true, "carlos.tc02@girocusto.com")
 
         // Perfil completo no Room
@@ -1005,7 +1008,7 @@ class AuthBiometricsAndViaCepTest {
 
     @Test
     fun testTC_BIO_03_eliminationOfFakeTokens_strictRealPayloadValidation() = runTest(testDispatcher) {
-        BiometricHelper.testHardwareAvailable = true
+        BiometricHelper.setHardwareProvider(FakeBiometricHardwareProvider(isHardwareAvailable = true))
         BiometricHelper.clearBiometrics(context)
         supabaseClient.clearSavedSession()
 
@@ -1079,7 +1082,7 @@ class AuthBiometricsAndViaCepTest {
             userEmail = "stable@girocusto.com"
         )
         supabaseClient.setAuthSession(originalSession)
-        BiometricHelper.testHardwareAvailable = true
+        BiometricHelper.setHardwareProvider(FakeBiometricHardwareProvider(isHardwareAvailable = true))
         BiometricHelper.setBiometricEnabled(context, true, "stable@girocusto.com")
         repository.saveUserProfile(
             UserProfile(id = 1, name = "Stable User", phone = "11988887777", city = "SP", onboardingCompleted = true)
@@ -1118,7 +1121,7 @@ class AuthBiometricsAndViaCepTest {
             userEmail = "destroy@girocusto.com"
         )
         supabaseClient.setAuthSession(session)
-        BiometricHelper.testHardwareAvailable = true
+        BiometricHelper.setHardwareProvider(FakeBiometricHardwareProvider(isHardwareAvailable = true))
         BiometricHelper.setBiometricEnabled(context, true, "destroy@girocusto.com")
         repository.saveUserProfile(
             UserProfile(id = 1, name = "Destructive", phone = "11999991111", city = "SP", onboardingCompleted = true)
@@ -1219,7 +1222,7 @@ class AuthBiometricsAndViaCepTest {
 
     @Test
     fun testTC_AUTH_googleSignIn_success() = runTest(testDispatcher) {
-        GoogleAuthHelper.testAuthHandler = {
+        GoogleAuthHelper.setAuthHandler { _, _ ->
             Result.success(GoogleAuthResult(idToken = "mock-google-id-token", rawNonce = "mock-raw-nonce"))
         }
 
@@ -1250,7 +1253,7 @@ class AuthBiometricsAndViaCepTest {
 
     @Test
     fun testTC_AUTH_googleSignIn_googleHelperFailure() = runTest(testDispatcher) {
-        GoogleAuthHelper.testAuthHandler = {
+        GoogleAuthHelper.setAuthHandler { _, _ ->
             Result.failure(Exception("Nenhuma conta Google encontrada no dispositivo."))
         }
 
@@ -1273,7 +1276,7 @@ class AuthBiometricsAndViaCepTest {
 
     @Test
     fun testTC_AUTH_googleSignIn_googleHelperCancelled() = runTest(testDispatcher) {
-        GoogleAuthHelper.testAuthHandler = {
+        GoogleAuthHelper.setAuthHandler { _, _ ->
             Result.failure(Exception("Login com o Google cancelado."))
         }
 
@@ -1296,7 +1299,7 @@ class AuthBiometricsAndViaCepTest {
 
     @Test
     fun testTC_AUTH_googleSignIn_supabaseFailure() = runTest(testDispatcher) {
-        GoogleAuthHelper.testAuthHandler = {
+        GoogleAuthHelper.setAuthHandler { _, _ ->
             Result.success(GoogleAuthResult(idToken = "invalid-token", rawNonce = "mock-raw-nonce"))
         }
 
@@ -1328,7 +1331,7 @@ class AuthBiometricsAndViaCepTest {
 
     @Test
     fun testTC_AUTH_googleSignIn_defaultCallback() = runTest(testDispatcher) {
-        GoogleAuthHelper.testAuthHandler = {
+        GoogleAuthHelper.setAuthHandler { _, _ ->
             Result.success(GoogleAuthResult(idToken = "mock-google-id-token", rawNonce = "mock-raw-nonce"))
         }
 

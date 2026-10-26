@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.util.Base64
+import androidx.annotation.VisibleForTesting
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
@@ -31,6 +32,48 @@ enum class BiometricProtectionLevel {
     NONE    // Nenhum hardware biométrico
 }
 
+/**
+ * Provedor de status do hardware biométrico do dispositivo.
+ * Permite desacoplamento e injeção de dependência limpa para testes.
+ */
+interface BiometricHardwareProvider {
+    fun getProtectionLevel(context: Context): BiometricProtectionLevel
+    fun isBiometricHardwareAvailable(context: Context): Boolean
+    fun checkAvailability(context: Context): BiometricAvailability
+}
+
+/**
+ * Implementação padrão de produção utilizando a API BiometricManager do Android.
+ */
+class DefaultBiometricHardwareProvider : BiometricHardwareProvider {
+    override fun getProtectionLevel(context: Context): BiometricProtectionLevel {
+        val manager = BiometricManager.from(context)
+        return when {
+            manager.canAuthenticate(BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS -> BiometricProtectionLevel.STRONG
+            manager.canAuthenticate(BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_SUCCESS -> BiometricProtectionLevel.WEAK
+            else -> BiometricProtectionLevel.NONE
+        }
+    }
+
+    override fun isBiometricHardwareAvailable(context: Context): Boolean {
+        val manager = BiometricManager.from(context)
+        val canAuth = manager.canAuthenticate(BIOMETRIC_STRONG or BIOMETRIC_WEAK)
+        return canAuth == BiometricManager.BIOMETRIC_SUCCESS
+    }
+
+    override fun checkAvailability(context: Context): BiometricAvailability {
+        val manager = BiometricManager.from(context)
+        return when (manager.canAuthenticate(BIOMETRIC_STRONG or BIOMETRIC_WEAK)) {
+            BiometricManager.BIOMETRIC_SUCCESS -> BiometricAvailability.AVAILABLE
+            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> BiometricAvailability.NO_HARDWARE
+            BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> BiometricAvailability.HARDWARE_UNAVAILABLE
+            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> BiometricAvailability.NONE_ENROLLED
+            BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED -> BiometricAvailability.SECURITY_UPDATE_REQUIRED
+            else -> BiometricAvailability.UNSUPPORTED
+        }
+    }
+}
+
 object BiometricHelper {
     private const val PREFS_NAME = "giro_custo_biometrics"
     private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
@@ -42,57 +85,47 @@ object BiometricHelper {
     const val ERROR_CRYPTO_FAILED = 992
     const val ERROR_KEY_INVALIDATED = 991
 
-    @Volatile
-    var testHardwareAvailable: Boolean? = null
+    private var hardwareProvider: BiometricHardwareProvider = DefaultBiometricHardwareProvider()
 
-    @Volatile
-    var testProtectionLevel: BiometricProtectionLevel? = null
+    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
+    fun setHardwareProvider(provider: BiometricHardwareProvider?) {
+        hardwareProvider = provider ?: DefaultBiometricHardwareProvider()
+    }
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
-    fun getProtectionLevel(context: Context): BiometricProtectionLevel {
-        testProtectionLevel?.let { return it }
-        testHardwareAvailable?.let { available ->
-            return if (available) BiometricProtectionLevel.STRONG else BiometricProtectionLevel.NONE
-        }
-        val manager = BiometricManager.from(context)
-        return when {
-            manager.canAuthenticate(BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS -> BiometricProtectionLevel.STRONG
-            manager.canAuthenticate(BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_SUCCESS -> BiometricProtectionLevel.WEAK
-            else -> BiometricProtectionLevel.NONE
-        }
+    fun getProtectionLevel(
+        context: Context,
+        provider: BiometricHardwareProvider = hardwareProvider
+    ): BiometricProtectionLevel {
+        return provider.getProtectionLevel(context)
     }
 
-    fun isBiometricHardwareAvailable(context: Context): Boolean {
-        testHardwareAvailable?.let { return it }
-        val manager = BiometricManager.from(context)
-        val canAuth = manager.canAuthenticate(BIOMETRIC_STRONG or BIOMETRIC_WEAK)
-        return canAuth == BiometricManager.BIOMETRIC_SUCCESS
+    fun isBiometricHardwareAvailable(
+        context: Context,
+        provider: BiometricHardwareProvider = hardwareProvider
+    ): Boolean {
+        return provider.isBiometricHardwareAvailable(context)
     }
 
-    fun checkAvailability(context: Context): BiometricAvailability {
-        testHardwareAvailable?.let { available ->
-            return if (available) BiometricAvailability.AVAILABLE else BiometricAvailability.NO_HARDWARE
-        }
-        val manager = BiometricManager.from(context)
-        return when (manager.canAuthenticate(BIOMETRIC_STRONG or BIOMETRIC_WEAK)) {
-            BiometricManager.BIOMETRIC_SUCCESS -> BiometricAvailability.AVAILABLE
-            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> BiometricAvailability.NO_HARDWARE
-            BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> BiometricAvailability.HARDWARE_UNAVAILABLE
-            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> BiometricAvailability.NONE_ENROLLED
-            BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED -> BiometricAvailability.SECURITY_UPDATE_REQUIRED
-            else -> BiometricAvailability.UNSUPPORTED
-        }
+    fun checkAvailability(
+        context: Context,
+        provider: BiometricHardwareProvider = hardwareProvider
+    ): BiometricAvailability {
+        return provider.checkAvailability(context)
     }
 
     fun isBiometricEnabled(context: Context): Boolean {
         return getPrefs(context).getBoolean(KEY_BIOMETRIC_ENABLED, false)
     }
 
-    fun canUnlockWithBiometrics(context: Context): Boolean =
-        isBiometricHardwareAvailable(context) && isBiometricEnabled(context)
+    fun canUnlockWithBiometrics(
+        context: Context,
+        provider: BiometricHardwareProvider = hardwareProvider
+    ): Boolean =
+        isBiometricHardwareAvailable(context, provider) && isBiometricEnabled(context)
 
     fun setBiometricEnabled(context: Context, enabled: Boolean, email: String? = null) {
         getPrefs(context).edit().apply {
