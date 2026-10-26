@@ -27,6 +27,10 @@ A Onda 1 teve como meta primordial a blindagem imediata contra riscos críticos 
 | **T-06c** | SEC-01 (Isolamento) | Alto | ✅ **VERIFICADO** | `e1c0742` | `feat(sync): isolamento estrito de dados entre contas no mesmo dispositivo (T-06c)` | Testado e homologado pelo usuário no aparelho físico; isolamento entre contas, máquina de estados de troca de conta, travas defensivas de sync e persistência no DataOwnerStorage validadas com sucesso no dispositivo. |
 | **T-06d** | Integridade Nuvem | Alto | ✅ **VERIFICADO** | `5da367d` | `Segurança: remove dados pessoais e senha dos documentos` | Removidos dados pessoais, senhas e arquivos de exportação CSV do repositório, blindando a documentação e histórico conforme a Regra 8; base Supabase limpa de registros inconsistentes. (Nota: o commit `bc7453b` foi o que enviou exportações ao repositório e NÃO é o commit da T-06d). |
 | **T-07** | SEC-05 | Alto | ✅ **VERIFICADO** | `129cd7a` | `build(release): ativa R8 em release, cria buildType releaseCheck e define regras ProGuard (T-07)` | Testado e homologado pelo usuário no aparelho físico; APK `releaseCheck` instalado com sucesso por cima da versão existente com R8 e regras ProGuard ativas, fluxos críticos validados sem travamentos. |
+| **T-27** | Limpeza | Baixo | ✅ **VERIFICADO** | `2ea2387` | `Limpeza: remove signInWithPhone e mensagem proibida de homologação (T-27)` | Remoção de código morto e mensagem proibida de homologação no ViewModel. |
+| **T-30** | SEC-09 | Alto | ✅ **VERIFICADO** | `bbde9ee` | `Segurança: torna DataOwnerStorage obrigatório e adiciona trava fail-safe (T-30)` | Testado e homologado; trava fail-safe de dono nulo no SupabaseSyncManager com teste de instalação nova. |
+| **T-26** | UX-03 | Médio | ✅ **VERIFICADO** | `209e83d`<br>`24132cf` | `UX/Rede: traduz erros da API Supabase Auth para mensagens amigáveis em português (T-26)`<br>`UX/Rede: detecta usuario ja existente em signup HTTP 200 com identities vazias (T-26)` | Testado e homologado no celular físico pelo usuário; tradução amigável em pt-BR de erros Supabase Auth com identificador tipado e detecção de identities vazias em HTTP 200 no signup. |
+
 
 
 ---
@@ -721,6 +725,7 @@ As sete novas tarefas identificadas durante a auditoria e os testes da Onda 1 fo
 
 ### Tarefa Nova 3.a [T-26 / UX-03]: Tradução em Português dos Erros de Autenticação do Supabase
 
+- **Status:** ✅ **VERIFICADO** (Homologado no aparelho físico pelo usuário)
 - **Severidade:** 🟡 **Média** (UX e Clareza de Mensagens ao Motorista)
 - **Responsável:** Agente Integrador / Frontend
 - **Revisores:** Agente Revisor Independente e Agente Designer
@@ -1057,9 +1062,9 @@ A ordem proposta para a execução da Onda 2 foi estruturada respeitando:
 
 | Ordem | ID Tarefa | Tipo | Risco | Responsável | Depende de | Impacto Principal |
 | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **1º** | **T-27** | Limpeza | Baixo | Frontend | - | Remove `signInWithPhone` e mensagem proibida de homologação no ViewModel. |
-| **2º** | **T-30** | Segurança | Alto | Segurança | T-06c | Blindagem fail-safe de dono nulo no `SupabaseSyncManager` com teste de instalação nova e testes existentes idênticos. |
-| **3º** | **T-26** | UX/Rede | Médio | Integrações | - | Tradução amigável em pt-BR de erros Supabase Auth com identificador tipado; login genérico e cadastro/não-confirmado específicos. |
+| **1º** | **T-27** | Limpeza | Baixo | Frontend | - | Remove `signInWithPhone` e mensagem proibida de homologação no ViewModel. (Status: ✅ **VERIFICADO**) |
+| **2º** | **T-30** | Segurança | Alto | Segurança | T-06c | Blindagem fail-safe de dono nulo no `SupabaseSyncManager` com teste de instalação nova e testes existentes idênticos. (Status: ✅ **VERIFICADO**) |
+| **3º** | **T-26** | UX/Rede | Médio | Integrações | - | Tradução amigável em pt-BR de erros Supabase Auth com identificador tipado; login genérico e cadastro/não-confirmado específicos. (Status: ✅ **VERIFICADO**) |
 | **4º** | **T-14a** | Arquitetura/Segurança | Alto | Arquiteto | T-06b, T-06c | Remoção de ganchos `test...`, `resetForTesting` e reflexão em Auth e Sessão (`GoogleAuthHelper`, `BiometricHelper`, `SupabaseClient`) com asserções idênticas e roteiro manual de login Google e biometria. |
 | **5º** | **T-14b** | Arquitetura | Alto | Arquiteto | T-14a | Remoção de ganchos de teste em clientes de rede e banco (`FipeNetworkClient`, `ViaCepNetworkClient`, `GiroCustoDatabase`) com asserções idênticas. |
 | **6º** | **T-29** | DevOps/R8 | Alto | DevOps | T-07 | Aperto cirúrgico das regras de keep do ProGuard/R8, teste em `releaseCheck` e roteiro manual de 9 fluxos com comando de logcat. |
