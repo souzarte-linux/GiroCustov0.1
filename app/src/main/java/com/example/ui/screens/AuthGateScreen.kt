@@ -72,6 +72,7 @@ fun AuthGateScreen(
     val scrollState = rememberScrollState()
 
     val authState by viewModel.authUiState.collectAsStateWithLifecycle()
+    val authErrorResId by viewModel.authErrorResId.collectAsStateWithLifecycle()
     val isBiometricAvailableState by viewModel.isBiometricAvailable.collectAsStateWithLifecycle()
     val canAuthenticateBiometric = isBiometricAvailableState || isBiometricSupported
 
@@ -199,7 +200,8 @@ fun AuthGateScreen(
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                val errorMsg = (authState as? AuthUiState.Error)?.message.orEmpty()
+                val errorMsg = authErrorResId?.let { stringResource(it) }
+                    ?: (authState as? AuthUiState.Error)?.message.orEmpty()
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()

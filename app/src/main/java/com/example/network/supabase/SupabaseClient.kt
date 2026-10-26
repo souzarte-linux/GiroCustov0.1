@@ -152,11 +152,14 @@ class SupabaseClient private constructor(
                 }
                 Result.success(session)
             } else {
-                val errorMsg = response.errorBody()?.string() ?: "Erro ao registrar usuário (${response.code()})"
-                Result.failure(Exception(errorMsg))
+                val rawError = response.errorBody()?.string()
+                val errorMsg = rawError ?: "Erro ao registrar usuário (${response.code()})"
+                val resId = AuthErrorMapper.mapHttpError(response.code(), rawError, AuthFlow.SIGN_UP)
+                Result.failure(SupabaseAuthException(messageResId = resId, rawError = errorMsg, httpCode = response.code()))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            val resId = AuthErrorMapper.mapThrowable(e, AuthFlow.SIGN_UP)
+            Result.failure(if (e is SupabaseAuthException) e else SupabaseAuthException(messageResId = resId, rawError = e.message, cause = e))
         }
     }
 
@@ -174,11 +177,14 @@ class SupabaseClient private constructor(
                 setAuthSession(session)
                 Result.success(session)
             } else {
-                val errorMsg = response.errorBody()?.string() ?: "Credenciais inválidas (${response.code()})"
-                Result.failure(Exception(errorMsg))
+                val rawError = response.errorBody()?.string()
+                val errorMsg = rawError ?: "Credenciais inválidas (${response.code()})"
+                val resId = AuthErrorMapper.mapHttpError(response.code(), rawError, AuthFlow.SIGN_IN)
+                Result.failure(SupabaseAuthException(messageResId = resId, rawError = errorMsg, httpCode = response.code()))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            val resId = AuthErrorMapper.mapThrowable(e, AuthFlow.SIGN_IN)
+            Result.failure(if (e is SupabaseAuthException) e else SupabaseAuthException(messageResId = resId, rawError = e.message, cause = e))
         }
     }
 
@@ -203,11 +209,14 @@ class SupabaseClient private constructor(
                 setAuthSession(session)
                 Result.success(session)
             } else {
-                val errorMsg = response.errorBody()?.string() ?: "Erro na autenticação com Google (${response.code()})"
-                Result.failure(Exception(errorMsg))
+                val rawError = response.errorBody()?.string()
+                val errorMsg = rawError ?: "Erro na autenticação com Google (${response.code()})"
+                val resId = AuthErrorMapper.mapHttpError(response.code(), rawError, AuthFlow.GOOGLE_SIGN_IN)
+                Result.failure(SupabaseAuthException(messageResId = resId, rawError = errorMsg, httpCode = response.code()))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            val resId = AuthErrorMapper.mapThrowable(e, AuthFlow.GOOGLE_SIGN_IN)
+            Result.failure(if (e is SupabaseAuthException) e else SupabaseAuthException(messageResId = resId, rawError = e.message, cause = e))
         }
     }
 
@@ -229,11 +238,14 @@ class SupabaseClient private constructor(
                 setAuthSession(newSession)
                 Result.success(newSession)
             } else {
-                val errorMsg = response.errorBody()?.string() ?: "Erro ao renovar token (${response.code()})"
-                Result.failure(Exception(errorMsg))
+                val rawError = response.errorBody()?.string()
+                val errorMsg = rawError ?: "Erro ao renovar token (${response.code()})"
+                val resId = AuthErrorMapper.mapHttpError(response.code(), rawError, AuthFlow.REFRESH_TOKEN)
+                Result.failure(SupabaseAuthException(messageResId = resId, rawError = errorMsg, httpCode = response.code()))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            val resId = AuthErrorMapper.mapThrowable(e, AuthFlow.REFRESH_TOKEN)
+            Result.failure(if (e is SupabaseAuthException) e else SupabaseAuthException(messageResId = resId, rawError = e.message, cause = e))
         }
     }
 

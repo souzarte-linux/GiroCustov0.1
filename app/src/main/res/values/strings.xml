@@ -34,4 +34,13 @@
     <string name="profile_biometric_switch_title">Bloqueio por Biometria</string>
     <string name="profile_biometric_switch_desc">Exigir digital ao abrir o GiroCusto</string>
     <string name="cd_profile_biometric_switch">Ativar ou desativar bloqueio por biometria</string>
+
+    <!-- Mensagens amigáveis de erro de autenticação Supabase (T-26 [UX-03]) -->
+    <string name="auth_error_invalid_credentials">E-mail ou senha incorretos. Verifique seus dados e tente novamente.</string>
+    <string name="auth_error_user_already_exists">Já existe uma conta cadastrada com este e-mail. Faça login.</string>
+    <string name="auth_error_email_not_confirmed">Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou spam.</string>
+    <string name="auth_error_rate_limit">Muitas tentativas em pouco tempo. Aguarde alguns minutos antes de tentar novamente.</string>
+    <string name="auth_error_weak_password">A senha escolhida é muito fraca. Utilize ao menos 6 caracteres com números ou símbolos.</string>
+    <string name="auth_error_network">Sem conexão com a internet. Verifique seu sinal e tente novamente.</string>
+    <string name="auth_error_generic">Não foi possível concluir a autenticação. Tente novamente mais tarde.</string>
 </resources>

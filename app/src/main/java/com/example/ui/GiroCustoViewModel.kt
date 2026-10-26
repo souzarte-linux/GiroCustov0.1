@@ -205,6 +205,9 @@ class GiroCustoViewModel @JvmOverloads constructor(
     private val _authUiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
     val authUiState: StateFlow<AuthUiState> = _authUiState.asStateFlow()
 
+    private val _authErrorResId = MutableStateFlow<Int?>(null)
+    val authErrorResId: StateFlow<Int?> = _authErrorResId.asStateFlow()
+
     private val _viaCepState = MutableStateFlow<ViaCepUiState>(ViaCepUiState.Idle)
     val viaCepState: StateFlow<ViaCepUiState> = _viaCepState.asStateFlow()
 
@@ -464,19 +467,25 @@ class GiroCustoViewModel @JvmOverloads constructor(
         }
         viewModelScope.launch {
             _authUiState.value = AuthUiState.Loading
+            _authErrorResId.value = null
             _syncState.value = SyncState.SYNCING
             _syncErrorMessage.value = null
             val result = supabaseClient.signIn(email.trim(), pass)
             if (result.isSuccess) {
                 _isBiometricLocked.value = false
                 _authUiState.value = AuthUiState.Success()
+                _authErrorResId.value = null
                 _syncState.value = SyncState.IDLE
                 BiometricHelper.setBiometricEnabled(getApplication(), true, email.trim())
                 triggerSync()
                 onResult(true, null)
             } else {
                 _syncState.value = SyncState.ERROR
-                val err = result.exceptionOrNull()?.message ?: "Falha ao autenticar"
+                val exception = result.exceptionOrNull()
+                val resId = (exception as? SupabaseAuthException)?.messageResId
+                    ?: AuthErrorMapper.mapThrowable(exception, AuthFlow.SIGN_IN)
+                _authErrorResId.value = resId
+                val err = exception?.message ?: "Falha ao autenticar"
                 _syncErrorMessage.value = err
                 _authUiState.value = AuthUiState.Error(err)
                 onResult(false, err)
@@ -491,12 +500,14 @@ class GiroCustoViewModel @JvmOverloads constructor(
         }
         viewModelScope.launch {
             _authUiState.value = AuthUiState.Loading
+            _authErrorResId.value = null
             _syncState.value = SyncState.SYNCING
             _syncErrorMessage.value = null
             val result = supabaseClient.signUp(email.trim(), pass)
             if (result.isSuccess) {
                 _isBiometricLocked.value = false
                 _authUiState.value = AuthUiState.Success("Conta criada com sucesso!")
+                _authErrorResId.value = null
                 _syncState.value = SyncState.IDLE
                 BiometricHelper.setBiometricEnabled(getApplication(), true, email.trim())
                 val session = result.getOrNull()
@@ -506,7 +517,11 @@ class GiroCustoViewModel @JvmOverloads constructor(
                 onResult(true, null)
             } else {
                 _syncState.value = SyncState.ERROR
-                val err = result.exceptionOrNull()?.message ?: "Falha ao registrar conta"
+                val exception = result.exceptionOrNull()
+                val resId = (exception as? SupabaseAuthException)?.messageResId
+                    ?: AuthErrorMapper.mapThrowable(exception, AuthFlow.SIGN_UP)
+                _authErrorResId.value = resId
+                val err = exception?.message ?: "Falha ao registrar conta"
                 _syncErrorMessage.value = err
                 _authUiState.value = AuthUiState.Error(err)
                 onResult(false, err)
@@ -517,6 +532,7 @@ class GiroCustoViewModel @JvmOverloads constructor(
     fun signInWithGoogle(context: Context, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
         viewModelScope.launch {
             _authUiState.value = AuthUiState.Loading
+            _authErrorResId.value = null
             _syncState.value = SyncState.SYNCING
             _syncErrorMessage.value = null
 
@@ -525,6 +541,7 @@ class GiroCustoViewModel @JvmOverloads constructor(
                 _syncState.value = SyncState.ERROR
                 val err = authResult.exceptionOrNull()?.message ?: "Falha ao autenticar com o Google"
                 _syncErrorMessage.value = err
+                _authErrorResId.value = null
                 _authUiState.value = AuthUiState.Error(err)
                 onResult(false, err)
                 return@launch
@@ -535,6 +552,7 @@ class GiroCustoViewModel @JvmOverloads constructor(
             if (result.isSuccess) {
                 _isBiometricLocked.value = false
                 _authUiState.value = AuthUiState.Success()
+                _authErrorResId.value = null
                 _syncState.value = SyncState.IDLE
                 val session = result.getOrNull()
                 val email = session?.userEmail?.takeIf { it.isNotBlank() } ?: "google_user"
@@ -543,7 +561,11 @@ class GiroCustoViewModel @JvmOverloads constructor(
                 onResult(true, null)
             } else {
                 _syncState.value = SyncState.ERROR
-                val err = result.exceptionOrNull()?.message ?: "Falha ao autenticar com o Google"
+                val exception = result.exceptionOrNull()
+                val resId = (exception as? SupabaseAuthException)?.messageResId
+                    ?: AuthErrorMapper.mapThrowable(exception, AuthFlow.GOOGLE_SIGN_IN)
+                _authErrorResId.value = resId
+                val err = exception?.message ?: "Falha ao autenticar com o Google"
                 _syncErrorMessage.value = err
                 _authUiState.value = AuthUiState.Error(err)
                 onResult(false, err)
@@ -554,10 +576,12 @@ class GiroCustoViewModel @JvmOverloads constructor(
     fun unlockWithBiometrics(onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
         viewModelScope.launch {
             _authUiState.value = AuthUiState.Loading
+            _authErrorResId.value = null
             val restored = supabaseClient.restoreSavedSession()
             if (restored) {
                 _isBiometricLocked.value = false
                 _authUiState.value = AuthUiState.Success("Autenticado via biometria com sucesso!")
+                _authErrorResId.value = null
                 onResult(true, null)
                 launch {
                     supabaseClient.refreshCurrentSession()
@@ -566,6 +590,7 @@ class GiroCustoViewModel @JvmOverloads constructor(
             } else {
                 _isBiometricLocked.value = false
                 val err = getApplication<Application>().getString(com.example.R.string.auth_session_revalidation_notice)
+                _authErrorResId.value = com.example.R.string.auth_session_revalidation_notice
                 _authUiState.value = AuthUiState.Error(err)
                 onResult(false, err)
             }
@@ -577,12 +602,14 @@ class GiroCustoViewModel @JvmOverloads constructor(
         supabaseClient.clearSavedSession()
         BiometricHelper.clearBiometrics(getApplication())
         val msg = getApplication<Application>().getString(com.example.R.string.auth_session_revalidation_notice)
+        _authErrorResId.value = com.example.R.string.auth_session_revalidation_notice
         _authUiState.value = AuthUiState.Error(msg)
     }
 
     fun dismissBiometricLockForFallback() {
         _isBiometricLocked.value = false
         supabaseClient.clearSavedSession()
+        _authErrorResId.value = null
         _authUiState.value = AuthUiState.Idle
     }
 
@@ -601,6 +628,7 @@ class GiroCustoViewModel @JvmOverloads constructor(
             _isBiometricLocked.value = false
             supabaseClient.signOut()
             BiometricHelper.clearBiometrics(getApplication())
+            _authErrorResId.value = null
             _authUiState.value = AuthUiState.Idle
             _syncState.value = SyncState.IDLE
             _syncErrorMessage.value = null
