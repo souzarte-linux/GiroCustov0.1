@@ -33,6 +33,8 @@ A Onda 1 teve como meta primordial a blindagem imediata contra riscos críticos 
 | **T-14a** | ARQ-01A | Alto | ✅ **VERIFICADO** | `0676ec8` | `Arquitetura/Segurança: desacopla ganchos de teste e reflexão em Auth e Sessão (T-14a)` | Testado e homologado no celular físico pelo usuário; desacoplamento de ganchos de teste em Auth e Sessão (`GoogleAuthHelper`, `BiometricHelper`, `SupabaseClient`), Login com Google via Credential Manager e desbloqueio por biometria 100% verificados no aparelho. |
 | **T-14b** | ARQ-01B | Alto | ✅ **VERIFICADO** | `0d62142` | `Arquitetura: desacopla ganchos de teste e provê injeção em clientes de rede e banco (T-14b)` | Testado e homologado no celular físico pelo usuário; remoção de ganchos de teste em clientes de rede e banco (`FipeNetworkClient`, `ViaCepNetworkClient`, `GiroCustoDatabase`), consulta de CEP e busca no catálogo FIPE 100% verificadas no aparelho. |
 | **T-29** | SEC-05B | Alto | ✅ **VERIFICADO** | `42dbb17`<br>`cc36d56` | `build(r8): aperto cirurgico das regras ProGuard e validacao em releaseCheck (T-29)` | Testado e homologado no celular físico pelo usuário; keeps genéricos amplos removidos de `proguard-rules.pro`, regras cirúrgicas mínimas implementadas, ofuscação R8 comprovada em `mapping.txt`, APK `releaseCheck` instalado por cima da versão anterior e 9 fluxos essenciais validados com 100% de sucesso sem erros de reflexão no logcat. |
+| **T-28A** | ARQ-06A | Médio | ✅ **VERIFICADO** | `1172c41`<br>`c125047` | `docs(metas): diagnóstico, inventário e desenho técnico de metas por conta na nuvem (T-28A)` | Diagnóstico aprofundado no código real, inventário completo de SharedPreferences e desenho técnico completo formalizados em `docs/design-metas-por-conta.md`; aprovado formalmente pelo usuário em 26/10/2026. |
+| **T-08** | PERF-01 | Alto | ✅ **VERIFICADO** | `<commit-hash>` | `perf(room): índices nas 7 entidades Room e migração v13 com MigrationTestHelper (T-08)` | 20 índices criados nas 7 entidades do Room baseados em consultas reais dos DAOs, migração MIGRATION_12_13, schema v13 exportado (`13.json`) e 100% validado com MigrationTestHelper e mutação manual; 228 testes unitários passando. |
 
 
 
@@ -831,6 +833,7 @@ As sete novas tarefas identificadas durante a auditoria e os testes da Onda 1 fo
 
 ### Tarefa Nova 3.d.1 [T-28A / ARQ-06A]: Diagnóstico, Inventário de Preferências e Desenho de Metas na Nuvem (Opção B)
 
+- **Status:** ✅ **VERIFICADO** (Desenho técnico em `docs/design-metas-por-conta.md` formalmente aprovado pelo usuário em 26/10/2026)
 - **Severidade:** 🟡 **Média** (Integridade de Dados e Desenho Arquitetural)
 - **Responsável:** Agente Arquiteto / Backend
 - **Revisores:** Agente Revisor Independente e Agente Designer
@@ -1071,8 +1074,8 @@ A ordem proposta para a execução da Onda 2 foi estruturada respeitando:
 | **4º** | **T-14a** | Arquitetura/Segurança | Alto | Arquiteto | T-06b, T-06c | Remoção de ganchos `test...`, `resetForTesting` e reflexão em Auth e Sessão (`GoogleAuthHelper`, `BiometricHelper`, `SupabaseClient`) com asserções idênticas e roteiro manual de login Google e biometria. (Status: ✅ **VERIFICADO**) |
 | **5º** | **T-14b** | Arquitetura | Alto | Arquiteto | T-14a | Remoção de ganchos de teste em clientes de rede e banco (`FipeNetworkClient`, `ViaCepNetworkClient`, `GiroCustoDatabase`) com asserções idênticas. (Status: ✅ **VERIFICADO**) |
 | **6º** | **T-29** | DevOps/R8 | Alto | DevOps | T-07 | Aperto cirúrgico das regras de keep do ProGuard/R8, teste em `releaseCheck` e roteiro manual de 9 fluxos com comando de logcat. (Status: ✅ **VERIFICADO**) |
-| **7º** | **T-28A** | Diagnóstico | Médio | Arquiteto | T-06c | Diagnóstico, inventário de preferências e desenho técnico para sincronização de metas na nuvem (Opção B) em `docs/design-metas-por-conta.md` (SEM CÓDIGO). **PARADA OBRIGATÓRIA**: aguarda aprovação do usuário. |
-| **8º** | **T-08** | Dados | Alto | Backend | - | Índices Room nas 7 tabelas e Migration v13 com `runMigrationsAndValidate`. |
+| **7º** | **T-28A** | Diagnóstico | Médio | Arquiteto | T-06c | Diagnóstico, inventário de preferências e desenho técnico para sincronização de metas na nuvem (Opção B) em `docs/design-metas-por-conta.md`. (Status: ✅ **VERIFICADO** — Aprovado formalmente pelo usuário em 26/10/2026) |
+| **8º** | **T-08** | Dados | Alto | Backend | - | Índices Room nas 7 tabelas e Migration v13 com `runMigrationsAndValidate`. (Status: ✅ **VERIFICADO**) |
 | **9º** | **T-28B** | Implementação/Dados | Alto | Backend | T-28A (Aprovado), T-08 | Implementação das metas sincronizadas na nuvem (Room v14 com MIGRATION_13_14 e schema 14.json, Supabase SQL, Sync, ViewModel), preservando preferências legadas (Status SQL: ⛔ BLOQUEADO até execução no painel). |
 | **10º** | **T-09** | Performance | Alto | Frontend | - | Chaves estáveis (`key`) em todas as LazyColumns. |
 | **11º** | **T-10** | Segurança/LGPD | Alto | Segurança | T-06c, T-30, T-28B | Exclusão de conta via RPC Supabase com limpeza local, `DataOwnerStorage` e metas (falha no servidor não apaga nada local, confirmação reforçada, oferta de exportação e teste com conta descartável) (Status SQL: ⛔ BLOQUEADO até execução no painel). |
@@ -1106,9 +1109,10 @@ As validações manuais das tarefas da Onda 1 no smartphone físico (T-03, T-06c
 
 Abaixo estão listadas, de forma transparente e objetiva, as decisões e aprovações que dependem exclusivamente de você antes ou durante a execução da Onda 2:
 
-### Decisão 1: Aprovação do Desenho Técnico de Metas por Conta (T-28A) Antes da Implementação (T-28B)
-- **Contexto:** A Opção B (sincronizar metas na nuvem) foi escolhida para que as metas acompanhem o motorista ao trocar de aparelho. A tarefa T-28A elaborará o documento técnico completo `docs/design-metas-por-conta.md` (SEM CÓDIGO) contemplando o inventário das preferências, a escolha entre colunas em `user_profile` vs. tabela `user_goals`, migration Room MIGRATION_13_14 (schema 14.json), scripts Supabase com RLS, regras de conflito LWW, valores padrão, migração de dados legados e impacto na T-10 e T-30.
-- **Ação necessária:** Ler o documento técnico entregue em T-28A e aprovar formalmente no chat para liberar o início da implementação em T-28B (**PARADA OBRIGATÓRIA**).
+### Decisão 1: Aprovação do Desenho Técnico de Metas por Conta (T-28A) Antes da Implementação (T-28B) — [RESOLVIDA]
+- **Status:** ✅ **APROVADO FORMALMENTE PELO PROPRIETÁRIO DO PROJETO EM 26/10/2026**
+- **Contexto:** A Opção B (sincronizar metas na nuvem) foi escolhida para que as metas acompanhem o motorista ao trocar de aparelho. A tarefa T-28A elaborou o documento técnico completo `docs/design-metas-por-conta.md` (SEM CÓDIGO) contemplando o inventário das preferências, a escolha entre colunas em `user_profile` vs. tabela `user_goals`, migration Room MIGRATION_13_14 (schema 14.json), scripts Supabase com RLS, regras de conflito LWW, valores padrão, migração de dados legados e impacto na T-10 e T-30.
+- **Resultado:** Desenho técnico aprovado formalmente no chat. A Tarefa T-28B está autorizada para execução respeitando a ordem sequencial de versionamento do Room (após a conclusão da T-08).
 
 ---
 

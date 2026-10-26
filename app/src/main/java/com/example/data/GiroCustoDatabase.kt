@@ -10,7 +10,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Vehicle::class, VehiclePart::class, DailyRecord::class, UserProfile::class, Platform::class, FuelRefill::class, MaintenanceRecord::class],
-    version = 12,
+    version = 13,
     exportSchema = true
 )
 abstract class GiroCustoDatabase : RoomDatabase() {
@@ -187,6 +187,44 @@ abstract class GiroCustoDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // vehicle
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicle_active_isDeleted` ON `vehicle` (`active`, `isDeleted`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicle_remoteId` ON `vehicle` (`remoteId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicle_syncStatus` ON `vehicle` (`syncStatus`)")
+
+                // vehicle_parts
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicle_parts_vehicleId` ON `vehicle_parts` (`vehicleId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicle_parts_remoteId` ON `vehicle_parts` (`remoteId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicle_parts_syncStatus` ON `vehicle_parts` (`syncStatus`)")
+
+                // daily_records
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_daily_records_isDeleted_dateTimestamp` ON `daily_records` (`isDeleted`, `dateTimestamp`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_daily_records_remoteId` ON `daily_records` (`remoteId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_daily_records_syncStatus` ON `daily_records` (`syncStatus`)")
+
+                // user_profile
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_profile_remoteId` ON `user_profile` (`remoteId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_profile_syncStatus` ON `user_profile` (`syncStatus`)")
+
+                // platforms
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_platforms_remoteId` ON `platforms` (`remoteId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_platforms_syncStatus` ON `platforms` (`syncStatus`)")
+
+                // fuel_refills
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fuel_refills_vehicleId_dateTimestamp` ON `fuel_refills` (`vehicleId`, `dateTimestamp`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fuel_refills_vehicleId_odometer` ON `fuel_refills` (`vehicleId`, `odometer`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fuel_refills_remoteId` ON `fuel_refills` (`remoteId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fuel_refills_syncStatus` ON `fuel_refills` (`syncStatus`)")
+
+                // maintenance_records
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_maintenance_records_vehicleId_dateTimestamp` ON `maintenance_records` (`vehicleId`, `dateTimestamp`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_maintenance_records_remoteId` ON `maintenance_records` (`remoteId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_maintenance_records_syncStatus` ON `maintenance_records` (`syncStatus`)")
+            }
+        }
+
         fun getDatabase(context: Context): GiroCustoDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -194,7 +232,7 @@ abstract class GiroCustoDatabase : RoomDatabase() {
                     GiroCustoDatabase::class.java,
                     "giro_custo_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
                 .build()
                 INSTANCE = instance
                 instance

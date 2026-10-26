@@ -3,10 +3,12 @@ package com.example
 import android.content.ContentValues
 import android.content.Context
 import androidx.room.Room
+import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.platform.app.InstrumentationRegistry
 import com.example.data.*
 import com.example.network.supabase.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -14,6 +16,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -27,6 +30,13 @@ import java.io.IOException
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class SupabaseSyncAndMigrationTest {
+
+    @get:Rule
+    val migrationTestHelper: MigrationTestHelper = MigrationTestHelper(
+        InstrumentationRegistry.getInstrumentation(),
+        GiroCustoDatabase::class.java.canonicalName,
+        FrameworkSQLiteOpenHelperFactory()
+    )
 
     private lateinit var context: Context
     private lateinit var inMemoryDb: GiroCustoDatabase
@@ -380,9 +390,9 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // Abre agora com Room versão 12 executando MIGRATION_9_10, MIGRATION_10_11 e MIGRATION_11_12
+        // Abre agora com Room versão 13 executando MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12 e MIGRATION_12_13
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_9_10, GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12)
+            .addMigrations(GiroCustoDatabase.MIGRATION_9_10, GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13)
             .allowMainThreadQueries()
             .build()
 
@@ -599,9 +609,9 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // Abre agora com Room versão 12 executando MIGRATION_10_11 e MIGRATION_11_12
+        // Abre agora com Room versão 13 executando MIGRATION_10_11, MIGRATION_11_12 e MIGRATION_12_13
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12)
+            .addMigrations(GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13)
             .allowMainThreadQueries()
             .build()
 
@@ -855,9 +865,9 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // Abre agora com Room versão 12 executando MIGRATION_11_12
+        // Abre agora com Room versão 13 executando MIGRATION_11_12 e MIGRATION_12_13
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_11_12)
+            .addMigrations(GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13)
             .allowMainThreadQueries()
             .build()
 
@@ -884,6 +894,467 @@ class SupabaseSyncAndMigrationTest {
         val partsForUno = partDao.getPartsForVehicle(20L)
         assertEquals(1, partsForUno.size)
         assertEquals("Pneu de Carro", partsForUno[0].name)
+
+        roomDb.close()
+    }
+
+    // =========================================================================
+    // 1.D TESTES DA MIGRATION_12_13 (ÍNDICES ROOM E SCHEMA V13 COM MIGRATION_TEST_HELPER)
+    // =========================================================================
+
+    @Test
+    fun testMigration12To13_createsAllIndexesAndPreservesDataWithMigrationTestHelper() = runTest {
+        val dbName = "migration_12_13_test_${System.currentTimeMillis()}.db"
+
+        // 1. Cria o banco de dados na versão 12 a partir do schema 12.json
+        val dbV12 = migrationTestHelper.createDatabase(dbName, 12)
+
+        // 2. Insere dados em todas as 7 entidades Room na versão 12
+        // Tabela vehicle
+        val cvVehicle = ContentValues().apply {
+            put("id", 101L)
+            put("model", "Yamaha Crosser 150")
+            put("averageConsumption", 38.5)
+            put("fuelType", "Gasolina")
+            put("monthlyFixedCosts", 150.0)
+            put("plannedWorkDays", 22)
+            put("currentOdometer", 18500.0)
+            put("active", 1)
+            put("vehicleType", "MOTO")
+            put("brand", "Yamaha")
+            put("manufacturingYear", "2024")
+            put("tankCapacity", 12.0)
+            put("hasTopBox", 1)
+            put("hasDeliveryBag", 0)
+            put("carBodyType", "")
+            put("remoteId", "veh-v12-uuid-101")
+            put("syncStatus", "SYNCED")
+            put("updatedAt", 1761000000000L)
+            put("isDeleted", 0)
+        }
+        dbV12.insert("vehicle", 0, cvVehicle)
+
+        // Tabela vehicle_parts
+        val cvPart = ContentValues().apply {
+            put("id", 201L)
+            put("vehicleId", 101L)
+            put("name", "Vela de Ignição")
+            put("price", 35.0)
+            put("lifespanKm", 10000.0)
+            put("runKmSinceChange", 2500.0)
+            put("remoteId", "part-v12-uuid-201")
+            put("syncStatus", "SYNCED")
+            put("updatedAt", 1761000000000L)
+            put("isDeleted", 0)
+        }
+        dbV12.insert("vehicle_parts", 0, cvPart)
+
+        // Tabela daily_records
+        val cvRecord = ContentValues().apply {
+            put("id", 301L)
+            put("dateString", "2026-10-26")
+            put("dateTimestamp", 1761500000000L)
+            put("platform", "iFood")
+            put("grossEarnings", 220.0)
+            put("deliveriesCount", 16)
+            put("startOdometer", 18500.0)
+            put("endOdometer", 18600.0)
+            put("fuelPrice", 5.89)
+            put("foodExpense", 25.0)
+            put("fuelCost", 15.3)
+            put("wearCost", 8.2)
+            put("proportionalFixedCost", 6.8)
+            put("netProfit", 164.7)
+            put("startTime", "08:00")
+            put("endTime", "18:00")
+            put("pauseDuration", "01:00")
+            put("remoteId", "record-v12-uuid-301")
+            put("syncStatus", "PENDING_INSERT")
+            put("updatedAt", 1761500000000L)
+            put("isDeleted", 0)
+        }
+        dbV12.insert("daily_records", 0, cvRecord)
+
+        // Tabela user_profile
+        val cvProfile = ContentValues().apply {
+            put("id", 1)
+            put("name", "Motorista de Teste")
+            put("phone", "11988887777")
+            put("city", "São Paulo")
+            put("email", "teste@girocusto.com")
+            put("isWhatsapp", 1)
+            put("cep", "01001-000")
+            put("street", "Praça da Sé")
+            put("addressNumber", "100")
+            put("neighborhood", "Sé")
+            put("stateUf", "SP")
+            put("onboardingCompleted", 1)
+            put("remoteId", "profile-v12-uuid-1")
+            put("syncStatus", "SYNCED")
+            put("updatedAt", 1761000000000L)
+            put("isDeleted", 0)
+        }
+        dbV12.insert("user_profile", 0, cvProfile)
+
+        // Tabela platforms
+        val cvPlatform = ContentValues().apply {
+            put("id", 401L)
+            put("name", "iFood")
+            put("segment", "delivery")
+            put("paymentModel", "producao")
+            put("cycle", "semanal")
+            put("paymentDay", "QUA")
+            put("fixedPayDelay", 7)
+            put("cycleEntriesJson", "1:7,16:7")
+            put("bankName", "Nubank")
+            put("bankAgency", "0001")
+            put("bankAccount", "123456-7")
+            put("pixKeyType", "CPF")
+            put("pixKey", "12345678900")
+            put("active", 1)
+            put("remoteId", "plat-v12-uuid-401")
+            put("syncStatus", "SYNCED")
+            put("updatedAt", 1761000000000L)
+            put("isDeleted", 0)
+        }
+        dbV12.insert("platforms", 0, cvPlatform)
+
+        // Tabela fuel_refills
+        val cvRefill = ContentValues().apply {
+            put("id", 501L)
+            put("vehicleId", 101L)
+            put("dateTimestamp", 1761400000000L)
+            put("dateString", "2026-10-25")
+            put("gasStation", "Posto Shell Central")
+            put("fuelType", "Gasolina")
+            put("pricePerLiter", 5.89)
+            put("liters", 10.0)
+            put("discount", 0.0)
+            put("totalPaid", 58.90)
+            put("odometer", 18500.0)
+            put("isFullTank", 1)
+            put("paymentMethod", "PIX")
+            put("isInstallment", 0)
+            put("installmentsCount", 1)
+            put("remoteId", "refill-v12-uuid-501")
+            put("syncStatus", "SYNCED")
+            put("updatedAt", 1761400000000L)
+            put("isDeleted", 0)
+        }
+        dbV12.insert("fuel_refills", 0, cvRefill)
+
+        // Tabela maintenance_records
+        val cvMaintenance = ContentValues().apply {
+            put("id", 601L)
+            put("vehicleId", 101L)
+            put("dateTimestamp", 1761300000000L)
+            put("dateString", "2026-10-24")
+            put("description", "Troca de óleo e filtro")
+            put("location", "Oficina do Zé")
+            put("value", 85.0)
+            put("odometer", 18450.0)
+            put("remoteId", "maint-v12-uuid-601")
+            put("syncStatus", "SYNCED")
+            put("updatedAt", 1761300000000L)
+            put("isDeleted", 0)
+        }
+        dbV12.insert("maintenance_records", 0, cvMaintenance)
+
+        dbV12.close()
+
+        // 3. Executa a migração para a versão 13 e valida rigorosamente contra 13.json
+        val dbV13 = migrationTestHelper.runMigrationsAndValidate(
+            dbName,
+            13,
+            true,
+            GiroCustoDatabase.MIGRATION_12_13
+        )
+
+        // 4. Validação da integridade total dos dados preexistentes após a migração
+        // vehicle
+        val cursorVehicle = dbV13.query("SELECT model, remoteId, active, isDeleted FROM vehicle WHERE id = 101")
+        assertTrue("Vehicle deve existir após migração", cursorVehicle.moveToFirst())
+        assertEquals("Yamaha Crosser 150", cursorVehicle.getString(0))
+        assertEquals("veh-v12-uuid-101", cursorVehicle.getString(1))
+        assertEquals(1, cursorVehicle.getInt(2))
+        assertEquals(0, cursorVehicle.getInt(3))
+        cursorVehicle.close()
+
+        // vehicle_parts
+        val cursorPart = dbV13.query("SELECT name, vehicleId, price FROM vehicle_parts WHERE id = 201")
+        assertTrue("VehiclePart deve existir após migração", cursorPart.moveToFirst())
+        assertEquals("Vela de Ignição", cursorPart.getString(0))
+        assertEquals(101L, cursorPart.getLong(1))
+        assertEquals(35.0, cursorPart.getDouble(2), 0.001)
+        cursorPart.close()
+
+        // daily_records
+        val cursorRecord = dbV13.query("SELECT grossEarnings, remoteId, syncStatus FROM daily_records WHERE id = 301")
+        assertTrue("DailyRecord deve existir após migração", cursorRecord.moveToFirst())
+        assertEquals(220.0, cursorRecord.getDouble(0), 0.001)
+        assertEquals("record-v12-uuid-301", cursorRecord.getString(1))
+        assertEquals("PENDING_INSERT", cursorRecord.getString(2))
+        cursorRecord.close()
+
+        // user_profile
+        val cursorProfile = dbV13.query("SELECT name, city, remoteId FROM user_profile WHERE id = 1")
+        assertTrue("UserProfile deve existir após migração", cursorProfile.moveToFirst())
+        assertEquals("Motorista de Teste", cursorProfile.getString(0))
+        assertEquals("São Paulo", cursorProfile.getString(1))
+        assertEquals("profile-v12-uuid-1", cursorProfile.getString(2))
+        cursorProfile.close()
+
+        // platforms
+        val cursorPlatform = dbV13.query("SELECT name, remoteId FROM platforms WHERE id = 401")
+        assertTrue("Platform deve existir após migração", cursorPlatform.moveToFirst())
+        assertEquals("iFood", cursorPlatform.getString(0))
+        assertEquals("plat-v12-uuid-401", cursorPlatform.getString(1))
+        cursorPlatform.close()
+
+        // fuel_refills
+        val cursorRefill = dbV13.query("SELECT gasStation, totalPaid, odometer FROM fuel_refills WHERE id = 501")
+        assertTrue("FuelRefill deve existir após migração", cursorRefill.moveToFirst())
+        assertEquals("Posto Shell Central", cursorRefill.getString(0))
+        assertEquals(58.90, cursorRefill.getDouble(1), 0.001)
+        assertEquals(18500.0, cursorRefill.getDouble(2), 0.001)
+        cursorRefill.close()
+
+        // maintenance_records
+        val cursorMaintenance = dbV13.query("SELECT description, value, odometer FROM maintenance_records WHERE id = 601")
+        assertTrue("MaintenanceRecord deve existir após migração", cursorMaintenance.moveToFirst())
+        assertEquals("Troca de óleo e filtro", cursorMaintenance.getString(0))
+        assertEquals(85.0, cursorMaintenance.getDouble(1), 0.001)
+        assertEquals(18450.0, cursorMaintenance.getDouble(2), 0.001)
+        cursorMaintenance.close()
+
+        // 5. Validação explícita de todos os 20 índices criados no SQLite
+        val cursorIndexes = dbV13.query("SELECT name, tbl_name FROM sqlite_master WHERE type = 'index'")
+        val existingIndexes = mutableMapOf<String, String>()
+        while (cursorIndexes.moveToNext()) {
+            val idxName = cursorIndexes.getString(0)
+            val tblName = cursorIndexes.getString(1)
+            existingIndexes[idxName] = tblName
+        }
+        cursorIndexes.close()
+
+        val expectedIndexes = listOf(
+            "index_vehicle_active_isDeleted" to "vehicle",
+            "index_vehicle_remoteId" to "vehicle",
+            "index_vehicle_syncStatus" to "vehicle",
+            "index_vehicle_parts_vehicleId" to "vehicle_parts",
+            "index_vehicle_parts_remoteId" to "vehicle_parts",
+            "index_vehicle_parts_syncStatus" to "vehicle_parts",
+            "index_daily_records_isDeleted_dateTimestamp" to "daily_records",
+            "index_daily_records_remoteId" to "daily_records",
+            "index_daily_records_syncStatus" to "daily_records",
+            "index_user_profile_remoteId" to "user_profile",
+            "index_user_profile_syncStatus" to "user_profile",
+            "index_platforms_remoteId" to "platforms",
+            "index_platforms_syncStatus" to "platforms",
+            "index_fuel_refills_vehicleId_dateTimestamp" to "fuel_refills",
+            "index_fuel_refills_vehicleId_odometer" to "fuel_refills",
+            "index_fuel_refills_remoteId" to "fuel_refills",
+            "index_fuel_refills_syncStatus" to "fuel_refills",
+            "index_maintenance_records_vehicleId_dateTimestamp" to "maintenance_records",
+            "index_maintenance_records_remoteId" to "maintenance_records",
+            "index_maintenance_records_syncStatus" to "maintenance_records"
+        )
+
+        for ((idxName, tblName) in expectedIndexes) {
+            assertTrue("Índice $idxName deve existir na tabela $tblName", existingIndexes.containsKey(idxName))
+            assertEquals("Índice $idxName deve pertencer à tabela $tblName", tblName, existingIndexes[idxName])
+        }
+
+        dbV13.close()
+
+        // 6. Confirmação de abertura e consultas do Room em versão 13 com DAOs
+        val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
+            .addMigrations(GiroCustoDatabase.MIGRATION_12_13)
+            .allowMainThreadQueries()
+            .build()
+
+        val activeVeh = roomDb.vehicleDao().getActiveVehicle()
+        assertNotNull(activeVeh)
+        assertEquals("Yamaha Crosser 150", activeVeh?.model)
+
+        val parts = roomDb.vehiclePartDao().getPartsForVehicle(101L)
+        assertEquals(1, parts.size)
+        assertEquals("Vela de Ignição", parts[0].name)
+
+        val records = roomDb.dailyRecordDao().getAllRecords()
+        assertEquals(1, records.size)
+        assertEquals("iFood", records[0].platform)
+
+        roomDb.close()
+    }
+
+    @Test
+    fun testMigration12To13_emptyDatabase_validatesSchemaAndCreatesIndexes() {
+        val dbName = "migration_12_13_empty_${System.currentTimeMillis()}.db"
+
+        // Cria base vazia na versão 12
+        val dbV12 = migrationTestHelper.createDatabase(dbName, 12)
+        dbV12.close()
+
+        // Migra para v13 e valida conformidade estrita contra 13.json
+        val dbV13 = migrationTestHelper.runMigrationsAndValidate(
+            dbName,
+            13,
+            true,
+            GiroCustoDatabase.MIGRATION_12_13
+        )
+
+        val cursor = dbV13.query("SELECT count(*) FROM sqlite_master WHERE type = 'index'")
+        assertTrue(cursor.moveToFirst())
+        val indexCount = cursor.getInt(0)
+        cursor.close()
+        // Deve conter ao menos os 20 índices criados
+        assertTrue("Deve conter pelo menos 20 índices (encontrados $indexCount)", indexCount >= 20)
+
+        dbV13.close()
+    }
+
+    @Test
+    fun testMigrationChain_fromV9ToV13_executesFullMigrationChain() = runTest {
+        val dbName = "migration_chain_9_to_13_${System.currentTimeMillis()}.db"
+        context.deleteDatabase(dbName)
+
+        // 1. Cria na versão 9 manualmente
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(dbName)
+                .callback(object : SupportSQLiteOpenHelper.Callback(9) {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `vehicle` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`model` TEXT NOT NULL, " +
+                                "`averageConsumption` REAL NOT NULL, " +
+                                "`fuelType` TEXT NOT NULL, " +
+                                "`monthlyFixedCosts` REAL NOT NULL, " +
+                                "`plannedWorkDays` INTEGER NOT NULL, " +
+                                "`currentOdometer` REAL NOT NULL, " +
+                                "`active` INTEGER NOT NULL)"
+                        )
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `vehicle_parts` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`name` TEXT NOT NULL, " +
+                                "`price` REAL NOT NULL, " +
+                                "`lifespanKm` REAL NOT NULL, " +
+                                "`runKmSinceChange` REAL NOT NULL)"
+                        )
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `daily_records` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`dateString` TEXT NOT NULL, " +
+                                "`dateTimestamp` INTEGER NOT NULL, " +
+                                "`platform` TEXT NOT NULL, " +
+                                "`grossEarnings` REAL NOT NULL, " +
+                                "`deliveriesCount` INTEGER NOT NULL, " +
+                                "`startOdometer` REAL NOT NULL, " +
+                                "`endOdometer` REAL NOT NULL, " +
+                                "`fuelPrice` REAL NOT NULL, " +
+                                "`foodExpense` REAL NOT NULL, " +
+                                "`fuelCost` REAL NOT NULL, " +
+                                "`wearCost` REAL NOT NULL, " +
+                                "`proportionalFixedCost` REAL NOT NULL, " +
+                                "`netProfit` REAL NOT NULL, " +
+                                "`startTime` TEXT NOT NULL, " +
+                                "`endTime` TEXT NOT NULL, " +
+                                "`pauseDuration` TEXT NOT NULL)"
+                        )
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `user_profile` (" +
+                                "`id` INTEGER NOT NULL, " +
+                                "`name` TEXT NOT NULL, " +
+                                "`phone` TEXT NOT NULL, " +
+                                "`city` TEXT NOT NULL, " +
+                                "PRIMARY KEY(`id`))"
+                        )
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `platforms` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`name` TEXT NOT NULL, " +
+                                "`segment` TEXT NOT NULL, " +
+                                "`paymentModel` TEXT NOT NULL, " +
+                                "`cycle` TEXT NOT NULL, " +
+                                "`paymentDay` TEXT NOT NULL, " +
+                                "`fixedPayDelay` INTEGER NOT NULL, " +
+                                "`cycleEntriesJson` TEXT NOT NULL, " +
+                                "`bankName` TEXT NOT NULL, " +
+                                "`bankAgency` TEXT NOT NULL, " +
+                                "`bankAccount` TEXT NOT NULL, " +
+                                "`pixKeyType` TEXT NOT NULL, " +
+                                "`pixKey` TEXT NOT NULL, " +
+                                "`active` INTEGER NOT NULL)"
+                        )
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `fuel_refills` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`vehicleId` INTEGER NOT NULL, " +
+                                "`dateTimestamp` INTEGER NOT NULL, " +
+                                "`dateString` TEXT NOT NULL, " +
+                                "`gasStation` TEXT NOT NULL, " +
+                                "`fuelType` TEXT NOT NULL, " +
+                                "`pricePerLiter` REAL NOT NULL, " +
+                                "`liters` REAL NOT NULL, " +
+                                "`discount` REAL NOT NULL, " +
+                                "`totalPaid` REAL NOT NULL, " +
+                                "`odometer` REAL NOT NULL, " +
+                                "`isFullTank` INTEGER NOT NULL, " +
+                                "`paymentMethod` TEXT NOT NULL, " +
+                                "`isInstallment` INTEGER NOT NULL, " +
+                                "`installmentsCount` INTEGER NOT NULL)"
+                        )
+                        db.execSQL(
+                            "CREATE TABLE IF NOT EXISTS `maintenance_records` (" +
+                                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                                "`vehicleId` INTEGER NOT NULL, " +
+                                "`dateTimestamp` INTEGER NOT NULL, " +
+                                "`dateString` TEXT NOT NULL, " +
+                                "`description` TEXT NOT NULL, " +
+                                "`location` TEXT NOT NULL, " +
+                                "`value` REAL NOT NULL, " +
+                                "`odometer` REAL NOT NULL)"
+                        )
+                    }
+
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+                })
+                .build()
+        )
+        val rawDb = helper.writableDatabase
+        val cv = ContentValues().apply {
+            put("id", 10)
+            put("model", "Honda CG 160 Fan V9")
+            put("averageConsumption", 40.0)
+            put("fuelType", "Gasolina")
+            put("monthlyFixedCosts", 180.0)
+            put("plannedWorkDays", 22)
+            put("currentOdometer", 10000.0)
+            put("active", 1)
+        }
+        rawDb.insert("vehicle", 0, cv)
+        rawDb.close()
+        helper.close()
+
+        // 2. Abre com Room v13 aplicando cadeia completa 9->10->11->12->13
+        val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
+            .addMigrations(
+                GiroCustoDatabase.MIGRATION_9_10,
+                GiroCustoDatabase.MIGRATION_10_11,
+                GiroCustoDatabase.MIGRATION_11_12,
+                GiroCustoDatabase.MIGRATION_12_13
+            )
+            .allowMainThreadQueries()
+            .build()
+
+        val activeVehicle = roomDb.vehicleDao().getActiveVehicle()
+        assertNotNull(activeVehicle)
+        assertEquals("Honda CG 160 Fan V9", activeVehicle?.model)
+        assertEquals(SyncStatus.SYNCED, activeVehicle?.syncStatus)
+        assertEquals("MOTO", activeVehicle?.vehicleType)
 
         roomDb.close()
     }

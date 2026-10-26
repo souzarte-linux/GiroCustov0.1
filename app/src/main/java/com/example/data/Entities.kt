@@ -1,6 +1,7 @@
 package com.example.data
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 object SyncStatus {
@@ -10,7 +11,14 @@ object SyncStatus {
     const val PENDING_DELETE = "PENDING_DELETE"
 }
 
-@Entity(tableName = "vehicle")
+@Entity(
+    tableName = "vehicle",
+    indices = [
+        Index(value = ["active", "isDeleted"]),
+        Index(value = ["remoteId"]),
+        Index(value = ["syncStatus"])
+    ]
+)
 data class Vehicle(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val model: String = "Honda CG 160 Titan",
@@ -33,7 +41,14 @@ data class Vehicle(
     val isDeleted: Boolean = false
 )
 
-@Entity(tableName = "vehicle_parts")
+@Entity(
+    tableName = "vehicle_parts",
+    indices = [
+        Index(value = ["vehicleId"]),
+        Index(value = ["remoteId"]),
+        Index(value = ["syncStatus"])
+    ]
+)
 data class VehiclePart(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val vehicleId: Long = 0L,
@@ -56,7 +71,14 @@ data class VehiclePart(
         get() = if (lifespanKm > 0) price / lifespanKm else 0.0
 }
 
-@Entity(tableName = "daily_records")
+@Entity(
+    tableName = "daily_records",
+    indices = [
+        Index(value = ["isDeleted", "dateTimestamp"]),
+        Index(value = ["remoteId"]),
+        Index(value = ["syncStatus"])
+    ]
+)
 data class DailyRecord(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val dateString: String, // formato "YYYY-MM-DD"
@@ -138,7 +160,13 @@ data class DailyRecord(
         }
 }
 
-@Entity(tableName = "user_profile")
+@Entity(
+    tableName = "user_profile",
+    indices = [
+        Index(value = ["remoteId"]),
+        Index(value = ["syncStatus"])
+    ]
+)
 data class UserProfile(
     @PrimaryKey val id: Int = 1,
     val name: String = "",
@@ -158,7 +186,13 @@ data class UserProfile(
     val isDeleted: Boolean = false
 )
 
-@Entity(tableName = "platforms")
+@Entity(
+    tableName = "platforms",
+    indices = [
+        Index(value = ["remoteId"]),
+        Index(value = ["syncStatus"])
+    ]
+)
 data class Platform(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
@@ -180,7 +214,15 @@ data class Platform(
     val isDeleted: Boolean = false
 )
 
-@Entity(tableName = "fuel_refills")
+@Entity(
+    tableName = "fuel_refills",
+    indices = [
+        Index(value = ["vehicleId", "dateTimestamp"]),
+        Index(value = ["vehicleId", "odometer"]),
+        Index(value = ["remoteId"]),
+        Index(value = ["syncStatus"])
+    ]
+)
 data class FuelRefill(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val vehicleId: Long,
@@ -203,7 +245,14 @@ data class FuelRefill(
     val isDeleted: Boolean = false
 )
 
-@Entity(tableName = "maintenance_records")
+@Entity(
+    tableName = "maintenance_records",
+    indices = [
+        Index(value = ["vehicleId", "dateTimestamp"]),
+        Index(value = ["remoteId"]),
+        Index(value = ["syncStatus"])
+    ]
+)
 data class MaintenanceRecord(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val vehicleId: Long,

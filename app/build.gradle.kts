@@ -79,6 +79,9 @@ android {
     buildConfig = true
   }
   testOptions { unitTests { isIncludeAndroidResources = true } }
+  sourceSets {
+    getByName("debug").assets.srcDirs(files("$projectDir/schemas"))
+  }
 }
 
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
@@ -148,6 +151,7 @@ dependencies {
   testImplementation(libs.roborazzi.compose)
   testImplementation(libs.roborazzi.junit.rule)
   testImplementation(libs.mockwebserver)
+  testImplementation(libs.androidx.room.testing)
   androidTestImplementation(platform(libs.androidx.compose.bom))
   androidTestImplementation(libs.androidx.compose.ui.test.junit4)
   androidTestImplementation(libs.androidx.espresso.core)
