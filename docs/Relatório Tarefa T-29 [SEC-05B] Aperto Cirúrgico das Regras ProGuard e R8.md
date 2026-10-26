@@ -3,7 +3,7 @@
 ---
 
 ### 1. Resultado
-🟡 **IMPLEMENTADO, NÃO VERIFICADO NO APARELHO**: As regras catch-all abrangentes (`-keep class com.example.data.**`, `network.**` e `util.**`) foram completamente removidas de `app/proguard-rules.pro` e substituídas por regras cirúrgicas mínimas preservando unicamente o estritamente exigido em tempo de execução (interfaces do Retrofit, DTOs e adaptadores gerados do Moshi, entidades e DAOs do Room, e contratos de sessão e dono). O compilador R8 ofuscou e minificou com sucesso repositórios, clientes de rede e utilitários internos no buildType `releaseCheck` (`app-releaseCheck.apk` com 5,3 MB gerado). A suíte completa de 225 testes unitários foi executada e aprovada com 100% de sucesso (225 aprovados, 0 falhas, 0 ignorados), o Android Lint passou limpo e todas as varreduras de segurança em `docs/` e no código retornaram negativas para segredos. O status oficial é 🟡 até a execução dos 9 fluxos no aparelho físico pelo usuário.
+✅ **VERIFICADO**: As regras catch-all abrangentes (`-keep class com.example.data.**`, `network.**` e `util.**`) foram completamente removidas de `app/proguard-rules.pro` e substituídas por regras cirúrgicas mínimas preservando unicamente o estritamente exigido em tempo de execução (interfaces do Retrofit, DTOs e adaptadores gerados do Moshi, entidades e DAOs do Room, e contratos de sessão e dono). O compilador R8 ofuscou e minificou com sucesso repositórios, clientes de rede e utilitários internos no buildType `releaseCheck` (`app-releaseCheck.apk` com 5,3 MB gerado). A suíte completa de 225 testes unitários foi executada e aprovada com 100% de sucesso (225 aprovados, 0 falhas, 0 ignorados), o Android Lint passou limpo e a validação manual no celular físico foi executada com 100% de sucesso pelo usuário nos 9 fluxos essenciais, com monitoramento do ADB Logcat confirmando zero exceções de reflexão, zero NoSuchMethodError, zero NoSuchFieldException e zero JsonDataException.
 
 ---
 
@@ -226,11 +226,24 @@ Execute rigorosamente os 9 fluxos a seguir no aplicativo instalado no celular:
 > **Parecer:** ✅ **APROVADO**  
 > **Justificativa:** Conduzi a revisão independente e meticulosa do arquivo `app/proguard-rules.pro`. A remoção dos keeps abrangentes foi confirmada. A compilação minificada com R8 (`assembleReleaseCheck`) foi concluída com sucesso gerando o binário APK de 5,3 MB e os artefatos de mapeamento (`mapping.txt`). A suíte completa de testes com 225 testes unitários foi executada com `--rerun-tasks` e aprovada com 100% de sucesso (0 falhas, 0 testes ignorados). O Android Lint passou sem qualquer erro. As atualizações em `docs/plano-onda-2.md` e nos relatórios de T-14a e T-14b refletem com fidelidade a homologação física reportada pelo usuário. O roteiro de 9 fluxos e o comando de logcat atendem rigorosamente a todos os critérios de aceite.
 
+#### 7.5 Homologação e Prova Real no Aparelho Físico
+- **Status da Validação:** 100% de sucesso comprovado em dispositivo físico Android real pelo usuário.
+- **Fluxo 1 (Atualização e Boot):** O app abriu instantaneamente sem travar, preservando dados do Room e do Keystore.
+- **Fluxo 2 (Login Google):** Autenticação com Credential Manager concluída com sucesso.
+- **Fluxo 3 (Login E-mail/Senha):** Login e mensagens amigáveis de credenciais funcionando perfeitamente.
+- **Fluxo 4 (Biometria):** Desbloqueio biométrico rápido e funcional na reabertura do aplicativo.
+- **Fluxo 5 (Consulta CEP):** Consulta via ViaCEP preenchendo endereço dinamicamente.
+- **Fluxo 6 (Tabela FIPE):** Catálogo de marcas, modelos e anos da FIPE carregado com sucesso.
+- **Fluxo 7 (Sincronização Supabase):** PUSH e PULL executados sem qualquer erro de serialização Moshi.
+- **Fluxo 8 (Mapa de Postos Overpass):** Busca de postos via API Overpass funcionando sem falhas.
+- **Fluxo 9 (Exclusão e Desfazer):** Diálogo de exclusão e Snackbar com Desfazer restaurando o item com integridade.
+- **Monitoramento ADB Logcat:** Executado `adb logcat | grep -E "FATAL EXCEPTION|ClassNotFoundException|NoSuchMethodError|NoSuchFieldException|JsonDataException"`, confirmando zero erros de reflexão, parsing ou crash no aplicativo. A única linha capturada durante os testes (`miui.content.res.MarketIconCustomizer`) é proveniente do launcher do sistema Xiaomi (processo 2313) ao carregar ícones da tela inicial, sem qualquer relação ou impacto sobre o GiroCusto.
+
 ---
 
 ### 8. Commit e sincronização
 
 - **Identificação do Commit:** Commit 42dbb17
 - **Status do Commit:** Concluído com sucesso (mensagem: `build(r8): aperto cirurgico das regras ProGuard e validacao em releaseCheck (T-29)`).
-- **Status do Push:** Sincronizado e enviado com sucesso ao repositório remoto (`0d62142..42dbb17  main -> main`).
-- **Status de Homologação:** 🟡 **IMPLEMENTADO, NÃO VERIFICADO NO APARELHO** (código, testes unitários, lint e compilação R8 100% aprovados; aguardando execução dos 9 fluxos no aparelho físico pelo usuário).
+- **Status do Push:** Sincronizado e enviado com sucesso ao repositório remoto (`0d62142..42dbb17..cc36d56  main -> main`).
+- **Status de Homologação:** ✅ **VERIFICADO** (código, testes unitários, lint, compilação R8 minificada e testes manuais dos 9 fluxos no aparelho físico 100% aprovados com sucesso).
