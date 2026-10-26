@@ -141,6 +141,20 @@ class SupabaseClient private constructor(
             val response = authApi.signUp(AuthRequest(email = email, password = pass))
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()!!
+                // Quando o Supabase possui a confirmação de e-mail ativada ("Confirm email"),
+                // a tentativa de registrar um e-mail já existente retorna HTTP 200 com
+                // o array identities vazio (`[]`). Trata explicitamente como erro de usuário existente.
+                if (AuthErrorMapper.isExistingUserSignUp(body.user)) {
+                    val resId = com.example.R.string.auth_error_user_already_exists
+                    return Result.failure(
+                        SupabaseAuthException(
+                            messageResId = resId,
+                            rawError = "User already registered",
+                            httpCode = 400
+                        )
+                    )
+                }
+
                 val session = AuthSession(
                     accessToken = body.accessToken,
                     refreshToken = body.refreshToken,

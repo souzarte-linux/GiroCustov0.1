@@ -197,4 +197,93 @@ class SupabaseGoogleAuthMockWebServerTest {
         assertEquals("google", json.getString("provider"))
         assertEquals("expired-token", json.getString("id_token"))
     }
+
+    @Test
+    fun testSignUp_http200_userAlreadyExistsWithEmptyIdentities_returnsFailureWithUserAlreadyExistsResId() = runTest {
+        // GoTrue retorna HTTP 200 com array identities vazio quando a confirmação de e-mail está ativa
+        // e o usuário já está cadastrado. O app deve detectar e falhar com R.string.auth_error_user_already_exists.
+        val jsonResponseBody = """
+            {
+              "access_token": "",
+              "token_type": "",
+              "expires_in": 0,
+              "refresh_token": "",
+              "user": {
+                "id": "c56a4180-65aa-42ec-a945-5fd21dec0538",
+                "email": "existente@girocusto.com",
+                "phone": "",
+                "created_at": "2026-10-25T10:00:00Z",
+                "identities": []
+              }
+            }
+        """.trimIndent()
+
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json; charset=utf-8")
+                .setBody(jsonResponseBody)
+        )
+
+        val result = supabaseClient.signUp(
+            email = "existente@girocusto.com",
+            pass = "senha123"
+        )
+
+        // Deve falhar com erro mapeado para auth_error_user_already_exists
+        assertTrue("Resultado deve ser falha quando identities é vazio", result.isFailure)
+        val exception = result.exceptionOrNull()
+        assertTrue("Exceção deve ser SupabaseAuthException", exception is com.example.network.supabase.SupabaseAuthException)
+        val authException = exception as com.example.network.supabase.SupabaseAuthException
+        assertEquals(
+            "Deve mapear para auth_error_user_already_exists",
+            com.example.R.string.auth_error_user_already_exists,
+            authException.messageResId
+        )
+    }
+
+    @Test
+    fun testSignUp_http200_newUserWithNonEmptyIdentities_returnsSuccess() = runTest {
+        val jsonResponseBody = """
+            {
+              "access_token": "",
+              "token_type": "",
+              "expires_in": 0,
+              "refresh_token": "",
+              "user": {
+                "id": "mock-new-user-123",
+                "email": "novousuario@girocusto.com",
+                "phone": "",
+                "created_at": "2026-10-25T11:00:00Z",
+                "identities": [
+                  {
+                    "id": "mock-ident-1",
+                    "user_id": "mock-new-user-123",
+                    "provider": "email"
+                  }
+                ]
+              }
+            }
+        """.trimIndent()
+
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json; charset=utf-8")
+                .setBody(jsonResponseBody)
+        )
+
+        val result = supabaseClient.signUp(
+            email = "novousuario@girocusto.com",
+            pass = "senhaSegura123"
+        )
+
+        assertTrue("Resultado deve ser sucesso para novo cadastro", result.isSuccess)
+        val session = result.getOrNull()
+        assertNotNull("Sessão não deve ser nula", session)
+        assertEquals("mock-new-user-123", session?.userId)
+        assertEquals("novousuario@girocusto.com", session?.userEmail)
+    }
 }
+
+

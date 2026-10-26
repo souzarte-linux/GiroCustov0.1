@@ -79,6 +79,14 @@ open class SupabaseAuthException(
 object AuthErrorMapper {
 
     /**
+     * Verifica se a resposta de cadastro do GoTrue corresponde a um usuário que já existia previamente.
+     * Quando "Confirm email" está ativo no Supabase, a API retorna HTTP 200 com array identities vazio (`[]`).
+     */
+    fun isExistingUserSignUp(user: SupabaseUser?): Boolean {
+        return user?.identities != null && user.identities.isEmpty()
+    }
+
+    /**
      * Mapeia código HTTP e payload de erro para o tipo selado AuthError.
      */
     fun mapToAuthError(

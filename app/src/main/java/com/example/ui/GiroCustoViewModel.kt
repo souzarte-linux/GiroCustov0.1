@@ -506,15 +506,20 @@ class GiroCustoViewModel @JvmOverloads constructor(
             val result = supabaseClient.signUp(email.trim(), pass)
             if (result.isSuccess) {
                 _isBiometricLocked.value = false
-                _authUiState.value = AuthUiState.Success("Conta criada com sucesso!")
-                _authErrorResId.value = null
-                _syncState.value = SyncState.IDLE
-                BiometricHelper.setBiometricEnabled(getApplication(), true, email.trim())
                 val session = result.getOrNull()
                 if (session != null && session.accessToken.isNotBlank()) {
+                    _authUiState.value = AuthUiState.Success("Conta criada com sucesso!")
+                    _authErrorResId.value = null
+                    _syncState.value = SyncState.IDLE
+                    BiometricHelper.setBiometricEnabled(getApplication(), true, email.trim())
                     triggerSync()
+                    onResult(true, null)
+                } else {
+                    _authUiState.value = AuthUiState.Success("Conta criada com sucesso! Verifique seu e-mail para confirmar o cadastro.")
+                    _authErrorResId.value = null
+                    _syncState.value = SyncState.IDLE
+                    onResult(true, null)
                 }
-                onResult(true, null)
             } else {
                 _syncState.value = SyncState.ERROR
                 val exception = result.exceptionOrNull()
@@ -611,6 +616,13 @@ class GiroCustoViewModel @JvmOverloads constructor(
         supabaseClient.clearSavedSession()
         _authErrorResId.value = null
         _authUiState.value = AuthUiState.Idle
+    }
+
+    fun resetAuthError() {
+        _authErrorResId.value = null
+        if (_authUiState.value is AuthUiState.Error || _authUiState.value is AuthUiState.Success) {
+            _authUiState.value = AuthUiState.Idle
+        }
     }
 
     fun signInWithBiometrics(onResult: (Boolean, String?) -> Unit = { _, _ -> }) {

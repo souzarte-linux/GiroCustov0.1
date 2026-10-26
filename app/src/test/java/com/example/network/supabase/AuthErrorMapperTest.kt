@@ -192,4 +192,37 @@ class AuthErrorMapperTest {
         assertEquals(R.string.auth_error_network, AuthError.Network.stringResId)
         assertEquals(R.string.auth_error_generic, AuthError.Generic.stringResId)
     }
+
+    @Test
+    fun testIsExistingUserSignUp_nullUser_returnsFalse() {
+        org.junit.Assert.assertFalse(AuthErrorMapper.isExistingUserSignUp(null))
+    }
+
+    @Test
+    fun testIsExistingUserSignUp_nullIdentities_returnsFalse() {
+        val user = SupabaseUser(id = "user-1", email = "user@test.com", identities = null)
+        org.junit.Assert.assertFalse(AuthErrorMapper.isExistingUserSignUp(user))
+    }
+
+    @Test
+    fun testIsExistingUserSignUp_nonEmptyIdentities_returnsFalse() {
+        val user = SupabaseUser(
+            id = "user-1",
+            email = "novo@test.com",
+            identities = listOf(UserIdentity(id = "ident-1", userId = "user-1", provider = "email"))
+        )
+        org.junit.Assert.assertFalse(AuthErrorMapper.isExistingUserSignUp(user))
+    }
+
+    @Test
+    fun testIsExistingUserSignUp_emptyIdentities_returnsTrue() {
+        // GoTrue retorna identities = [] quando email já existe e confirmação de e-mail está ativa
+        val user = SupabaseUser(
+            id = "user-1",
+            email = "existente@test.com",
+            identities = emptyList()
+        )
+        assertTrue(AuthErrorMapper.isExistingUserSignUp(user))
+    }
 }
+

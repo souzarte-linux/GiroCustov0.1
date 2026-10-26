@@ -231,6 +231,45 @@ fun AuthGateScreen(
                 }
             }
 
+            // ==========================================
+            // BANNER DE SUCESSO REATIVO
+            // ==========================================
+            AnimatedVisibility(
+                visible = authState is AuthUiState.Success && !(authState as AuthUiState.Success).message.isNullOrBlank(),
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                val successMsg = (authState as? AuthUiState.Success)?.message.orEmpty()
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("auth_success_banner"),
+                    color = Color(0xFF143E2E),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, ColorBrandEmerald)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.CheckCircle,
+                            contentDescription = "Sucesso",
+                            tint = ColorBrandEmerald,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = successMsg,
+                            color = ColorBrandEmerald,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+
             if (isBiometricLocked) {
                 // ==========================================
                 // TELA LIMPA DE DESBLOQUEIO COM BIOMETRIA
@@ -381,7 +420,10 @@ fun AuthGateScreen(
                 ) {
                     Tab(
                         selected = selectedTabIndex == 0,
-                        onClick = { selectedTabIndex = 0 },
+                        onClick = {
+                            selectedTabIndex = 0
+                            viewModel.resetAuthError()
+                        },
                         modifier = Modifier
                             .fillMaxHeight()
                             .padding(4.dp)
@@ -411,7 +453,10 @@ fun AuthGateScreen(
 
                     Tab(
                         selected = selectedTabIndex == 1,
-                        onClick = { selectedTabIndex = 1 },
+                        onClick = {
+                            selectedTabIndex = 1
+                            viewModel.resetAuthError()
+                        },
                         modifier = Modifier
                             .fillMaxHeight()
                             .padding(4.dp)
@@ -588,7 +633,10 @@ fun AuthGateScreen(
                         }
 
                         TextButton(
-                            onClick = { isRegisterMode = !isRegisterMode },
+                            onClick = {
+                                isRegisterMode = !isRegisterMode
+                                viewModel.resetAuthError()
+                            },
                             enabled = !isLoading,
                             modifier = Modifier
                                 .fillMaxWidth()

@@ -38,12 +38,21 @@ data class AuthResponse(
 )
 
 @JsonClass(generateAdapter = true)
+data class UserIdentity(
+    @Json(name = "id") val id: String? = null,
+    @Json(name = "user_id") val userId: String? = null,
+    @Json(name = "provider") val provider: String? = null
+)
+
+@JsonClass(generateAdapter = true)
 data class SupabaseUser(
     @Json(name = "id") val id: String,
     @Json(name = "email") val email: String? = null,
     @Json(name = "phone") val phone: String? = null,
-    @Json(name = "created_at") val createdAt: String? = null
+    @Json(name = "created_at") val createdAt: String? = null,
+    @Json(name = "identities") val identities: List<UserIdentity>? = null
 )
+
 
 @JsonClass(generateAdapter = true)
 data class AuthSession(
