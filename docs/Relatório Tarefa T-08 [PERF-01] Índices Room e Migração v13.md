@@ -227,5 +227,5 @@ Para acompanhar o projeto:
 ### 9. Commit e sincronização
 
 - **Mensagem de commit:** `perf(room): índices nas 7 entidades Room e migração v13 com MigrationTestHelper (T-08)`
-- **Hash do commit:** `<commit-hash>`
-- **Status do push:** `<push-status>`
+- **Hash do commit:** `f8e4a73`
+- **Status do push:** Sincronizado com sucesso com `origin/main` (`c125047..f8e4a73`).
