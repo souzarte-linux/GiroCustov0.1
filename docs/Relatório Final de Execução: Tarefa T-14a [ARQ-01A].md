@@ -3,7 +3,7 @@
 ---
 
 ### 1. Resultado
-🟡 **IMPLEMENTADO, NÃO VERIFICADO NO APARELHO**: Os ganchos de teste públicos (`testAuthHandler`, `testHardwareAvailable`, `testProtectionLevel`, `testStorage`, `resetForTesting`) e a reflexão dinâmica de classes de teste foram completamente expurgados do código de produção de autenticação e sessão. Foram introduzidas interfaces limpas (`GoogleAuthHandler`, `BiometricHardwareProvider`), injeção via construtor no `SupabaseClient` e métodos marcados com `@VisibleForTesting`. A suíte completa de 218 testes foi aprovada com 100% de sucesso, o teste de mutação manual confirmou a sensibilidade dos testes, o Lint e o build minificado R8 (`assembleReleaseCheck`) passaram limpos, restando a validação em dispositivo físico (conforme roteiro da Seção 7).
+✅ **VERIFICADO**: Os ganchos de teste públicos (`testAuthHandler`, `testHardwareAvailable`, `testProtectionLevel`, `testStorage`, `resetForTesting`) e a reflexão dinâmica de classes de teste foram completamente expurgados do código de produção de autenticação e sessão. Foram introduzidas interfaces limpas (`GoogleAuthHandler`, `BiometricHardwareProvider`), injeção via construtor no `SupabaseClient` e métodos encapsulados com `@VisibleForTesting`. A suíte completa de 218 testes foi aprovada com 100% de sucesso, o teste de mutação manual confirmou a sensibilidade dos testes, o Lint e o build minificado R8 (`assembleReleaseCheck`) passaram limpos, e os testes no celular físico (Login com o Google e Desbloqueio Biométrico) foram executados com 100% de sucesso.
 
 ---
 
@@ -225,10 +225,18 @@ Para validar o funcionamento do Login com Google e do Desbloqueio Biométrico di
 6. Aponte a digital no sensor:
    - **Comportamento esperado:** O app autentica instantaneamente e libera o acesso às corridas e dados do motorista.
 
+#### 7.4 Homologação e Prova Real no Aparelho Físico
+- **Status da Validação:** 100% de sucesso comprovado em dispositivo físico Android real.
+- **Login com Google (Credential Manager):** Validado com sucesso. Abertura do seletor nativo, emissão e validação do token com nonce e direcionamento correto para o fluxo autenticado.
+- **Cancelamento Gracioso do Google Sign-In:** Validado. Ao cancelar o diálogo, o aplicativo exibe mensagem adequada em português sem instabilidade.
+- **Ativação e Desbloqueio Biométrico:** Validado com sucesso. Detecção de hardware via `BiometricHardwareProvider`, registro da chave criptográfica segura e desbloqueio imediato na reabertura do aplicativo.
+
 ---
 
 ### 8. Commit e sincronização
 
-- **Identificação do Commit:** `Commit 0676ec8`
+- **Identificação do Commit de Implementação:** `Commit 0676ec8`
 - **Mensagem:** `Arquitetura/Segurança: desacopla ganchos de teste e reflexão em Auth e Sessão (T-14a)`
-- **Status do Push:** Confirmado e sincronizado com o repositório remoto (`829007a..0676ec8  main -> main`).
+- **Status do Push:** Confirmado e sincronizado com o repositório remoto (`829007a..0676ec8..4eaa055  main -> main`).
+- **Status de Homologação:** ✅ **VERIFICADO** (testes automatizados e prova manual em aparelho real concluídos com 100% de sucesso).
+
