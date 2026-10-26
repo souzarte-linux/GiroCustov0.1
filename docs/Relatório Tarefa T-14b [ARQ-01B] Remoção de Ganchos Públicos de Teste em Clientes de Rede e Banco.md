@@ -3,7 +3,7 @@
 ---
 
 ### 1. Resultado
-🟡 **IMPLEMENTADO, NÃO VERIFICADO NO APARELHO**: Os ganchos de teste públicos (`FipeNetworkClient.testApi`, `ViaCepNetworkClient.testApi` e `GiroCustoDatabase.setTestDatabase`) foram completamente expurgados do código de produção de rede e banco de dados. Foram implementadas classes desacopladas com suporte a injeção via construtor (`FipeNetworkClient(customApi)`, `ViaCepNetworkClient(customApi)`) e controle de instâncias estritamente restrito via anotações `@VisibleForTesting(otherwise = VisibleForTesting.NONE)`. A suíte completa de 225 testes unitários foi executada e aprovada com 100% de sucesso (225 aprovados, 0 falhas, 0 ignorados). As mutações manuais obrigatórias comprovaram a sensibilidade dos testes (com quebra e restauração documentadas), o Android Lint passou limpo e a compilação minificada com ofuscação R8 (`assembleReleaseCheck`) foi gerada com sucesso. O status oficial é 🟡 até a execução do roteiro manual de conferência no celular físico pelo usuário.
+✅ **VERIFICADO**: Os ganchos de teste públicos (`FipeNetworkClient.testApi`, `ViaCepNetworkClient.testApi` e `GiroCustoDatabase.setTestDatabase`) foram completamente expurgados do código de produção de rede e banco de dados. Foram implementadas classes desacopladas com suporte a injeção via construtor (`FipeNetworkClient(customApi)`, `ViaCepNetworkClient(customApi)`) e controle de instâncias estritamente restrito via anotações `@VisibleForTesting(otherwise = VisibleForTesting.NONE)`. A suíte completa de 225 testes unitários foi executada e aprovada com 100% de sucesso (225 aprovados, 0 falhas, 0 ignorados). As mutações manuais comprovaram a sensibilidade dos testes, o Android Lint passou limpo, a compilação minificada com ofuscação R8 (`assembleReleaseCheck`) foi gerada com sucesso e a validação manual no celular físico foi executada com 100% de sucesso pelo usuário (Consulta de CEP via ViaCEP e Catálogo FIPE de Veículos funcionando perfeitamente).
 
 ---
 
@@ -294,6 +294,11 @@ Para validar a consulta de CEP e a busca na Tabela FIPE diretamente no seu smart
 > **Parecer:** ✅ **APROVADO**  
 > **Justificativa:** A eliminação de variáveis públicas mutáveis em singletons de rede e banco de dados encerra uma superfície de ataque onde bibliotecas terceiras ou rotinas concorrentes poderiam substituir as instâncias de API ou do banco SQLite em tempo de execução. O uso de `@VisibleForTesting(otherwise = VisibleForTesting.NONE)` assegura que tais ganchos não sejam utilizados por código em produção, com checagem garantida pelo compilador e pelo Lint. As chamadas de rede para ViaCEP e FIPE utilizam HTTPS seguro e redação estrita de cabeçalhos. Todas as varreduras de segredos, tokens e dados sensíveis em `docs/` e no código-fonte retornaram limpas.
 
+#### 7.3 Homologação e Prova Real no Aparelho Físico
+- **Status da Validação:** 100% de sucesso comprovado em dispositivo físico Android real pelo usuário.
+- **Consulta de CEP (ViaCEP):** Validada com sucesso. Preenchimento automático de logradouro, bairro, cidade e estado em Meus Dados, além de mensagem de erro amigável ao buscar CEP inválido.
+- **Consulta à Tabela FIPE (Cadastro de Veículo):** Validada com sucesso. Carregamento dinâmico em tempo real de marcas, modelos e anos a partir da API oficial, sem travamentos.
+
 ---
 
 ### 8. Commit e sincronização
@@ -301,4 +306,4 @@ Para validar a consulta de CEP e a busca na Tabela FIPE diretamente no seu smart
 - **Identificação do Commit:** `Arquitetura: desacopla ganchos de teste e provê injeção em clientes de rede e banco (T-14b)`
 - **Status do Commit:** Commit único de implementação e documentação da Tarefa T-14b.
 - **Status do Push:** Sincronizado e enviado via `git push origin main`.
-- **Status de Homologação:** 🟡 **IMPLEMENTADO, NÃO VERIFICADO NO APARELHO** (testes automatizados, mutação manual, lint e R8 100% aprovados; aguardando validação manual do usuário no celular físico).
+- **Status de Homologação:** ✅ **VERIFICADO** (testes automatizados, mutação manual, lint, R8 e validação manual do usuário no celular físico com 100% de sucesso).

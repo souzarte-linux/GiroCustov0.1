@@ -65,8 +65,30 @@
 -dontwarn org.osmdroid.**
 
 # --------------------------------------------------------------------
-# Modelos e Entidades do GiroCusto (Room, Supabase, FIPE, ViaCEP, Crypto)
+# Regras Cirúrgicas do GiroCusto (T-29 / SEC-05B)
+# Permite a ofuscação e minificação completa de repositórios, utilitários,
+# clientes de rede e lógicas internas, preservando cirurgicamente apenas
+# o estritamente exigido em tempo de execução por reflexão / contratos.
 # --------------------------------------------------------------------
--keep class com.example.data.** { *; }
--keep class com.example.network.** { *; }
--keep class com.example.util.** { *; }
+
+# Interfaces de Serviço Retrofit (acessadas via Proxy dinâmico e reflexão)
+-keep,allowobfuscation interface * {
+    @retrofit2.http.* <methods>;
+}
+-keep interface com.example.network.supabase.SupabaseAuthApi { *; }
+-keep interface com.example.network.supabase.SupabaseRestApi { *; }
+-keep interface com.example.network.fipe.FipeApi { *; }
+-keep interface com.example.network.viacep.ViaCepApi { *; }
+-keep interface com.example.network.OverpassApiService { *; }
+
+# Adapters gerados pelo Moshi Codegen (preserva métodos fromJson/toJson)
+-keep class *JsonAdapter extends com.squareup.moshi.JsonAdapter { *; }
+
+# Contratos essenciais de integridade e isolamento de sessão/dono
+-keep interface com.example.data.DataOwnerStorage {
+    public abstract <methods>;
+}
+-keep interface com.example.network.supabase.SecureSessionStorage {
+    public abstract <methods>;
+}
+
