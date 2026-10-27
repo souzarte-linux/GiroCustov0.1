@@ -165,5 +165,5 @@ Para validar a alteração diretamente no seu celular físico:
 
 ## 8. Commit e sincronização
 
-- **Hash do commit:** `[Aguardando commit do DevOps]`
-- **Status do push:** `[Aguardando push]`
+- **Hash do commit:** `9c580b3` (`feat(ux/privacidade): diálogo explicativo prévio para permissão de GPS em busca de postos (T-11)`)
+- **Status do push:** Sincronizado com `origin/main`
