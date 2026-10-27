@@ -302,5 +302,5 @@ Após a compilação e instalação do novo APK no aparelho celular, siga os 3 r
 ### 8. Commit e sincronização
 
 - **Mensagem do commit:** `feat(metas): sincronização de metas na nuvem, Room v14 e desacoplamento de tema (T-28B)`
-- **Hash do commit:** `<commit-hash>`
-- **Status do push:** `<push-status>`
+- **Hash do commit:** `7af3a40`
+- **Status do push:** Sincronizado com sucesso com `origin/main` (`c4d9078..7af3a40`).
