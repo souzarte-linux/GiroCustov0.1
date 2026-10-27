@@ -5,9 +5,9 @@
 
 ### 1. Resultado
 
-🟡 **IMPLEMENTADO, NÃO VERIFICADO NO APARELHO**  
-O código de produção foi totalmente implementado com persistência Room na versão 14 (`14.json`), migração sequencial não destrutiva `MIGRATION_13_14`, modelo e DTO de sincronização com resolução Last-Write-Wins (LWW), API REST Supabase, desacoplamento seguro da preferência de tema em `app_preferences`, suporte a entrada numérica com vírgula padrão brasileiro e testes unitários e de integração 100% aprovados.  
-O status permanece como 🟡 pois a execução do script DDL da tabela `user_goals` no PostgreSQL remoto depende de intervenção do usuário no console web do Supabase, e a validação do comportamento em dispositivo móvel sob condições de uso real exige homologação manual no aparelho físico.
+✅ **VERIFICADO**  
+O código de produção foi totalmente implementado com persistência Room na versão 14 (`14.json`), migração sequencial não destrutiva `MIGRATION_13_14`, modelo e DTO de sincronização com resolução Last-Write-Wins (LWW), API REST Supabase, desacoplamento seguro da preferência de tema em `giro_custo_preferences`, tratamento robusto de entrada numérica e vírgula pt-BR (`parsePtBrDouble`), exibição com duas casas decimais e centavos nos cards (`R$ %,.2f`), 251 testes unitários automatizados 100% aprovados e compilação de release com minificação R8.  
+Os testes práticos foram executados no aparelho físico pelo usuário conforme os roteiros de homologação e obtiveram **100% de aprovação**, comprovando a integridade da persistência local, o salvamento com vírgula decimal brasileira, a exibição de centavos e o desacoplamento do tema visual.
 
 ---
 

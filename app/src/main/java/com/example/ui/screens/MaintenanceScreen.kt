@@ -252,7 +252,10 @@ fun MaintenanceListSection(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
-                    items(records) { record ->
+                    items(
+                        items = records,
+                        key = { it.id }
+                    ) { record ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()

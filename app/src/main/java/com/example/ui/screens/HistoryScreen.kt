@@ -390,7 +390,10 @@ fun HistoryScreen(
                     val isAsc = selectedSortOption == HistorySortOption.DATA_CRESCENTE
                     val groupedList = groupRecordsHierarchically(filteredAndSortedRecords, isAsc)
                     
-                    items(groupedList) { item ->
+                    items(
+                        items = groupedList,
+                        key = { getHistoryListItemKey(it) }
+                    ) { item ->
                         when (item) {
                             is HistoryListItem.YearHeader -> {
                                 YearHeaderCard(
@@ -437,7 +440,10 @@ fun HistoryScreen(
                         }
                     }
                 } else {
-                    items(filteredAndSortedRecords) { record ->
+                    items(
+                        items = filteredAndSortedRecords,
+                        key = { it.id }
+                    ) { record ->
                         HistoryRecordCard(
                             record = record,
                             onEditClick = {
@@ -776,6 +782,14 @@ sealed class HistoryListItem {
     data class WeekHeader(val weekStartMillis: Long, val weekEndMillis: Long, val totalGross: Double, val totalNet: Double) : HistoryListItem()
     data class DayHeader(val dateTimestamp: Long, val label: String) : HistoryListItem()
     data class RecordRow(val record: DailyRecord) : HistoryListItem()
+}
+
+fun getHistoryListItemKey(item: HistoryListItem): String = when (item) {
+    is HistoryListItem.YearHeader -> "year_${item.year}"
+    is HistoryListItem.MonthHeader -> "month_${item.year}_${item.month}"
+    is HistoryListItem.WeekHeader -> "week_${item.weekStartMillis}_${item.weekEndMillis}"
+    is HistoryListItem.DayHeader -> "day_${item.dateTimestamp}_${item.label}"
+    is HistoryListItem.RecordRow -> "record_${item.record.id}"
 }
 
 /**

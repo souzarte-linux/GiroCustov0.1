@@ -193,7 +193,10 @@ fun PlatformListSection(
                         .weight(1f),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(platforms) { platform ->
+                    items(
+                        items = platforms,
+                        key = { it.id }
+                    ) { platform ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()

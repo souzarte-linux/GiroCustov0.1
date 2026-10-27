@@ -297,7 +297,10 @@ fun RefillsListSection(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
-                    items(refills) { refill ->
+                    items(
+                        items = refills,
+                        key = { it.id }
+                    ) { refill ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
