@@ -123,5 +123,5 @@ Para prosseguir com o projeto:
 ### 8. Commit e sincronização
 
 - **Mensagem do Commit:** `docs(metas): relatório formal de aprovação da Tarefa T-28A e liberação da T-28B`
-- **Hash do Commit:** `<commit-hash>`
-- **Status do Push:** `<push-status>`
+- **Hash do Commit:** `5dff078`
+- **Status do Push:** Sincronizado com sucesso para `origin/main` (`518169e..5dff078`).
