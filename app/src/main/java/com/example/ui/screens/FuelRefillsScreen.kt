@@ -33,11 +33,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.R
 import com.example.data.FuelRefill
 import com.example.ui.ConsumptionAlertLevel
 import com.example.ui.FuelConsumptionComparisonState
 import com.example.ui.GiroCustoViewModel
 import com.example.network.GasStationResult
+import com.example.ui.components.FuelLocationRationaleDialog
 import com.example.ui.components.NearbyStationsMapView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -628,13 +630,17 @@ fun RefillFormSection(
     val stationSearchError by viewModel.stationSearchError.collectAsStateWithLifecycle()
     val lastSearchLocation by viewModel.lastSearchLocation.collectAsStateWithLifecycle()
 
+    var showLocationRationaleDialog by remember { mutableStateOf(false) }
+
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val isGranted = permissions[android.Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            permissions[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true
         if (isGranted) {
             viewModel.searchNearbyGasStations(context)
         } else {
-            Toast.makeText(context, "Permissão de localização necessária para buscar postos próximos.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.fuel_location_permission_denied), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -860,15 +866,18 @@ fun RefillFormSection(
 
             FilledIconButton(
                 onClick = {
-                    val permission = android.Manifest.permission.ACCESS_FINE_LOCATION
-                    val hasPermission = ContextCompat.checkSelfPermission(
+                    val hasFine = ContextCompat.checkSelfPermission(
                         context,
-                        permission
+                        android.Manifest.permission.ACCESS_FINE_LOCATION
                     ) == PackageManager.PERMISSION_GRANTED
-                    if (hasPermission) {
+                    val hasCoarse = ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+                    if (hasFine || hasCoarse) {
                         viewModel.searchNearbyGasStations(context)
                     } else {
-                        permissionLauncher.launch(permission)
+                        showLocationRationaleDialog = true
                     }
                 },
                 colors = IconButtonDefaults.filledIconButtonColors(
@@ -1608,6 +1617,23 @@ fun RefillFormSection(
                     }
                 },
                 modifier = Modifier.testTag("tank_capacity_confirm_dialog")
+            )
+        }
+
+        if (showLocationRationaleDialog) {
+            FuelLocationRationaleDialog(
+                onConfirm = {
+                    showLocationRationaleDialog = false
+                    permissionLauncher.launch(
+                        arrayOf(
+                            android.Manifest.permission.ACCESS_FINE_LOCATION,
+                            android.Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                },
+                onDismiss = {
+                    showLocationRationaleDialog = false
+                }
             )
         }
     }

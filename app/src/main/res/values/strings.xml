@@ -83,4 +83,12 @@
     <string name="lgpd_delete_error">Não foi possível excluir sua conta: %1$s</string>
     <string name="cd_lgpd_export_icon">Ícone de exportação de dados</string>
     <string name="cd_lgpd_delete_icon">Ícone de exclusão definitiva de conta</string>
+
+    <!-- Rationale Prévia para Acesso à Localização GPS (T-11 [SEC-07]) -->
+    <string name="fuel_location_rationale_title">Acesso à Localização</string>
+    <string name="fuel_location_rationale_message">O GiroCusto utiliza a sua localização exclusivamente para encontrar os postos de combustível mais próximos da sua rota e calcular onde abastecer com o menor custo por km. Seus dados de GPS não são compartilhados com terceiros nem armazenados externamente.</string>
+    <string name="fuel_location_rationale_confirm">Permitir Localização</string>
+    <string name="fuel_location_rationale_dismiss">Agora Não</string>
+    <string name="fuel_location_permission_denied">Permissão de localização necessária para buscar postos próximos.</string>
+    <string name="cd_fuel_location_rationale_icon">Ícone de localização GPS</string>
 </resources>
