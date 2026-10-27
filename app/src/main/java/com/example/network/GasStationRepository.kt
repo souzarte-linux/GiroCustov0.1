@@ -5,9 +5,11 @@ import kotlin.math.*
 object GasStationRepository {
     val OVERPASS_ENDPOINTS = listOf(
         "https://overpass-api.de/api/interpreter",
-        "https://overpass.kumi.systems/api/interpreter",
-        "https://overpass.openstreetmap.ru/api/interpreter"
+        "https://overpass.private.coffee/api/interpreter"
     )
+
+    var endpoints: List<String> = OVERPASS_ENDPOINTS
+    var apiService: OverpassApiService = overpassApiService
 
     fun buildOverpassQuery(lat: Double, lon: Double, radiusMeters: Int): String {
         return """[out:json][timeout:25];nwr["amenity"="fuel"](around:$radiusMeters,$lat,$lon);out center;"""
@@ -48,9 +50,9 @@ object GasStationRepository {
         val query = buildOverpassQuery(lat, lon, radiusMeters)
         var lastException: Throwable? = null
 
-        for (endpoint in OVERPASS_ENDPOINTS) {
+        for (endpoint in endpoints) {
             try {
-                val response = overpassApiService.getNearbyStations(endpoint, query)
+                val response = apiService.getNearbyStations(endpoint, query)
                 val elements = response.elements
                 val results = elements.mapNotNull { element ->
                     val name = element.tags?.get("name")
@@ -79,7 +81,6 @@ object GasStationRepository {
             }
         }
 
-        val errMsg = lastException?.localizedMessage ?: "Erro de rede"
-        return GasStationSearchResult.Error("Não foi possível conectar: $errMsg")
+        return GasStationSearchResult.Error("Não foi possível buscar postos próximos no momento. Verifique sua conexão com a internet e tente novamente.")
     }
 }

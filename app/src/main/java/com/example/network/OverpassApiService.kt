@@ -19,12 +19,13 @@ interface OverpassApiService {
 }
 
 private val okHttpClient = OkHttpClient.Builder()
-    .connectTimeout(8, TimeUnit.SECONDS)
-    .readTimeout(8, TimeUnit.SECONDS)
+    .connectTimeout(15, TimeUnit.SECONDS)
+    .readTimeout(25, TimeUnit.SECONDS)
     .addInterceptor { chain ->
         val original = chain.request()
         val request = original.newBuilder()
             .header("User-Agent", "GiroCusto/1.0")
+            .header("Accept", "application/json")
             .build()
         chain.proceed(request)
     }
