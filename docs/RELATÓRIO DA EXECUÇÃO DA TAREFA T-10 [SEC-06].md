@@ -212,6 +212,6 @@ Após gerar o APK ou instalar o aplicativo atualizado no seu celular, siga os pa
 
 ## 8. Commit e Sincronização
 
-- **Hash do Commit:** `9e498f0`
+- **Hash do Commit:** `7719147`
 - **Mensagem do Commit:** `feat(lgpd): portabilidade de dados e exclusão segura de conta (T-10)`
-- **Status do Push:** Sincronizado com `origin/main`.
+- **Status do Push:** Sincronizado com `origin/main` (`b806646..7719147`).
