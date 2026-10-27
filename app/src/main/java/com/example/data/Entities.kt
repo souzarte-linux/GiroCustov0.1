@@ -1,5 +1,6 @@
 package com.example.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -267,3 +268,43 @@ data class MaintenanceRecord(
     val updatedAt: Long = System.currentTimeMillis(),
     val isDeleted: Boolean = false
 )
+
+@Entity(
+    tableName = "user_goals",
+    indices = [
+        Index(value = ["remoteId"]),
+        Index(value = ["syncStatus"])
+    ]
+)
+data class UserGoals(
+    @PrimaryKey val id: Int = 1,
+
+    // Metas Diárias
+    val dailyGoalGross: Double = 200.0,
+    val dailyGoalNet: Double = 130.0,
+    val dailyGoalKm: Double = 100.0,
+    val dailyGoalDeliveries: Int = 15,
+
+    // Metas Semanais
+    val weeklyGoalGross: Double = 1200.0,
+    val weeklyGoalNet: Double = 800.0,
+    val weeklyGoalKm: Double = 600.0,
+    val weeklyGoalDeliveries: Int = 90,
+
+    // Metas Mensais
+    val monthlyGoalGross: Double = 5000.0,
+    val monthlyGoalNet: Double = 3200.0,
+    val monthlyGoalKm: Double = 2500.0,
+    val monthlyGoalDeliveries: Int = 400,
+
+    // Campos de Sincronização e Resolução de Conflitos
+    @ColumnInfo(defaultValue = "")
+    val remoteId: String = "",
+    @ColumnInfo(defaultValue = "SYNCED")
+    val syncStatus: String = SyncStatus.SYNCED,
+    @ColumnInfo(defaultValue = "0")
+    val updatedAt: Long = System.currentTimeMillis(),
+    @ColumnInfo(defaultValue = "0")
+    val isDeleted: Boolean = false
+)
+

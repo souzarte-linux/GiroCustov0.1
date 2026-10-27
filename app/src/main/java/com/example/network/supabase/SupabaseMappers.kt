@@ -354,3 +354,51 @@ fun MaintenanceRecordDto.toEntity(existingId: Long = 0, localVehicleId: Long): M
         isDeleted = deletedAt != null
     )
 }
+
+// ==========================================
+// USER GOALS MAPPERS
+// ==========================================
+fun UserGoals.toDto(userId: String): UserGoalsDto {
+    val assignedRemoteId = if (remoteId.isNotBlank()) remoteId else UUID.randomUUID().toString()
+    return UserGoalsDto(
+        id = assignedRemoteId,
+        userId = userId,
+        dailyGoalGross = dailyGoalGross,
+        dailyGoalNet = dailyGoalNet,
+        dailyGoalKm = dailyGoalKm,
+        dailyGoalDeliveries = dailyGoalDeliveries,
+        weeklyGoalGross = weeklyGoalGross,
+        weeklyGoalNet = weeklyGoalNet,
+        weeklyGoalKm = weeklyGoalKm,
+        weeklyGoalDeliveries = weeklyGoalDeliveries,
+        monthlyGoalGross = monthlyGoalGross,
+        monthlyGoalNet = monthlyGoalNet,
+        monthlyGoalKm = monthlyGoalKm,
+        monthlyGoalDeliveries = monthlyGoalDeliveries,
+        updatedAt = SupabaseMappers.toIsoString(if (updatedAt > 0) updatedAt else System.currentTimeMillis()),
+        deletedAt = if (isDeleted) SupabaseMappers.toIsoString(updatedAt) else null
+    )
+}
+
+fun UserGoalsDto.toEntity(existingId: Int = 1): UserGoals {
+    return UserGoals(
+        id = existingId,
+        dailyGoalGross = dailyGoalGross,
+        dailyGoalNet = dailyGoalNet,
+        dailyGoalKm = dailyGoalKm,
+        dailyGoalDeliveries = dailyGoalDeliveries,
+        weeklyGoalGross = weeklyGoalGross,
+        weeklyGoalNet = weeklyGoalNet,
+        weeklyGoalKm = weeklyGoalKm,
+        weeklyGoalDeliveries = weeklyGoalDeliveries,
+        monthlyGoalGross = monthlyGoalGross,
+        monthlyGoalNet = monthlyGoalNet,
+        monthlyGoalKm = monthlyGoalKm,
+        monthlyGoalDeliveries = monthlyGoalDeliveries,
+        remoteId = id,
+        syncStatus = SyncStatus.SYNCED,
+        updatedAt = SupabaseMappers.parseIsoTimestamp(updatedAt),
+        isDeleted = deletedAt != null
+    )
+}
+

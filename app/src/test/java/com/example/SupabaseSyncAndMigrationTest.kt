@@ -390,9 +390,9 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // Abre agora com Room versão 13 executando MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12 e MIGRATION_12_13
+        // Abre agora com Room versão 14 executando MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13 e MIGRATION_13_14
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_9_10, GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13)
+            .addMigrations(GiroCustoDatabase.MIGRATION_9_10, GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14)
             .allowMainThreadQueries()
             .build()
 
@@ -609,9 +609,9 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // Abre agora com Room versão 13 executando MIGRATION_10_11, MIGRATION_11_12 e MIGRATION_12_13
+        // Abre agora com Room versão 14 executando MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13 e MIGRATION_13_14
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13)
+            .addMigrations(GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14)
             .allowMainThreadQueries()
             .build()
 
@@ -865,9 +865,9 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // Abre agora com Room versão 13 executando MIGRATION_11_12 e MIGRATION_12_13
+        // Abre agora com Room versão 14 executando MIGRATION_11_12, MIGRATION_12_13 e MIGRATION_13_14
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13)
+            .addMigrations(GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14)
             .allowMainThreadQueries()
             .build()
 
@@ -1167,9 +1167,9 @@ class SupabaseSyncAndMigrationTest {
 
         dbV13.close()
 
-        // 6. Confirmação de abertura e consultas do Room em versão 13 com DAOs
+        // 6. Confirmação de abertura e consultas do Room em versão 14 com DAOs
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_12_13)
+            .addMigrations(GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14)
             .allowMainThreadQueries()
             .build()
 
@@ -1339,13 +1339,14 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // 2. Abre com Room v13 aplicando cadeia completa 9->10->11->12->13
+        // 2. Abre com Room v14 aplicando cadeia completa 9->10->11->12->13->14
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
             .addMigrations(
                 GiroCustoDatabase.MIGRATION_9_10,
                 GiroCustoDatabase.MIGRATION_10_11,
                 GiroCustoDatabase.MIGRATION_11_12,
-                GiroCustoDatabase.MIGRATION_12_13
+                GiroCustoDatabase.MIGRATION_12_13,
+                GiroCustoDatabase.MIGRATION_13_14
             )
             .allowMainThreadQueries()
             .build()
@@ -2497,6 +2498,7 @@ class FakeSupabaseRestApi : SupabaseRestApi {
     val remotePlatforms = mutableListOf<PlatformDto>()
     val remoteFuelRefills = mutableListOf<FuelRefillDto>()
     val remoteMaintenanceRecords = mutableListOf<MaintenanceRecordDto>()
+    val remoteUserGoals = mutableListOf<UserGoalsDto>()
 
     val upsertedVehicles = mutableListOf<VehicleDto>()
     val upsertedParts = mutableListOf<VehiclePartDto>()
@@ -2505,6 +2507,7 @@ class FakeSupabaseRestApi : SupabaseRestApi {
     val upsertedPlatforms = mutableListOf<PlatformDto>()
     val upsertedFuelRefills = mutableListOf<FuelRefillDto>()
     val upsertedMaintenanceRecords = mutableListOf<MaintenanceRecordDto>()
+    val upsertedUserGoals = mutableListOf<UserGoalsDto>()
 
     override suspend fun getVehicles(select: String, updatedAtFilter: String?): List<VehicleDto> {
         if (shouldFail) throw IOException("Falha de rede simulada")
@@ -2680,5 +2683,25 @@ class FakeSupabaseRestApi : SupabaseRestApi {
         if (shouldFail) throw IOException("Falha de rede simulada")
         remoteMaintenanceRecords.removeAll { it.id == idFilter }
         return Response.success(Unit)
+    }
+
+    override suspend fun getUserGoals(select: String, updatedAtFilter: String?): List<UserGoalsDto> {
+        if (shouldFail) throw IOException("Falha de rede simulada")
+        return remoteUserGoals.toList()
+    }
+
+    override suspend fun upsertUserGoals(goals: List<UserGoalsDto>): List<UserGoalsDto> {
+        if (shouldFail) throw IOException("Falha de rede simulada")
+        upsertedUserGoals.addAll(goals)
+        for (g in goals) {
+            val existing = remoteUserGoals.firstOrNull { it.id == g.id || it.userId == g.userId }
+            val existingTime = SupabaseMappers.parseIsoTimestamp(existing?.updatedAt)
+            val incomingTime = SupabaseMappers.parseIsoTimestamp(g.updatedAt)
+            if (existing == null || incomingTime >= existingTime) {
+                remoteUserGoals.removeAll { it.id == g.id || it.userId == g.userId }
+                remoteUserGoals.add(g)
+            }
+        }
+        return goals
     }
 }

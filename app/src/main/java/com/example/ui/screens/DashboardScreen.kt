@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.R
 import com.example.data.DailyRecord
 import com.example.data.Vehicle
 import com.example.data.VehiclePart
@@ -40,6 +42,7 @@ import com.example.ui.GiroCustoViewModel
 import com.example.ui.Period
 import com.example.ui.components.CustomPeriodDialog
 import com.example.ui.components.GiroCustoLogo
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -86,13 +89,18 @@ fun DashboardScreen(
     val costPerKm = if (totalKm > 0) (totalExpenses + totalMaintenance) / totalKm else 0.0
     val netProfitPerKm = if (totalKm > 0) realNetProfit / totalKm else 0.0
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    val savedFeedbackMessage = stringResource(R.string.goals_saved_feedback)
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         // Título e Header (Professional Polish Header Style with App Logo and Theme Toggle)
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -634,23 +642,38 @@ fun DashboardScreen(
         // Botão para Ajustar Metas (Polished Green Outlined Style)
         OutlinedButton(
             onClick = { showGoalsDialog = true },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 48.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF10B981)),
             border = BorderStroke(1.2.dp, Color(0xFF10B981)),
             shape = RoundedCornerShape(12.dp)
         ) {
             Icon(Icons.Filled.Edit, "Editar Metas", modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(6.dp))
-            Text("Ajustar Valores de Metas", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text(stringResource(R.string.goals_adjust_button), fontWeight = FontWeight.Bold, fontSize = 13.sp)
         }
 
         if (showGoalsDialog) {
             EditGoalsDialog(
                 viewModel = viewModel,
-                onDismiss = { showGoalsDialog = false }
+                onDismiss = { showGoalsDialog = false },
+                onGoalsSaved = {
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(savedFeedbackMessage)
+                    }
+                }
             )
         }
     }
+
+    SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(bottom = 16.dp)
+    )
+}
 }
 
 @Composable
@@ -744,22 +767,26 @@ fun GoalRowInt(label: String, value: Int, target: Int) {
 @Composable
 fun EditGoalsDialog(
     viewModel: GiroCustoViewModel,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onGoalsSaved: (() -> Unit)? = null
 ) {
+    fun formatInitial(value: Double): String =
+        if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
+
     // Pegar valores atuais
-    var dg by remember { mutableStateOf(viewModel.dailyGoalGross.value.toString()) }
-    var dn by remember { mutableStateOf(viewModel.dailyGoalNet.value.toString()) }
-    var dk by remember { mutableStateOf(viewModel.dailyGoalKm.value.toString()) }
+    var dg by remember { mutableStateOf(formatInitial(viewModel.dailyGoalGross.value)) }
+    var dn by remember { mutableStateOf(formatInitial(viewModel.dailyGoalNet.value)) }
+    var dk by remember { mutableStateOf(formatInitial(viewModel.dailyGoalKm.value)) }
     var dd by remember { mutableStateOf(viewModel.dailyGoalDeliveries.value.toString()) }
 
-    var wg by remember { mutableStateOf(viewModel.weeklyGoalGross.value.toString()) }
-    var wn by remember { mutableStateOf(viewModel.weeklyGoalNet.value.toString()) }
-    var wk by remember { mutableStateOf(viewModel.weeklyGoalKm.value.toString()) }
+    var wg by remember { mutableStateOf(formatInitial(viewModel.weeklyGoalGross.value)) }
+    var wn by remember { mutableStateOf(formatInitial(viewModel.weeklyGoalNet.value)) }
+    var wk by remember { mutableStateOf(formatInitial(viewModel.weeklyGoalKm.value)) }
     var wd by remember { mutableStateOf(viewModel.weeklyGoalDeliveries.value.toString()) }
 
-    var mg by remember { mutableStateOf(viewModel.monthlyGoalGross.value.toString()) }
-    var mn by remember { mutableStateOf(viewModel.monthlyGoalNet.value.toString()) }
-    var mk by remember { mutableStateOf(viewModel.monthlyGoalKm.value.toString()) }
+    var mg by remember { mutableStateOf(formatInitial(viewModel.monthlyGoalGross.value)) }
+    var mn by remember { mutableStateOf(formatInitial(viewModel.monthlyGoalNet.value)) }
+    var mk by remember { mutableStateOf(formatInitial(viewModel.monthlyGoalKm.value)) }
     var md by remember { mutableStateOf(viewModel.monthlyGoalDeliveries.value.toString()) }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -767,7 +794,8 @@ fun EditGoalsDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = 600.dp)
-                .padding(16.dp),
+                .padding(16.dp)
+                .imePadding(),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)), // Charcoal background
             shape = RoundedCornerShape(20.dp),
             border = BorderStroke(1.dp, Color(0xFF2D2D34)) // Dark border
@@ -778,44 +806,136 @@ fun EditGoalsDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Ajustar Metas", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(
+                    stringResource(R.string.goals_dialog_title),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
                 HorizontalDivider(color = Color(0xFF2D2D34))
 
                 // Diária
-                Text("METAS DIÁRIAS", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    stringResource(R.string.goals_section_daily),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextField(value = dg, onValueChange = { dg = it }, label = { Text("Faturamento") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                    TextField(value = dn, onValueChange = { dn = it }, label = { Text("Lucro Líq") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                    TextField(
+                        value = dg,
+                        onValueChange = { dg = it },
+                        label = { Text(stringResource(R.string.goals_field_gross)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
+                    TextField(
+                        value = dn,
+                        onValueChange = { dn = it },
+                        label = { Text(stringResource(R.string.goals_field_net)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextField(value = dk, onValueChange = { dk = it }, label = { Text("Km") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                    TextField(value = dd, onValueChange = { dd = it }, label = { Text("Entregas") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                    TextField(
+                        value = dk,
+                        onValueChange = { dk = it },
+                        label = { Text(stringResource(R.string.goals_field_km)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
+                    TextField(
+                        value = dd,
+                        onValueChange = { dd = it },
+                        label = { Text(stringResource(R.string.goals_field_deliveries)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 // Semanal
-                Text("METAS SEMANAIS", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    stringResource(R.string.goals_section_weekly),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextField(value = wg, onValueChange = { wg = it }, label = { Text("Faturamento") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                    TextField(value = wn, onValueChange = { wn = it }, label = { Text("Lucro Líq") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                    TextField(
+                        value = wg,
+                        onValueChange = { wg = it },
+                        label = { Text(stringResource(R.string.goals_field_gross)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
+                    TextField(
+                        value = wn,
+                        onValueChange = { wn = it },
+                        label = { Text(stringResource(R.string.goals_field_net)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextField(value = wk, onValueChange = { wk = it }, label = { Text("Km") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                    TextField(value = wd, onValueChange = { wd = it }, label = { Text("Entregas") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                    TextField(
+                        value = wk,
+                        onValueChange = { wk = it },
+                        label = { Text(stringResource(R.string.goals_field_km)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
+                    TextField(
+                        value = wd,
+                        onValueChange = { wd = it },
+                        label = { Text(stringResource(R.string.goals_field_deliveries)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 // Mensal
-                Text("METAS MENSAIS", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    stringResource(R.string.goals_section_monthly),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextField(value = mg, onValueChange = { mg = it }, label = { Text("Faturamento") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                    TextField(value = mn, onValueChange = { mn = it }, label = { Text("Lucro Líq") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                    TextField(
+                        value = mg,
+                        onValueChange = { mg = it },
+                        label = { Text(stringResource(R.string.goals_field_gross)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
+                    TextField(
+                        value = mn,
+                        onValueChange = { mn = it },
+                        label = { Text(stringResource(R.string.goals_field_net)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextField(value = mk, onValueChange = { mk = it }, label = { Text("Km") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                    TextField(value = md, onValueChange = { md = it }, label = { Text("Entregas") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                    TextField(
+                        value = mk,
+                        onValueChange = { mk = it },
+                        label = { Text(stringResource(R.string.goals_field_km)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
+                    TextField(
+                        value = md,
+                        onValueChange = { md = it },
+                        label = { Text(stringResource(R.string.goals_field_deliveries)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -825,34 +945,39 @@ fun EditGoalsDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancelar", color = Color(0xFF94A3B8)) // Slate-400 for cancel in dark mode
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                    ) {
+                        Text(stringResource(R.string.goals_btn_cancel), color = Color(0xFF94A3B8))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
                             viewModel.updateGoals(
-                                dg.toDoubleOrNull() ?: 200.0,
-                                dn.toDoubleOrNull() ?: 130.0,
-                                dk.toDoubleOrNull() ?: 100.0,
-                                dd.toIntOrNull() ?: 15,
-                                wg.toDoubleOrNull() ?: 1200.0,
-                                wn.toDoubleOrNull() ?: 800.0,
-                                wk.toDoubleOrNull() ?: 600.0,
-                                wd.toIntOrNull() ?: 90,
-                                mg.toDoubleOrNull() ?: 5000.0,
-                                mn.toDoubleOrNull() ?: 3200.0,
-                                mk.toDoubleOrNull() ?: 2500.0,
-                                md.toIntOrNull() ?: 400
+                                dailyG = dg.trim().replace(',', '.').toDoubleOrNull() ?: 200.0,
+                                dailyN = dn.trim().replace(',', '.').toDoubleOrNull() ?: 130.0,
+                                dailyK = dk.trim().replace(',', '.').toDoubleOrNull() ?: 100.0,
+                                dailyD = dd.trim().toIntOrNull() ?: 15,
+                                weeklyG = wg.trim().replace(',', '.').toDoubleOrNull() ?: 1200.0,
+                                weeklyN = wn.trim().replace(',', '.').toDoubleOrNull() ?: 800.0,
+                                weeklyK = wk.trim().replace(',', '.').toDoubleOrNull() ?: 600.0,
+                                weeklyD = wd.trim().toIntOrNull() ?: 90,
+                                monthlyG = mg.trim().replace(',', '.').toDoubleOrNull() ?: 5000.0,
+                                monthlyN = mn.trim().replace(',', '.').toDoubleOrNull() ?: 3200.0,
+                                monthlyK = mk.trim().replace(',', '.').toDoubleOrNull() ?: 2500.0,
+                                monthlyD = md.trim().toIntOrNull() ?: 400
                             )
+                            onGoalsSaved?.invoke()
                             onDismiss()
                         },
+                        modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF10B981),
                             contentColor = Color(0xFF064E3B)
                         )
                     ) {
-                        Text("Salvar", fontWeight = FontWeight.Bold, color = Color(0xFF064E3B))
+                        Text(stringResource(R.string.goals_btn_save), fontWeight = FontWeight.Bold, color = Color(0xFF064E3B))
                     }
                 }
             }

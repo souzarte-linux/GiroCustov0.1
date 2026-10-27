@@ -1,5 +1,6 @@
 package com.example.data
 
+import android.content.Context
 import android.util.Log
 import androidx.room.withTransaction
 import com.example.network.supabase.AuthSession
@@ -27,6 +28,7 @@ class GiroCustoRepository(
     private val platformDao = db.platformDao()
     private val fuelRefillDao = db.fuelRefillDao()
     private val maintenanceRecordDao = db.maintenanceRecordDao()
+    private val userGoalsDao = db.userGoalsDao()
 
     val vehicleFlow: Flow<Vehicle?> = vehicleDao.getActiveVehicleFlow()
     val allVehiclesFlow: Flow<List<Vehicle>> = vehicleDao.getAllVehiclesFlow()
@@ -34,6 +36,7 @@ class GiroCustoRepository(
     val allRecordsFlow: Flow<List<DailyRecord>> = recordDao.getAllRecordsFlow()
     val userProfileFlow: Flow<UserProfile?> = userProfileDao.getUserProfileFlow()
     val allPlatformsFlow: Flow<List<Platform>> = platformDao.getAllPlatformsFlow()
+    val userGoalsFlow: Flow<UserGoals?> = userGoalsDao.getUserGoalsFlow()
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val refillsForActiveVehicleFlow: Flow<List<FuelRefill>> = vehicleFlow.flatMapLatest { vehicle ->
@@ -127,6 +130,69 @@ class GiroCustoRepository(
             isDeleted = false
         )
         userProfileDao.insertOrUpdateUserProfile(toSave)
+    }
+
+    suspend fun getUserGoals(): UserGoals? = userGoalsDao.getUserGoals()
+
+    suspend fun updateUserGoals(goals: UserGoals) {
+        val existing = userGoalsDao.getUserGoals()
+        val remoteId = when {
+            goals.remoteId.isNotBlank() -> goals.remoteId
+            existing?.remoteId?.isNotBlank() == true -> existing.remoteId
+            else -> UUID.randomUUID().toString()
+        }
+        val toSave = goals.copy(
+            id = 1,
+            remoteId = remoteId,
+            syncStatus = SyncStatus.PENDING_UPDATE,
+            updatedAt = System.currentTimeMillis(),
+            isDeleted = false
+        )
+        userGoalsDao.insertOrUpdateUserGoals(toSave)
+    }
+
+    suspend fun insertInitialUserGoals(goals: UserGoals) {
+        userGoalsDao.insertOrUpdateUserGoals(goals.copy(id = 1))
+    }
+
+    suspend fun migrateLegacyGoalsIfNeeded(context: Context) = withContext(ioDispatcher) {
+        if (userGoalsDao.getUserGoals() != null) return@withContext
+        val legacyPrefs = context.getSharedPreferences("giro_custo_goals", Context.MODE_PRIVATE)
+        val hasLegacyGoals = legacyPrefs.contains("daily_goal_gross")
+        val goals = if (hasLegacyGoals) {
+            UserGoals(
+                id = 1,
+                dailyGoalGross = legacyPrefs.getFloat("daily_goal_gross", 200.0f).toDouble(),
+                dailyGoalNet = legacyPrefs.getFloat("daily_goal_net", 130.0f).toDouble(),
+                dailyGoalKm = legacyPrefs.getFloat("daily_goal_km", 100.0f).toDouble(),
+                dailyGoalDeliveries = legacyPrefs.getInt("daily_goal_deliveries", 15),
+                weeklyGoalGross = legacyPrefs.getFloat("weekly_goal_gross", 1200.0f).toDouble(),
+                weeklyGoalNet = legacyPrefs.getFloat("weekly_goal_net", 800.0f).toDouble(),
+                weeklyGoalKm = legacyPrefs.getFloat("weekly_goal_km", 600.0f).toDouble(),
+                weeklyGoalDeliveries = legacyPrefs.getInt("weekly_goal_deliveries", 90),
+                monthlyGoalGross = legacyPrefs.getFloat("monthly_goal_gross", 5000.0f).toDouble(),
+                monthlyGoalNet = legacyPrefs.getFloat("monthly_goal_net", 3200.0f).toDouble(),
+                monthlyGoalKm = legacyPrefs.getFloat("monthly_goal_km", 2500.0f).toDouble(),
+                monthlyGoalDeliveries = legacyPrefs.getInt("monthly_goal_deliveries", 400),
+                syncStatus = SyncStatus.PENDING_UPDATE,
+                updatedAt = System.currentTimeMillis()
+            )
+        } else {
+            UserGoals(
+                id = 1,
+                syncStatus = SyncStatus.SYNCED
+            )
+        }
+        userGoalsDao.insertOrUpdateUserGoals(goals)
+
+        if (legacyPrefs.contains("is_dark_theme")) {
+            val isDark = legacyPrefs.getBoolean("is_dark_theme", true)
+            context.getSharedPreferences("giro_custo_preferences", Context.MODE_PRIVATE)
+                .edit().putBoolean("is_dark_theme", isDark).apply()
+            context.getSharedPreferences("giro_custo_app_prefs", Context.MODE_PRIVATE)
+                .edit().putBoolean("is_dark_theme", isDark).apply()
+        }
+        legacyPrefs.edit().clear().apply()
     }
 
     suspend fun getPlatformById(id: Long): Platform? = platformDao.getPlatformById(id)
@@ -736,7 +802,8 @@ class GiroCustoRepository(
         fuelRefillDao.getPendingRefills().isNotEmpty() ||
         maintenanceRecordDao.getPendingRecords().isNotEmpty() ||
         platformDao.getPendingPlatforms().isNotEmpty() ||
-        userProfileDao.getPendingUserProfile() != null
+        userProfileDao.getPendingUserProfile() != null ||
+        userGoalsDao.getPendingUserGoals() != null
     }
 
     suspend fun hasAnyLocalData(): Boolean = withContext(ioDispatcher) {
@@ -745,7 +812,8 @@ class GiroCustoRepository(
         partDao.getAllParts().isNotEmpty() ||
         recordDao.getAllRecords().isNotEmpty() ||
         platformDao.getAllPlatforms().isNotEmpty() ||
-        userProfileDao.getUserProfile() != null
+        userProfileDao.getUserProfile() != null ||
+        userGoalsDao.getUserGoals() != null
     }
 
     suspend fun countPendingChanges(): Int = withContext(ioDispatcher) {
@@ -755,7 +823,8 @@ class GiroCustoRepository(
         fuelRefillDao.getPendingRefills().size +
         maintenanceRecordDao.getPendingRecords().size +
         platformDao.getPendingPlatforms().size +
-        (if (userProfileDao.getPendingUserProfile() != null) 1 else 0)
+        (if (userProfileDao.getPendingUserProfile() != null) 1 else 0) +
+        (if (userGoalsDao.getPendingUserGoals() != null) 1 else 0)
     }
 
     suspend fun syncWithSupabase(userId: String, authToken: String): SyncResult {

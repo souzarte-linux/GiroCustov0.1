@@ -17,6 +17,7 @@ O schema espelha as 7 entidades Room do GiroCusto (versão 9) com suporte comple
 | `platforms` | Configurações de plataformas (iFood, Uber, etc.), modelos de repasse e ciclos | `id UUID` | `user_id -> auth.users.id` |
 | `fuel_refills` | Histórico detalhado de abastecimentos, litragem, valores e cálculo de tanque | `id UUID` | `user_id`, `vehicle_id -> vehicle.id` |
 | `maintenance_records` | Registros de oficina, serviços realizados e odômetro da manutenção | `id UUID` | `user_id`, `vehicle_id -> vehicle.id` |
+| `user_goals` | Metas operacionais e financeiras sincronizadas por conta (12 metas: diárias, semanais e mensais) | `id UUID` | `user_id -> auth.users.id (UNIQUE)` |
 
 ---
 
@@ -72,3 +73,16 @@ Para suportar o sincronizador bidirecional no Android:
 2. O repositório sincronizador fará:
    - **Upload (Push):** Envia registros locais com `isSynced = false` para o Supabase (Upsert).
    - **Download (Pull):** Busca no Supabase registros com `updated_at > lastSyncTimestamp` e atualiza a base Room local.
+
+---
+
+## 5. Migração de Metas Sincronizadas por Conta (T-28B - `user_goals`)
+
+O arquivo [`migrations/20261026_user_goals.sql`](./migrations/20261026_user_goals.sql) implementa a persistência e sincronização de metas de faturamento, lucro, quilometragem e entregas (diárias, semanais e mensais):
+
+- **Isolamento Multi-tenant:** Chave estrangeira `user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE`.
+- **Row Level Security (RLS):** Política `Users can manage their own goals` (`auth.uid() = user_id`) para SELECT, INSERT, UPDATE, DELETE.
+- **Trigger `trigger_user_goals_set_updated_at`:** Atualiza automaticamente o campo `updated_at` a cada UPDATE.
+- **Índices:** `idx_user_goals_user_id` e `idx_user_goals_updated_at`.
+- **Aplicação:** Executar o script `migrations/20261026_user_goals.sql` no SQL Editor do Supabase Dashboard.
+

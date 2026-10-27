@@ -156,4 +156,18 @@ interface SupabaseRestApi {
     suspend fun deleteMaintenanceRecord(
         @Query("id") idFilter: String
     ): Response<Unit>
+
+    // USER GOALS
+    @GET("rest/v1/user_goals")
+    suspend fun getUserGoals(
+        @Query("select") select: String = "*",
+        @Query("updated_at") updatedAtFilter: String? = null
+    ): List<UserGoalsDto>
+
+    @POST("rest/v1/user_goals")
+    @Headers("Prefer: resolution=merge-duplicates,return=representation")
+    suspend fun upsertUserGoals(
+        @Body goals: List<UserGoalsDto>
+    ): List<UserGoalsDto>
 }
+

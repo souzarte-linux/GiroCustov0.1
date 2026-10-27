@@ -213,3 +213,25 @@ data class MaintenanceRecordDto(
     @Json(name = "updated_at") val updatedAt: String? = null,
     @Json(name = "deleted_at") val deletedAt: String? = null
 )
+
+@JsonClass(generateAdapter = true)
+data class UserGoalsDto(
+    @Json(name = "id") val id: String = UUID.randomUUID().toString(),
+    @Json(name = "user_id") val userId: String,
+    @Json(name = "daily_goal_gross") val dailyGoalGross: Double,
+    @Json(name = "daily_goal_net") val dailyGoalNet: Double,
+    @Json(name = "daily_goal_km") val dailyGoalKm: Double,
+    @Json(name = "daily_goal_deliveries") val dailyGoalDeliveries: Int,
+    @Json(name = "weekly_goal_gross") val weeklyGoalGross: Double,
+    @Json(name = "weekly_goal_net") val weeklyGoalNet: Double,
+    @Json(name = "weekly_goal_km") val weeklyGoalKm: Double,
+    @Json(name = "weekly_goal_deliveries") val weeklyGoalDeliveries: Int,
+    @Json(name = "monthly_goal_gross") val monthlyGoalGross: Double,
+    @Json(name = "monthly_goal_net") val monthlyGoalNet: Double,
+    @Json(name = "monthly_goal_km") val monthlyGoalKm: Double,
+    @Json(name = "monthly_goal_deliveries") val monthlyGoalDeliveries: Int,
+    @Json(name = "created_at") val createdAt: String? = null,
+    @Json(name = "updated_at") val updatedAt: String? = null,
+    @Json(name = "deleted_at") val deletedAt: String? = null
+)
+

@@ -43,4 +43,18 @@
     <string name="auth_error_weak_password">A senha escolhida é muito fraca. Utilize ao menos 6 caracteres com números ou símbolos.</string>
     <string name="auth_error_network">Sem conexão com a internet. Verifique seu sinal e tente novamente.</string>
     <string name="auth_error_generic">Não foi possível concluir a autenticação. Tente novamente mais tarde.</string>
+
+    <!-- Metas e Dashboard (T-28B [DAT-03]) -->
+    <string name="goals_dialog_title">Ajustar Metas</string>
+    <string name="goals_section_daily">METAS DIÁRIAS</string>
+    <string name="goals_section_weekly">METAS SEMANAIS</string>
+    <string name="goals_section_monthly">METAS MENSAIS</string>
+    <string name="goals_field_gross">Faturamento</string>
+    <string name="goals_field_net">Lucro Líq</string>
+    <string name="goals_field_km">Km</string>
+    <string name="goals_field_deliveries">Entregas</string>
+    <string name="goals_btn_cancel">Cancelar</string>
+    <string name="goals_btn_save">Salvar</string>
+    <string name="goals_saved_feedback">Metas salvas com sucesso</string>
+    <string name="goals_adjust_button">Ajustar Valores de Metas</string>
 </resources>

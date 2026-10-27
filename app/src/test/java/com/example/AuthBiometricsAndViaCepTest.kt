@@ -142,6 +142,9 @@ class AuthBiometricsAndViaCepTest {
             override suspend fun getMaintenanceRecords(select: String, updatedAtFilter: String?) = emptyList<com.example.network.supabase.MaintenanceRecordDto>()
             override suspend fun upsertMaintenanceRecords(records: List<com.example.network.supabase.MaintenanceRecordDto>) = records
             override suspend fun deleteMaintenanceRecord(idFilter: String): retrofit2.Response<Unit> = retrofit2.Response.success(Unit)
+
+            override suspend fun getUserGoals(select: String, updatedAtFilter: String?) = emptyList<com.example.network.supabase.UserGoalsDto>()
+            override suspend fun upsertUserGoals(goals: List<com.example.network.supabase.UserGoalsDto>) = goals
         }
         BiometricHelper.clearBiometrics(context)
         BiometricHelper.setHardwareProvider(null)

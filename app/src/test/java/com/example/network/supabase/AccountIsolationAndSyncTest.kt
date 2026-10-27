@@ -697,4 +697,7 @@ class CountingSupabaseRestApi : SupabaseRestApi {
     override suspend fun getMaintenanceRecords(select: String, updatedAtFilter: String?): List<MaintenanceRecordDto> = emptyList()
     override suspend fun upsertMaintenanceRecords(records: List<MaintenanceRecordDto>): List<MaintenanceRecordDto> = records
     override suspend fun deleteMaintenanceRecord(idFilter: String): Response<Unit> = Response.success(Unit)
+
+    override suspend fun getUserGoals(select: String, updatedAtFilter: String?): List<UserGoalsDto> = emptyList()
+    override suspend fun upsertUserGoals(goals: List<UserGoalsDto>): List<UserGoalsDto> = goals
 }

@@ -9,8 +9,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Vehicle::class, VehiclePart::class, DailyRecord::class, UserProfile::class, Platform::class, FuelRefill::class, MaintenanceRecord::class],
-    version = 13,
+    entities = [Vehicle::class, VehiclePart::class, DailyRecord::class, UserProfile::class, Platform::class, FuelRefill::class, MaintenanceRecord::class, UserGoals::class],
+    version = 14,
     exportSchema = true
 )
 abstract class GiroCustoDatabase : RoomDatabase() {
@@ -21,6 +21,7 @@ abstract class GiroCustoDatabase : RoomDatabase() {
     abstract fun platformDao(): PlatformDao
     abstract fun fuelRefillDao(): FuelRefillDao
     abstract fun maintenanceRecordDao(): MaintenanceRecordDao
+    abstract fun userGoalsDao(): UserGoalsDao
 
     companion object {
         @Volatile
@@ -225,6 +226,38 @@ abstract class GiroCustoDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `user_goals` (
+                        `id` INTEGER NOT NULL,
+                        `dailyGoalGross` REAL NOT NULL,
+                        `dailyGoalNet` REAL NOT NULL,
+                        `dailyGoalKm` REAL NOT NULL,
+                        `dailyGoalDeliveries` INTEGER NOT NULL,
+                        `weeklyGoalGross` REAL NOT NULL,
+                        `weeklyGoalNet` REAL NOT NULL,
+                        `weeklyGoalKm` REAL NOT NULL,
+                        `weeklyGoalDeliveries` INTEGER NOT NULL,
+                        `monthlyGoalGross` REAL NOT NULL,
+                        `monthlyGoalNet` REAL NOT NULL,
+                        `monthlyGoalKm` REAL NOT NULL,
+                        `monthlyGoalDeliveries` INTEGER NOT NULL,
+                        `remoteId` TEXT NOT NULL DEFAULT '',
+                        `syncStatus` TEXT NOT NULL DEFAULT 'SYNCED',
+                        `updatedAt` INTEGER NOT NULL DEFAULT 0,
+                        `isDeleted` INTEGER NOT NULL DEFAULT 0,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+                // Índices para buscas rápidas em rotinas de sync
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_goals_remoteId` ON `user_goals` (`remoteId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_goals_syncStatus` ON `user_goals` (`syncStatus`)")
+            }
+        }
+
         fun getDatabase(context: Context): GiroCustoDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -232,7 +265,7 @@ abstract class GiroCustoDatabase : RoomDatabase() {
                     GiroCustoDatabase::class.java,
                     "giro_custo_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
                 .build()
                 INSTANCE = instance
                 instance

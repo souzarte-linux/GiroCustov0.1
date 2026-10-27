@@ -403,37 +403,92 @@ class GiroCustoViewModel @JvmOverloads constructor(
         launchDateTimestamp.value = timestamp
     }
 
-    // Preferências de Metas
-    private val prefs = application.getSharedPreferences("giro_custo_goals", Context.MODE_PRIVATE)
+    // Preferência dedicada para configurações do app (desacoplada de metas e contas)
+    private val appPrefs = getApplication<Application>().getSharedPreferences("giro_custo_preferences", Context.MODE_PRIVATE)
 
-    // Metas Editáveis (Valores de Destino)
-    val dailyGoalGross = MutableStateFlow(prefs.getFloat("daily_goal_gross", 200.0f).toDouble())
-    val dailyGoalNet = MutableStateFlow(prefs.getFloat("daily_goal_net", 130.0f).toDouble())
-    val dailyGoalKm = MutableStateFlow(prefs.getFloat("daily_goal_km", 100.0f).toDouble())
-    val dailyGoalDeliveries = MutableStateFlow(prefs.getInt("daily_goal_deliveries", 15))
+    // Metas Editáveis (Valores de Destino - alimentadas reativamente pelo Room)
+    val dailyGoalGross = MutableStateFlow(200.0)
+    val dailyGoalNet = MutableStateFlow(130.0)
+    val dailyGoalKm = MutableStateFlow(100.0)
+    val dailyGoalDeliveries = MutableStateFlow(15)
 
-    val weeklyGoalGross = MutableStateFlow(prefs.getFloat("weekly_goal_gross", 1200.0f).toDouble())
-    val weeklyGoalNet = MutableStateFlow(prefs.getFloat("weekly_goal_net", 800.0f).toDouble())
-    val weeklyGoalKm = MutableStateFlow(prefs.getFloat("weekly_goal_km", 600.0f).toDouble())
-    val weeklyGoalDeliveries = MutableStateFlow(prefs.getInt("weekly_goal_deliveries", 90))
+    val weeklyGoalGross = MutableStateFlow(1200.0)
+    val weeklyGoalNet = MutableStateFlow(800.0)
+    val weeklyGoalKm = MutableStateFlow(600.0)
+    val weeklyGoalDeliveries = MutableStateFlow(90)
 
-    val monthlyGoalGross = MutableStateFlow(prefs.getFloat("monthly_goal_gross", 5000.0f).toDouble())
-    val monthlyGoalNet = MutableStateFlow(prefs.getFloat("monthly_goal_net", 3200.0f).toDouble())
-    val monthlyGoalKm = MutableStateFlow(prefs.getFloat("monthly_goal_km", 2500.0f).toDouble())
-    val monthlyGoalDeliveries = MutableStateFlow(prefs.getInt("monthly_goal_deliveries", 400))
+    val monthlyGoalGross = MutableStateFlow(5000.0)
+    val monthlyGoalNet = MutableStateFlow(3200.0)
+    val monthlyGoalKm = MutableStateFlow(2500.0)
+    val monthlyGoalDeliveries = MutableStateFlow(400)
+
+    private fun getInitialThemePreference(): Boolean {
+        if (appPrefs.contains("is_dark_theme")) {
+            return appPrefs.getBoolean("is_dark_theme", true)
+        }
+        val legacyPrefs = getApplication<Application>().getSharedPreferences("giro_custo_goals", Context.MODE_PRIVATE)
+        if (legacyPrefs.contains("is_dark_theme")) {
+            val legacyVal = legacyPrefs.getBoolean("is_dark_theme", true)
+            appPrefs.edit().putBoolean("is_dark_theme", legacyVal).apply()
+            return legacyVal
+        }
+        return true
+    }
 
     // Tema Claro / Dark
-    val isDarkTheme = MutableStateFlow(prefs.getBoolean("is_dark_theme", true))
+    val isDarkTheme = MutableStateFlow(getInitialThemePreference())
 
     fun toggleTheme() {
         val newVal = !isDarkTheme.value
         isDarkTheme.value = newVal
-        prefs.edit().putBoolean("is_dark_theme", newVal).apply()
+        appPrefs.edit().putBoolean("is_dark_theme", newVal).apply()
     }
 
     init {
-        if (supabaseClient.hasSavedSession() && BiometricHelper.canUnlockWithBiometrics(application)) {
+        if (supabaseClient.hasSavedSession() && BiometricHelper.canUnlockWithBiometrics(getApplication())) {
             _isBiometricLocked.value = true
+        }
+
+        // Migração transparente de preferências legadas de metas para Room se necessário
+        viewModelScope.launch {
+            repository.migrateLegacyGoalsIfNeeded(getApplication())
+        }
+
+        // Integração com userGoalsFlow do Room para alimentar os StateFlows
+        viewModelScope.launch {
+            repository.userGoalsFlow.collect { goals ->
+                if (goals != null) {
+                    dailyGoalGross.value = goals.dailyGoalGross
+                    dailyGoalNet.value = goals.dailyGoalNet
+                    dailyGoalKm.value = goals.dailyGoalKm
+                    dailyGoalDeliveries.value = goals.dailyGoalDeliveries
+
+                    weeklyGoalGross.value = goals.weeklyGoalGross
+                    weeklyGoalNet.value = goals.weeklyGoalNet
+                    weeklyGoalKm.value = goals.weeklyGoalKm
+                    weeklyGoalDeliveries.value = goals.weeklyGoalDeliveries
+
+                    monthlyGoalGross.value = goals.monthlyGoalGross
+                    monthlyGoalNet.value = goals.monthlyGoalNet
+                    monthlyGoalKm.value = goals.monthlyGoalKm
+                    monthlyGoalDeliveries.value = goals.monthlyGoalDeliveries
+                } else {
+                    dailyGoalGross.value = 200.0
+                    dailyGoalNet.value = 130.0
+                    dailyGoalKm.value = 100.0
+                    dailyGoalDeliveries.value = 15
+
+                    weeklyGoalGross.value = 1200.0
+                    weeklyGoalNet.value = 800.0
+                    weeklyGoalKm.value = 600.0
+                    weeklyGoalDeliveries.value = 90
+
+                    monthlyGoalGross.value = 5000.0
+                    monthlyGoalNet.value = 3200.0
+                    monthlyGoalKm.value = 2500.0
+                    monthlyGoalDeliveries.value = 400
+                }
+            }
         }
 
         viewModelScope.launch {
@@ -955,22 +1010,6 @@ class GiroCustoViewModel @JvmOverloads constructor(
         syncPrefs.edit().remove("last_sync_timestamp").apply()
         _lastSyncTime.value = null
 
-        val dark = prefs.getBoolean("is_dark_theme", true)
-        prefs.edit().clear().putBoolean("is_dark_theme", dark).apply()
-
-        dailyGoalGross.value = 200.0
-        dailyGoalNet.value = 130.0
-        dailyGoalKm.value = 100.0
-        dailyGoalDeliveries.value = 15
-        weeklyGoalGross.value = 1200.0
-        weeklyGoalNet.value = 800.0
-        weeklyGoalKm.value = 600.0
-        weeklyGoalDeliveries.value = 90
-        monthlyGoalGross.value = 5000.0
-        monthlyGoalNet.value = 3200.0
-        monthlyGoalKm.value = 2500.0
-        monthlyGoalDeliveries.value = 400
-
         clearViaCepState()
         clearFipe()
     }
@@ -1162,44 +1201,48 @@ class GiroCustoViewModel @JvmOverloads constructor(
         platform.value = ""
     }
 
-    // Salvar Metas nas SharedPreferences
+    // Salvar Metas no Room com sincronização opcional Supabase
     fun updateGoals(
         dailyG: Double, dailyN: Double, dailyK: Double, dailyD: Int,
         weeklyG: Double, weeklyN: Double, weeklyK: Double, weeklyD: Int,
         monthlyG: Double, monthlyN: Double, monthlyK: Double, monthlyD: Int
     ) {
+        // Atualizar os StateFlows correspondentes para resposta imediata (0ms de latência)
+        dailyGoalGross.value = dailyG
+        dailyGoalNet.value = dailyN
+        dailyGoalKm.value = dailyK
+        dailyGoalDeliveries.value = dailyD
+
+        weeklyGoalGross.value = weeklyG
+        weeklyGoalNet.value = weeklyN
+        weeklyGoalKm.value = weeklyK
+        weeklyGoalDeliveries.value = weeklyD
+
+        monthlyGoalGross.value = monthlyG
+        monthlyGoalNet.value = monthlyN
+        monthlyGoalKm.value = monthlyK
+        monthlyGoalDeliveries.value = monthlyD
+
         viewModelScope.launch {
-            prefs.edit().apply {
-                putFloat("daily_goal_gross", dailyG.toFloat())
-                putFloat("daily_goal_net", dailyN.toFloat())
-                putFloat("daily_goal_km", dailyK.toFloat())
-                putInt("daily_goal_deliveries", dailyD)
-
-                putFloat("weekly_goal_gross", weeklyG.toFloat())
-                putFloat("weekly_goal_net", weeklyN.toFloat())
-                putFloat("weekly_goal_km", weeklyK.toFloat())
-                putInt("weekly_goal_deliveries", weeklyD)
-
-                putFloat("monthly_goal_gross", monthlyG.toFloat())
-                putFloat("monthly_goal_net", monthlyN.toFloat())
-                putFloat("monthly_goal_km", monthlyK.toFloat())
-                putInt("monthly_goal_deliveries", monthlyD)
-            }.apply()
-
-            dailyGoalGross.value = dailyG
-            dailyGoalNet.value = dailyN
-            dailyGoalKm.value = dailyK
-            dailyGoalDeliveries.value = dailyD
-
-            weeklyGoalGross.value = weeklyG
-            weeklyGoalNet.value = weeklyN
-            weeklyGoalKm.value = weeklyK
-            weeklyGoalDeliveries.value = weeklyD
-
-            monthlyGoalGross.value = monthlyG
-            monthlyGoalNet.value = monthlyN
-            monthlyGoalKm.value = monthlyK
-            monthlyGoalDeliveries.value = monthlyD
+            val userGoals = UserGoals(
+                id = 1,
+                dailyGoalGross = dailyG,
+                dailyGoalNet = dailyN,
+                dailyGoalKm = dailyK,
+                dailyGoalDeliveries = dailyD,
+                weeklyGoalGross = weeklyG,
+                weeklyGoalNet = weeklyN,
+                weeklyGoalKm = weeklyK,
+                weeklyGoalDeliveries = weeklyD,
+                monthlyGoalGross = monthlyG,
+                monthlyGoalNet = monthlyN,
+                monthlyGoalKm = monthlyK,
+                monthlyGoalDeliveries = monthlyD
+            )
+            repository.updateUserGoals(userGoals)
+            if (supabaseClient.isAuthenticated) {
+                triggerSync()
+            }
         }
     }
 

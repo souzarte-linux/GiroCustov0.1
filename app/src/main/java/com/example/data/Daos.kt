@@ -251,3 +251,25 @@ interface MaintenanceRecordDao {
     @Query("DELETE FROM maintenance_records WHERE id = :id")
     suspend fun hardDeleteRecord(id: Long)
 }
+
+@Dao
+interface UserGoalsDao {
+    @Query("SELECT * FROM user_goals WHERE id = 1 AND isDeleted = 0 LIMIT 1")
+    fun getUserGoalsFlow(): Flow<UserGoals?>
+
+    @Query("SELECT * FROM user_goals WHERE id = 1 LIMIT 1")
+    suspend fun getUserGoals(): UserGoals?
+
+    @Query("SELECT * FROM user_goals WHERE remoteId = :remoteId LIMIT 1")
+    suspend fun getUserGoalsByRemoteId(remoteId: String): UserGoals?
+
+    @Query("SELECT * FROM user_goals WHERE syncStatus != 'SYNCED' LIMIT 1")
+    suspend fun getPendingUserGoals(): UserGoals?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdateUserGoals(goals: UserGoals)
+
+    @Query("DELETE FROM user_goals")
+    suspend fun deleteAllGoals()
+}
+

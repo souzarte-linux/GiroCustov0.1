@@ -27,6 +27,7 @@ class SupabaseSyncManager(
     private val platformDao = db.platformDao()
     private val fuelRefillDao = db.fuelRefillDao()
     private val maintenanceRecordDao = db.maintenanceRecordDao()
+    private val userGoalsDao = db.userGoalsDao()
 
     internal suspend fun hasAnyLocalData(): Boolean {
         return vehicleDao.getAllVehicles().isNotEmpty() ||
@@ -34,7 +35,8 @@ class SupabaseSyncManager(
                 partDao.getAllParts().isNotEmpty() ||
                 recordDao.getAllRecords().isNotEmpty() ||
                 platformDao.getAllPlatforms().isNotEmpty() ||
-                userProfileDao.getUserProfile() != null
+                userProfileDao.getUserProfile() != null ||
+                userGoalsDao.getUserGoals() != null
     }
 
     suspend fun sync(userId: String): SyncResult = withContext(ioDispatcher) {
@@ -203,6 +205,15 @@ class SupabaseSyncManager(
                     }
                 }
             }
+        }
+
+        // --- 8. METAS DO USUÁRIO ---
+        val pendingGoals = userGoalsDao.getPendingUserGoals()
+        if (pendingGoals != null) {
+            val remId = if (pendingGoals.remoteId.isNotBlank()) pendingGoals.remoteId else UUID.randomUUID().toString()
+            val dto = pendingGoals.copy(remoteId = remId).toDto(userId)
+            restApi.upsertUserGoals(listOf(dto))
+            userGoalsDao.insertOrUpdateUserGoals(pendingGoals.copy(remoteId = dto.id, syncStatus = SyncStatus.SYNCED))
         }
     }
 
@@ -403,6 +414,18 @@ class SupabaseSyncManager(
                         maintenanceRecordDao.updateRecord(dto.toEntity(existingId = existing.id, localVehicleId = targetVehicleId).copy(isDeleted = isDel))
                     }
                 }
+            }
+        }
+
+        // --- 8. METAS DO USUÁRIO ---
+        val remoteGoalsList = restApi.getUserGoals()
+        val remoteGoals = remoteGoalsList.firstOrNull()
+        if (remoteGoals != null) {
+            val existing = userGoalsDao.getUserGoals()
+            val remoteUpdated = SupabaseMappers.parseIsoTimestamp(remoteGoals.updatedAt)
+            if (existing == null || existing.syncStatus == SyncStatus.SYNCED || remoteUpdated >= existing.updatedAt) {
+                val isDel = remoteGoals.deletedAt != null
+                userGoalsDao.insertOrUpdateUserGoals(remoteGoals.toEntity(existingId = 1).copy(isDeleted = isDel))
             }
         }
 
