@@ -141,5 +141,5 @@ Configuration cache entry reused.
 
 ## 8. Commit e sincronização
 
-- **Hash do commit:** `[Aguardando commit do DevOps]`
-- **Status do push:** `[Aguardando push]`
+- **Hash do commit:** `f863ca3` (`fix(network): alinha timeouts para 25s, adiciona Accept json e espelhos ativos no Overpass (T-13)`)
+- **Status do push:** Sincronizado com `origin/main`
