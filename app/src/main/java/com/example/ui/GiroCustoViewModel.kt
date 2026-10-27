@@ -718,6 +718,58 @@ class GiroCustoViewModel @JvmOverloads constructor(
     }
 
     // =========================================================================
+    // MÉTODOS DE PORTABILIDADE E EXCLUSÃO DE CONTA (LGPD)
+    // =========================================================================
+
+    fun exportUserData(onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            val json = repository.exportAllUserDataAsJson()
+            onResult(json)
+        }
+    }
+
+    fun deleteAccountAndData(onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                // 1. Se autenticado remotamente, chama a RPC remota delete_user_account()
+                val currentUserId = supabaseClient.currentUserId
+                if (currentUserId != null) {
+                    val rpcResult = supabaseClient.deleteUserAccount()
+                    if (rpcResult.isFailure) {
+                        val error = rpcResult.exceptionOrNull()?.message ?: "Falha ao excluir conta no servidor"
+                        // FAIL-SAFE: Aborta e preserva absolutamente todos os dados locais
+                        onResult(false, error)
+                        return@launch
+                    }
+                }
+
+                // 2. SUCESSO na exclusão remota (ou conta puramente local): Expurgo atômico dos dados locais
+                repository.clearAllLocalData()
+                dataOwnerStorage.clearDataOwner()
+                if (currentUserId != null) {
+                    supabaseClient.signOut()
+                } else {
+                    supabaseClient.clearSavedSession()
+                }
+                BiometricHelper.clearBiometrics(getApplication())
+                resetAccountSpecificPreferences()
+
+                _isBiometricLocked.value = false
+                _authErrorResId.value = null
+                _authUiState.value = AuthUiState.Idle
+                _syncState.value = SyncState.IDLE
+                _syncErrorMessage.value = null
+                _accountConflictState.value = null
+
+                onResult(true, null)
+            } catch (e: Exception) {
+                // FAIL-SAFE: Qualquer erro inesperado cancela o expurgo local
+                onResult(false, e.message ?: "Erro inesperado ao excluir conta")
+            }
+        }
+    }
+
+    // =========================================================================
     // MÉTODOS VIACEP E ONBOARDING
     // =========================================================================
 

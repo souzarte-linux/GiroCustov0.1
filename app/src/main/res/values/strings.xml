@@ -57,4 +57,30 @@
     <string name="goals_btn_save">Salvar</string>
     <string name="goals_saved_feedback">Metas salvas com sucesso</string>
     <string name="goals_adjust_button">Ajustar Valores de Metas</string>
+
+    <!-- Portabilidade e Exclusão de Conta - LGPD (T-10 [SEC-06]) -->
+    <string name="lgpd_section_title">Privacidade &amp; Seus Dados (LGPD)</string>
+    <string name="lgpd_section_desc">Gerencie seus dados e direitos de privacidade conforme a lei</string>
+    <string name="lgpd_btn_export_data">Exportar Meus Dados</string>
+    <string name="lgpd_btn_export_desc">Baixe ou compartilhe todo o seu histórico em formato JSON</string>
+    <string name="lgpd_btn_delete_account">Excluir Minha Conta e Dados</string>
+    <string name="lgpd_btn_delete_desc">Exclusão definitiva e irreversível da nuvem e do aparelho</string>
+    <string name="lgpd_export_dialog_title">Exportar Dados Operacionais</string>
+    <string name="lgpd_export_dialog_message">Seus dados (veículos, corridas, abastecimentos, manutenções e metas) foram consolidados em formato JSON padronizado. Escolha como deseja exportar:</string>
+    <string name="lgpd_export_share_btn">Compartilhar</string>
+    <string name="lgpd_export_save_btn">Salvar no Aparelho</string>
+    <string name="lgpd_export_success">Arquivo de backup gerado com sucesso!</string>
+    <string name="lgpd_export_error">Falha ao gerar o arquivo de exportação.</string>
+    <string name="lgpd_delete_dialog_title">Exclusão Definitiva de Conta</string>
+    <string name="lgpd_delete_dialog_warning">ATENÇÃO: Esta ação é permanente e irreversível. Todos os seus veículos, históricos de corridas, metas e acessos serão apagados definitivamente do servidor e deste celular.</string>
+    <string name="lgpd_delete_dialog_export_hint">Recomendamos exportar seus dados antes de prosseguir com a exclusão.</string>
+    <string name="lgpd_delete_confirmation_prompt">Para confirmar, digite a palavra EXCLUIR no campo abaixo:</string>
+    <string name="lgpd_delete_confirmation_word">EXCLUIR</string>
+    <string name="lgpd_delete_input_placeholder">Digite EXCLUIR</string>
+    <string name="lgpd_delete_btn_confirm">Excluir Definitivamente</string>
+    <string name="lgpd_deleting_progress">Excluindo conta e dados com segurança…</string>
+    <string name="lgpd_delete_success">Sua conta e todos os dados foram excluídos com sucesso.</string>
+    <string name="lgpd_delete_error">Não foi possível excluir sua conta: %1$s</string>
+    <string name="cd_lgpd_export_icon">Ícone de exportação de dados</string>
+    <string name="cd_lgpd_delete_icon">Ícone de exclusão definitiva de conta</string>
 </resources>

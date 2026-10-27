@@ -86,3 +86,17 @@ O arquivo [`migrations/20261026_user_goals.sql`](./migrations/20261026_user_goal
 - **Índices:** `idx_user_goals_user_id` e `idx_user_goals_updated_at`.
 - **Aplicação:** Executar o script `migrations/20261026_user_goals.sql` no SQL Editor do Supabase Dashboard.
 
+---
+
+## 6. Procedimento Remoto de Exclusão de Conta (LGPD) (T-10 - `delete_user_account`)
+
+O arquivo [`migrations/20261026_user_deletion_rpc.sql`](./migrations/20261026_user_deletion_rpc.sql) implementa a função RPC para exclusão definitiva e irreversível da conta e de todos os dados do motorista:
+
+- **Função:** `delete_user_account()` com privilégios `SECURITY DEFINER` e `SET search_path = public, auth, pg_temp`.
+- **Privilégios Estritos:** `REVOKE ALL FROM PUBLIC; REVOKE ALL FROM anon; GRANT EXECUTE TO authenticated;`.
+- **Comportamento em Cascata:**
+  1. Remove registros vinculados ao usuário em todas as 8 tabelas públicas (`user_goals`, `maintenance_records`, `fuel_refills`, `daily_records`, `platforms`, `vehicle_parts`, `vehicle`, `user_profile`).
+  2. Remove o registro do usuário em `auth.users(id)`.
+- **Aplicação:** Executar o script no SQL Editor do Supabase Dashboard antes de testar a exclusão remota.
+
+

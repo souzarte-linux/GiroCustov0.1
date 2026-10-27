@@ -3,7 +3,12 @@ package com.example.ui.screens
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import com.example.ui.components.PrivacyAndDataSection
+import com.example.ui.components.LgpdExportDialog
+import com.example.ui.components.LgpdDeleteAccountDialog
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -294,6 +299,28 @@ private fun ProfileSectionsContent(
     var showEditPartDialog by remember { mutableStateOf(false) }
     var partToEdit by remember { mutableStateOf<VehiclePart?>(null) }
 
+    // Estados de Privacidade e Exclusão LGPD (T-10 [SEC-06])
+    var showExportDialog by remember { mutableStateOf(false) }
+    var showDeleteAccountDialog by remember { mutableStateOf(false) }
+    var exportedJsonContent by remember { mutableStateOf<String?>(null) }
+    var isDeletingAccount by remember { mutableStateOf(false) }
+
+    val saveFileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: Uri? ->
+        uri?.let { targetUri ->
+            try {
+                context.contentResolver.openOutputStream(targetUri)?.use { output ->
+                    output.write((exportedJsonContent ?: "").toByteArray(Charsets.UTF_8))
+                }
+                Toast.makeText(context, context.getString(R.string.lgpd_export_success), Toast.LENGTH_SHORT).show()
+                showExportDialog = false
+            } catch (e: Exception) {
+                Toast.makeText(context, context.getString(R.string.lgpd_export_error), Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -390,6 +417,21 @@ private fun ProfileSectionsContent(
             onDeletePart = onDeletePart
         )
 
+        // =========================================================================
+        // SEÇÃO 5: PRIVACIDADE & DADOS (LGPD - T-10 [SEC-06])
+        // =========================================================================
+        PrivacyAndDataSection(
+            onExportClick = {
+                viewModel.exportUserData { json ->
+                    exportedJsonContent = json
+                    showExportDialog = true
+                }
+            },
+            onDeleteAccountClick = {
+                showDeleteAccountDialog = true
+            }
+        )
+
         Spacer(modifier = Modifier.height(24.dp))
     }
 
@@ -426,6 +468,47 @@ private fun ProfileSectionsContent(
                 showEditPartDialog = false
                 partToEdit = null
                 Toast.makeText(context, "Peça de desgaste atualizada!", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    // Diálogos de Privacidade e Exclusão LGPD (T-10 [SEC-06])
+    if (showExportDialog) {
+        LgpdExportDialog(
+            onDismiss = { showExportDialog = false },
+            onShare = {
+                val json = exportedJsonContent ?: return@LgpdExportDialog
+                val sendIntent = Intent().apply {
+                    action = Intent.ACTION_SEND
+                    putExtra(Intent.EXTRA_TEXT, json)
+                    type = "text/plain"
+                }
+                val shareIntent = Intent.createChooser(sendIntent, context.getString(R.string.lgpd_export_dialog_title))
+                context.startActivity(shareIntent)
+                showExportDialog = false
+            },
+            onSaveToDevice = {
+                val dateStr = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
+                saveFileLauncher.launch("girocusto_backup_$dateStr.json")
+            }
+        )
+    }
+
+    if (showDeleteAccountDialog) {
+        LgpdDeleteAccountDialog(
+            isDeleting = isDeletingAccount,
+            onDismiss = { showDeleteAccountDialog = false },
+            onConfirmDelete = {
+                isDeletingAccount = true
+                viewModel.deleteAccountAndData { success, error ->
+                    isDeletingAccount = false
+                    if (success) {
+                        showDeleteAccountDialog = false
+                        Toast.makeText(context, context.getString(R.string.lgpd_delete_success), Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(context, context.getString(R.string.lgpd_delete_error, error ?: "Erro desconhecido"), Toast.LENGTH_LONG).show()
+                    }
+                }
             }
         )
     }

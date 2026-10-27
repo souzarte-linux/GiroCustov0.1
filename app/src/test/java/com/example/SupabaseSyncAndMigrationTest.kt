@@ -2704,4 +2704,17 @@ class FakeSupabaseRestApi : SupabaseRestApi {
         }
         return goals
     }
+
+    override suspend fun deleteUserAccount(): Response<Unit> {
+        if (shouldFail) throw IOException("Falha de rede simulada")
+        remoteVehicles.clear()
+        remoteParts.clear()
+        remoteDailyRecords.clear()
+        remoteUserProfiles.clear()
+        remotePlatforms.clear()
+        remoteFuelRefills.clear()
+        remoteMaintenanceRecords.clear()
+        remoteUserGoals.clear()
+        return Response.success(Unit)
+    }
 }

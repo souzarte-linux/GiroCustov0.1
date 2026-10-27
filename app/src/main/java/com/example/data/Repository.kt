@@ -856,4 +856,8 @@ class GiroCustoRepository(
         val userId = client.currentUserId ?: return SyncResult.Error(IllegalStateException("Usuário não autenticado no Supabase"))
         return syncWithSupabase(userId)
     }
+
+    suspend fun exportAllUserDataAsJson(): String = withContext(ioDispatcher) {
+        com.example.util.UserDataExportHelper.export(db)
+    }
 }

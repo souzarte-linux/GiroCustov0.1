@@ -169,5 +169,9 @@ interface SupabaseRestApi {
     suspend fun upsertUserGoals(
         @Body goals: List<UserGoalsDto>
     ): List<UserGoalsDto>
+
+    // RPC DE EXCLUSÃO DE CONTA (LGPD)
+    @POST("rest/v1/rpc/delete_user_account")
+    suspend fun deleteUserAccount(): Response<Unit>
 }
 

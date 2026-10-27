@@ -275,6 +275,21 @@ class SupabaseClient(
         }
     }
 
+    suspend fun deleteUserAccount(): Result<Unit> {
+        return try {
+            val response = restApi.deleteUserAccount()
+            if (response.isSuccessful) {
+                clearSavedSession()
+                Result.success(Unit)
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Result.failure(Exception("Falha ao excluir conta remota (HTTP ${response.code()}): $errorBody"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     companion object {
         @Volatile
         private var INSTANCE: SupabaseClient? = null

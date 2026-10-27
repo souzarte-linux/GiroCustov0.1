@@ -145,6 +145,7 @@ class AuthBiometricsAndViaCepTest {
 
             override suspend fun getUserGoals(select: String, updatedAtFilter: String?) = emptyList<com.example.network.supabase.UserGoalsDto>()
             override suspend fun upsertUserGoals(goals: List<com.example.network.supabase.UserGoalsDto>) = goals
+            override suspend fun deleteUserAccount(): retrofit2.Response<Unit> = retrofit2.Response.success(Unit)
         }
         BiometricHelper.clearBiometrics(context)
         BiometricHelper.setHardwareProvider(null)
