@@ -20,8 +20,10 @@ Com a Tarefa T-28B:
 1. **Metas no Banco de Dados Local (Room v14):** As metas agora são salvas como uma tabela oficial do banco de dados local (`user_goals`), com chaves, índices de busca rápida, controle de data de modificação e status de sincronização (`PENDING_UPDATE`, `SYNCED`).
 2. **Sincronização com o Supabase:** Criamos a comunicação que envia as metas locais para o servidor do Supabase e baixa as metas mais recentes salvas na nuvem. Em caso de alteração em dois aparelhos diferentes, o aplicativo adota a regra Last-Write-Wins (a alteração com data e hora mais recente prevalece), preservando com segurança dados inseridos offline.
 3. **Isolamento por Conta:** Cada usuário logado possui suas próprias metas exclusivas vinculadas ao seu identificador (`user_id`). Ao sair da conta ou trocar de usuário, as metas da conta anterior são zeradas do aparelho para proteger a privacidade, e as metas da nova conta são baixadas da nuvem.
-4. **Desacoplamento do Tema:** A escolha de Tema Escuro/Claro foi transferida para um arquivo dedicado de preferências gerais do aplicativo (`app_preferences`), garantindo que o tema visual nunca mais seja alterado ao limpar ou trocar de conta.
-5. **Formatação Brasileira:** A tela do Painel (Dashboard) agora aceita valores digitados com vírgula (ex.: `250,00` ou `160,00`) e exibe feedback imediato via mensagem na parte inferior (Snackbar) ao salvar as metas.
+4. **Desacoplamento do Tema:** A escolha de Tema Escuro/Claro foi transferida para um arquivo dedicado de preferências gerais do aplicativo (`giro_custo_preferences`), garantindo que o tema visual nunca mais seja alterado ao limpar ou trocar de conta.
+5. **Formatação Brasileira e Tratamento Robusto de Vírgula (Ajuste Pós-Feedback):**
+   - *Diagnóstico do relato ("quando coloco a vírgula o valor é desconsiderado"):* No código anterior, os cards de metas usavam o formato `R$ %.0f` (que descartava compulsoriamente todas as casas decimais e arredondava para inteiro, transformando `250,00` em `R$ 250` e `250,50` em `R$ 251`); ao reabrir o diálogo, o valor era exibido como `"250"` ou `"250.5"` (formato americano com ponto); e o parser ingênuo anterior descartava valores se houvesse espaços ou pontos de milhar (`"1.200,00"` ou `"250, 00"`).
+   - *Correção definitiva:* Criamos os conversores `parsePtBrDouble` e `parsePtBrInt`, com remoção automática de prefixos (`R$`), espaços em branco e suporte bidirecional a separadores de milhar e vírgula decimal pt-BR; os campos do diálogo agora inicializam no formato monetário brasileiro (`formatMoneyGoal`, ex.: `"250,00"` e `"160,00"`); e os cards no topo da tela agora exibem valores com centavos (`R$ %,.2f`, ex.: `R$ 250,00` e `R$ 160,00`), eliminando qualquer descarte de decimais.
 
 **Lista exata de arquivos modificados e criados:**
 - **Esquema de Banco de Dados:**
@@ -36,8 +38,8 @@ Com a Tarefa T-28B:
   - `app/src/main/java/com/example/network/supabase/SupabaseApi.kt` *(Modificado: endpoints REST `getUserGoals` e `upsertUserGoals`)*
   - `app/src/main/java/com/example/network/supabase/SupabaseSyncManager.kt` *(Modificado: rotinas de upload `pushUserGoals` e download `pullUserGoals` com reconciliação Last-Write-Wins e inclusão nas rotinas de sincronização completa)*
 - **Interface com o Usuário e Recursos:**
-  - `app/src/main/java/com/example/ui/GiroCustoViewModel.kt` *(Modificado: observação reativa de metas via Flow, método `updateGoals`, desacoplamento da preferência `is_dark_theme` para `app_preferences` e migração silenciosa)*
-  - `app/src/main/java/com/example/ui/screens/DashboardScreen.kt` *(Modificado: parsing robusto de vírgula decimal pt-BR e Snackbar de confirmação ao salvar)*
+  - `app/src/main/java/com/example/ui/GiroCustoViewModel.kt` *(Modificado: observação reativa de metas via Flow, método `updateGoals`, desacoplamento da preferência `is_dark_theme` para `giro_custo_preferences` e migração silenciosa)*
+  - `app/src/main/java/com/example/ui/screens/DashboardScreen.kt` *(Modificado: funções `parsePtBrDouble`, `parsePtBrInt`, `formatMoneyGoal`, `formatKmGoal`, inicialização com vírgula e cards formatados com `R$ %,.2f` e `%,.1f km`)*
   - `app/src/main/res/values/strings.xml` *(Modificado: recursos de texto centralizados para metas salvas e feedbacks visuais)*
 - **Scripts de Banco de Dados Remoto:**
   - `supabase/migrations/20261026_user_goals.sql` *(Novo arquivo: DDL PostgreSQL com chave primária em `user_id`, RLS estrita por `auth.uid() = user_id`, índices e trigger de atualização)*
@@ -45,7 +47,7 @@ Com a Tarefa T-28B:
 - **Suíte de Testes Automatizados:**
   - `app/src/test/java/com/example/UserGoalsDatabaseAndSyncTest.kt` *(Novo arquivo: 10 testes unitários cobrindo Room v14, MigrationTestHelper, DAO, Repository e SyncManager)*
   - `app/src/test/java/com/example/UserGoalsSyncTest.kt` *(Novo arquivo: 5 testes de integração com MockWebServer e despacho HTTP realista)*
-  - `app/src/test/java/com/example/UserGoalsViewModelAndUiTest.kt` *(Novo arquivo: 7 testes de ViewModel, preferências de tema e parsing pt-BR)*
+  - `app/src/test/java/com/example/UserGoalsViewModelAndUiTest.kt` *(Novo arquivo: 8 testes de ViewModel, preferências de tema, parsing pt-BR robusto e formatação de decimais)*
   - `app/src/test/java/com/example/SupabaseSyncAndMigrationTest.kt` *(Modificado: adição de `MIGRATION_13_14` nas cadeias completas de teste e suporte a metas no `FakeSupabaseRestApi`)*
   - `app/src/test/java/com/example/VehicleAndFipeIntegrationTest.kt` *(Modificado: adição de `MIGRATION_13_14` no encadeamento de teste de banco)*
   - `app/src/test/java/com/example/AuthBiometricsAndViaCepTest.kt` *(Modificado: implementação de stubs no fake api de teste)*
@@ -85,17 +87,16 @@ Configuration cache entry reused.
 ---
 
 #### 3.2 Execução Completa da Suíte de Testes Unitários (`testDebugUnitTest`)
-Comando executado (execução fresca forçada):
+Comando executado:
 ```bash
-./gradlew testDebugUnitTest --rerun-tasks
+./gradlew testDebugUnitTest
 ```
 Contagem real de testes:
-- **Executados:** 250
-- **Aprovados:** 250
+- **Executados:** 251
+- **Aprovados:** 251
 - **Falhas:** 0
 - **Ignorados / Pulados:** 0
 - **Taxa de Sucesso:** 100%
-- **Tempo de Execução:** 41.551s
 
 Caminho do relatório HTML detalhado:
 `app/build/reports/tests/testDebugUnitTest/index.html`
@@ -103,12 +104,12 @@ Caminho do relatório HTML detalhado:
 Últimas linhas da saída do terminal:
 ```text
 > Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
-> Task :app:processDebugUnitTestJavaRes
+> Task :app:processDebugUnitTestJavaRes UP-TO-DATE
 > Task :app:testDebugUnitTest
 > Task :app:finalizeTestRoborazziDebug SKIPPED
 
-BUILD SUCCESSFUL in 4m 18s
-33 actionable tasks: 33 executed
+BUILD SUCCESSFUL in 47s
+33 actionable tasks: 1 executed, 32 up-to-date
 Configuration cache entry reused.
 ```
 
@@ -188,7 +189,7 @@ Conforme preconizado em `.agents/rules/integridade-de-testes.md`, o Agente de QA
 
 ### 4. Testes
 
-#### 4.1 Testes Novos Adicionados (Total: 22 testes)
+#### 4.1 Testes Novos Adicionados (Total: 23 testes)
 
 **Em `app/src/test/java/com/example/UserGoalsDatabaseAndSyncTest.kt` (10 testes):**
 1. `testMigration13To14_createsUserGoalsTableAndIndexesWithMigrationTestHelper`: Valida via `MigrationTestHelper` a criação da tabela `user_goals` com todas as 15 colunas, tipos SQLite e índice único em `(id)`.
@@ -209,14 +210,15 @@ Conforme preconizado em `.agents/rules/integridade-de-testes.md`, o Agente de QA
 14. `testPullUserGoals_emptyRemoteArray_preservesLocalGoalsIntact`: Garante que retorno vazio do servidor (usuário sem metas na nuvem) não apaga as metas locais.
 15. `testAccountSwitch_confirmDiscardData_clearsUserAGoals_preservesTheme_andPullsUserBGoals`: Cenário completo de ponta a ponta: troca da Conta A para a Conta B, confirmação de descarte de dados, limpeza das metas da Conta A, preservação rigorosa do tema escuro/claro e carregamento das metas da Conta B via rede.
 
-**Em `app/src/test/java/com/example/UserGoalsViewModelAndUiTest.kt` (7 testes):**
-16. `testInitialDarkTheme_readsFromDedicatedPreferences`: Valida que a inicialização do ViewModel consulta o arquivo desacoplado `app_preferences`.
-17. `testInitialDarkTheme_fallsBackToLegacyGoals_andMigratesToAppPrefs`: Valida a migração retrocompatível do tema salvo anteriormente em `giro_custo_goals` para `app_preferences`.
-18. `testToggleTheme_persistsToDedicatedPreferences`: Valida a alternância de tema e sua persistência direta em `app_preferences`.
+**Em `app/src/test/java/com/example/UserGoalsViewModelAndUiTest.kt` (8 testes):**
+16. `testInitialDarkTheme_readsFromDedicatedPreferences`: Valida que a inicialização do ViewModel consulta o arquivo desacoplado `giro_custo_preferences`.
+17. `testInitialDarkTheme_fallsBackToLegacyGoals_andMigratesToAppPrefs`: Valida a migração retrocompatível do tema salvo anteriormente em `giro_custo_goals` para `giro_custo_preferences`.
+18. `testToggleTheme_persistsToDedicatedPreferences`: Valida a alternância de tema e sua persistência direta em `giro_custo_preferences`.
 19. `testGoalsCollection_updatesStateFlowsFromDatabaseFlow`: Valida que alterações salvas no banco Room propagam automaticamente para os `StateFlow` observados pela UI.
 20. `testUpdateGoals_updatesStateFlowsImmediatelyAndPersistsToRoom`: Valida a gravação imediata na UI e disparo de persistência assíncrona ao invocar `updateGoals`.
-21. `testPtBrCommaDecimalParsing_handlesCommasAndDefaults`: Valida a conversão correta de strings contendo vírgula (`"250,00"`) para valores de ponto flutuante válidos (`250.0`), prevenindo erros de digitação e garantindo fallback seguro para campos em branco.
-22. `testResetAccountSpecificPreferences_preservesTheme`: Valida que a rotina de limpeza de preferências por troca de conta apaga o arquivo `giro_custo_goals` mas mantém intocado o `app_preferences` com o tema do motorista.
+21. `testPtBrCommaDecimalParsing_handlesCommasAndDefaults`: Valida a função de produção `parsePtBrDouble` com suporte a vírgulas (`"250,00"` -> `250.0`), pontos de milhar (`"1.250,50"` -> `1250.5`), espaços gerados pelo teclado (`"250, 00"` -> `250.0`) e prefixos monetários (`"R$ 250,00"` -> `250.0`).
+22. `testPtBrFormatting_goalsDisplayAndInitialValuesPreserveDecimals`: Valida a formatação de exibição dos cartões da Dashboard (`R$ %,.2f` gerando `"R$ 250,00"`, `"R$ 1.200,00"`) e a inicialização dos campos do diálogo (`formatMoneyGoal` gerando `"250,00"` com vírgula).
+23. `testResetAccountSpecificPreferences_preservesTheme`: Valida que a rotina de limpeza de preferências por troca de conta apaga o arquivo `giro_custo_goals` mas mantém intocado o `giro_custo_preferences` com o tema do motorista.
 
 #### 4.2 Testes Existentes Adaptados
 - `app/src/test/java/com/example/SupabaseSyncAndMigrationTest.kt`: Encadeamento da migração `MIGRATION_13_14` nos testes de banco e implementação dos métodos de metas na classe utilitária `FakeSupabaseRestApi`.
@@ -269,20 +271,24 @@ Para criar a nova tabela `user_goals` com segurança e isolamento por usuário n
 
 Após a compilação e instalação do novo APK no aparelho celular, siga os 3 roteiros abaixo para homologar a entrega:
 
-##### Roteiro 1: Persistência Local com Vírgula e Modo Avião
+##### Roteiro 1: Persistência Local com Vírgula Decimal e Modo Avião
 1. Abra o GiroCusto no seu celular.
-2. Na tela inicial (Painel / Dashboard), role até a seção **"Metas de Trabalho"** e toque no botão **"Editar Metas"** (ícone de lápis).
-3. No diálogo que se abrirá, digite valores usando a vírgula do teclado brasileiro:
-   - Meta Bruta Diária: `250,00`
-   - Meta Líquida Diária: `160,00`
-   - Meta Km Diária: `100,0`
+2. Na tela inicial (Painel / Dashboard), role até a seção **"Metas de Trabalho"** e toque no botão verde **"Ajustar Valores de Metas"** (ícone de lápis).
+3. Observe que os campos de Faturamento e Lucro já são exibidos no padrão brasileiro com vírgula (ex.: `200,00`, `130,00`).
+4. Digite novos valores usando a vírgula do teclado:
+   - Faturamento Diário: `250,00` (ou `250,50` para testar centavos fracionários)
+   - Lucro Líquido Diário: `160,00`
+   - Km Diário: `100,0` (ou `100`)
    - Entregas Diárias: `15`
-4. Toque no botão **"Salvar Metas"**.
-5. **Verificação imediata:** Observe que na parte inferior da tela surge a mensagem: *"Metas atualizadas com sucesso!"* e os cartões do painel passam a exibir imediatamente os novos valores calculados.
-6. Ative o **Modo Avião** no celular (desconectando Wi-Fi e dados móveis).
-7. Feche completamente o aplicativo (abra a tela de aplicativos recentes do Android e deslize o GiroCusto para encerrar o processo).
-8. Reabra o GiroCusto com o Modo Avião ainda ligado.
-9. **Resultado esperado:** O aplicativo abre sem nenhum travamento e as metas salvas (`R$ 250,00` / `R$ 160,00`) continuam visíveis e intactas no painel, comprovando que o banco Room v14 gravou os dados com sucesso no aparelho.
+5. Toque no botão **"Salvar"**.
+6. **Verificação imediata:**
+   - Surge a mensagem na parte inferior: *"Metas salvas com sucesso"*.
+   - Os cartões no topo da Dashboard passam a exibir imediatamente os novos valores com as casas decimais preservadas: `R$ 250,00` (ou `R$ 250,50`), `R$ 160,00` e `100,0 km`.
+   - Toque novamente em **"Ajustar Valores de Metas"** e comprove que o campo abre exibindo exatamente `250,00` (com a vírgula intacta, sem descartar decimais). Toque em **Cancelar**.
+7. Ative o **Modo Avião** no celular (desconectando Wi-Fi e dados móveis).
+8. Feche completamente o aplicativo (abra a tela de aplicativos recentes do Android e deslize o GiroCusto para encerrar o processo).
+9. Reabra o GiroCusto com o Modo Avião ainda ligado.
+10. **Resultado esperado:** O aplicativo abre sem nenhum travamento e as metas salvas (`R$ 250,00` / `R$ 160,00`) continuam visíveis e intactas no painel, comprovando que o banco Room v14 gravou os dados com sucesso no aparelho.
 
 ##### Roteiro 2: Sincronização com a Nuvem
 1. Desative o Modo Avião no celular e aguarde a reconexão à internet.
@@ -301,6 +307,7 @@ Após a compilação e instalação do novo APK no aparelho celular, siga os 3 r
 
 ### 8. Commit e sincronização
 
-- **Mensagem do commit:** `feat(metas): sincronização de metas na nuvem, Room v14 e desacoplamento de tema (T-28B)`
-- **Hash do commit:** `7af3a40`
-- **Status do push:** Sincronizado com sucesso com `origin/main` (`c4d9078..7af3a40`).
+- **Commits da Tarefa T-28B:**
+  - `7af3a40`: `feat(metas): sincronização de metas na nuvem, Room v14 e desacoplamento de tema (T-28B)`
+  - `18b1a49`: `fix(dashboard): parsing robusto de vírgula pt-BR e preservação de centavos nas metas (T-28B)`
+- **Status do push:** Sincronizado com sucesso com `origin/main`.

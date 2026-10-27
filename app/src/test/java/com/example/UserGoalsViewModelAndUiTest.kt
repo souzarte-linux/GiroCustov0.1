@@ -8,6 +8,11 @@ import com.example.data.*
 import com.example.network.supabase.AuthSession
 import com.example.network.supabase.SupabaseClient
 import com.example.ui.GiroCustoViewModel
+import com.example.ui.screens.formatKmGoal
+import com.example.ui.screens.formatMoneyGoal
+import com.example.ui.screens.parsePtBrDouble
+import com.example.ui.screens.parsePtBrInt
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.*
@@ -193,26 +198,51 @@ class UserGoalsViewModelAndUiTest {
 
     @Test
     fun testPtBrCommaDecimalParsing_handlesCommasAndDefaults() {
-        // Validação da regra implementada no EditGoalsDialog:
-        // text.trim().replace(',', '.').toDoubleOrNull() ?: defaultValue
-        fun parseDouble(text: String, default: Double): Double =
-            text.trim().replace(',', '.').toDoubleOrNull() ?: default
+        // Validação da função real de produção usada no EditGoalsDialog:
+        assertEquals(250.0, parsePtBrDouble("250,00", 200.0), 0.001)
+        assertEquals(250.5, parsePtBrDouble("250,5", 200.0), 0.001)
+        assertEquals(250.5, parsePtBrDouble("250,50", 200.0), 0.001)
+        assertEquals(250.0, parsePtBrDouble("250,", 200.0), 0.001)
+        assertEquals(250.0, parsePtBrDouble("250, 00", 200.0), 0.001)
+        assertEquals(160.0, parsePtBrDouble("160.00", 130.0), 0.001)
+        assertEquals(120.0, parsePtBrDouble("  120,0  ", 100.0), 0.001)
+        assertEquals(1250.5, parsePtBrDouble("1.250,50", 1200.0), 0.001)
+        assertEquals(1200.0, parsePtBrDouble("1.200,00", 1200.0), 0.001)
+        assertEquals(5000.0, parsePtBrDouble("5.000,00", 5000.0), 0.001)
+        assertEquals(250.0, parsePtBrDouble("R$ 250,00", 200.0), 0.001)
+        assertEquals(200.0, parsePtBrDouble("invalido", 200.0), 0.001)
+        assertEquals(200.0, parsePtBrDouble("", 200.0), 0.001)
 
-        fun parseInt(text: String, default: Int): Int =
-            text.trim().toIntOrNull() ?: default
-
-        assertEquals(250.0, parseDouble("250,00", 200.0), 0.001)
-        assertEquals(250.5, parseDouble("250,5", 200.0), 0.001)
-        assertEquals(160.0, parseDouble("160.00", 130.0), 0.001)
-        assertEquals(120.0, parseDouble("  120,0  ", 100.0), 0.001)
-        assertEquals(200.0, parseDouble("invalido", 200.0), 0.001)
-        assertEquals(200.0, parseDouble("", 200.0), 0.001)
-
-        assertEquals(18, parseInt("18", 15))
-        assertEquals(25, parseInt(" 25 ", 15))
-        assertEquals(15, parseInt("invalido", 15))
-        assertEquals(15, parseInt("", 15))
+        assertEquals(18, parsePtBrInt("18", 15))
+        assertEquals(25, parsePtBrInt(" 25 ", 15))
+        assertEquals(15, parsePtBrInt("invalido", 15))
+        assertEquals(15, parsePtBrInt("", 15))
     }
+
+    @Test
+    fun testPtBrFormatting_goalsDisplayAndInitialValuesPreserveDecimals() {
+        // Validação da formatação dos valores iniciais no diálogo (com vírgula pt-BR)
+        assertEquals("250,00", formatMoneyGoal(250.0))
+        assertEquals("160,00", formatMoneyGoal(160.0))
+        assertEquals("250,50", formatMoneyGoal(250.5))
+        assertEquals("1200,00", formatMoneyGoal(1200.0))
+
+        assertEquals("100", formatKmGoal(100.0))
+        assertEquals("100,5", formatKmGoal(100.5))
+
+        // Validação da formatação dos cards na Dashboard (R$ %,.2f com Locale.GERMAN)
+        val grossFormat = "R$ %,.2f"
+        assertEquals("R$ 250,00", String.format(Locale.GERMAN, grossFormat, 250.0))
+        assertEquals("R$ 160,00", String.format(Locale.GERMAN, grossFormat, 160.0))
+        assertEquals("R$ 1.200,00", String.format(Locale.GERMAN, grossFormat, 1200.0))
+        assertEquals("R$ 5.000,00", String.format(Locale.GERMAN, grossFormat, 5000.0))
+        assertEquals("R$ 250,50", String.format(Locale.GERMAN, grossFormat, 250.5))
+
+        val kmFormat = "%,.1f km"
+        assertEquals("100,0 km", String.format(Locale.GERMAN, kmFormat, 100.0))
+        assertEquals("100,5 km", String.format(Locale.GERMAN, kmFormat, 100.5))
+    }
+
 
     // =========================================================================
     // 4. RESET DE PREFERÊNCIAS NA TROCA DE CONTA NÃO AFETA TEMA

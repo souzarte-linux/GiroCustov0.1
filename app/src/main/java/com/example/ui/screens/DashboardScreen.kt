@@ -696,9 +696,9 @@ fun GoalCard(
             Spacer(modifier = Modifier.height(10.dp))
 
             // Linhas de Progresso das sub-metas
-            GoalRow(label = "Faturamento", value = grossAct, target = grossGoal, format = "R$ %.0f")
-            GoalRow(label = "Lucro Líquido", value = netAct, target = netGoal, format = "R$ %.0f")
-            GoalRow(label = "Kms Rodados", value = kmAct, target = kmGoal, format = "%.0f km")
+            GoalRow(label = "Faturamento", value = grossAct, target = grossGoal, format = "R$ %,.2f")
+            GoalRow(label = "Lucro Líquido", value = netAct, target = netGoal, format = "R$ %,.2f")
+            GoalRow(label = "Kms Rodados", value = kmAct, target = kmGoal, format = "%,.1f km")
             GoalRowInt(label = "Entregas", value = delAct, target = delGoal)
         }
     }
@@ -764,30 +764,67 @@ fun GoalRowInt(label: String, value: Int, target: Int) {
     }
 }
 
+fun parsePtBrDouble(input: String, fallback: Double): Double {
+    val clean = input.trim()
+        .replace("R$", "")
+        .replace(" ", "")
+        .replace("\u00A0", "")
+    if (clean.isEmpty()) return fallback
+
+    return try {
+        if (clean.contains('.') && clean.contains(',')) {
+            if (clean.lastIndexOf(',') > clean.lastIndexOf('.')) {
+                clean.replace(".", "").replace(',', '.').toDouble()
+            } else {
+                clean.replace(",", "").toDouble()
+            }
+        } else if (clean.contains(',')) {
+            clean.replace(',', '.').toDouble()
+        } else {
+            clean.toDouble()
+        }
+    } catch (_: Exception) {
+        fallback
+    }
+}
+
+fun parsePtBrInt(input: String, fallback: Int): Int {
+    val clean = input.trim()
+        .replace(" ", "")
+        .replace("\u00A0", "")
+        .replace(".", "")
+        .replace(",", "")
+    return clean.toIntOrNull() ?: fallback
+}
+
+fun formatMoneyGoal(value: Double): String =
+    String.format(Locale.GERMAN, "%.2f", value)
+
+fun formatKmGoal(value: Double): String =
+    if (value % 1.0 == 0.0) value.toLong().toString() else String.format(Locale.GERMAN, "%.1f", value)
+
 @Composable
 fun EditGoalsDialog(
     viewModel: GiroCustoViewModel,
     onDismiss: () -> Unit,
     onGoalsSaved: (() -> Unit)? = null
 ) {
-    fun formatInitial(value: Double): String =
-        if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
-
-    // Pegar valores atuais
-    var dg by remember { mutableStateOf(formatInitial(viewModel.dailyGoalGross.value)) }
-    var dn by remember { mutableStateOf(formatInitial(viewModel.dailyGoalNet.value)) }
-    var dk by remember { mutableStateOf(formatInitial(viewModel.dailyGoalKm.value)) }
+    // Pegar valores atuais formatados no padrão pt-BR
+    var dg by remember { mutableStateOf(formatMoneyGoal(viewModel.dailyGoalGross.value)) }
+    var dn by remember { mutableStateOf(formatMoneyGoal(viewModel.dailyGoalNet.value)) }
+    var dk by remember { mutableStateOf(formatKmGoal(viewModel.dailyGoalKm.value)) }
     var dd by remember { mutableStateOf(viewModel.dailyGoalDeliveries.value.toString()) }
 
-    var wg by remember { mutableStateOf(formatInitial(viewModel.weeklyGoalGross.value)) }
-    var wn by remember { mutableStateOf(formatInitial(viewModel.weeklyGoalNet.value)) }
-    var wk by remember { mutableStateOf(formatInitial(viewModel.weeklyGoalKm.value)) }
+    var wg by remember { mutableStateOf(formatMoneyGoal(viewModel.weeklyGoalGross.value)) }
+    var wn by remember { mutableStateOf(formatMoneyGoal(viewModel.weeklyGoalNet.value)) }
+    var wk by remember { mutableStateOf(formatKmGoal(viewModel.weeklyGoalKm.value)) }
     var wd by remember { mutableStateOf(viewModel.weeklyGoalDeliveries.value.toString()) }
 
-    var mg by remember { mutableStateOf(formatInitial(viewModel.monthlyGoalGross.value)) }
-    var mn by remember { mutableStateOf(formatInitial(viewModel.monthlyGoalNet.value)) }
-    var mk by remember { mutableStateOf(formatInitial(viewModel.monthlyGoalKm.value)) }
+    var mg by remember { mutableStateOf(formatMoneyGoal(viewModel.monthlyGoalGross.value)) }
+    var mn by remember { mutableStateOf(formatMoneyGoal(viewModel.monthlyGoalNet.value)) }
+    var mk by remember { mutableStateOf(formatKmGoal(viewModel.monthlyGoalKm.value)) }
     var md by remember { mutableStateOf(viewModel.monthlyGoalDeliveries.value.toString()) }
+
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -955,18 +992,18 @@ fun EditGoalsDialog(
                     Button(
                         onClick = {
                             viewModel.updateGoals(
-                                dailyG = dg.trim().replace(',', '.').toDoubleOrNull() ?: 200.0,
-                                dailyN = dn.trim().replace(',', '.').toDoubleOrNull() ?: 130.0,
-                                dailyK = dk.trim().replace(',', '.').toDoubleOrNull() ?: 100.0,
-                                dailyD = dd.trim().toIntOrNull() ?: 15,
-                                weeklyG = wg.trim().replace(',', '.').toDoubleOrNull() ?: 1200.0,
-                                weeklyN = wn.trim().replace(',', '.').toDoubleOrNull() ?: 800.0,
-                                weeklyK = wk.trim().replace(',', '.').toDoubleOrNull() ?: 600.0,
-                                weeklyD = wd.trim().toIntOrNull() ?: 90,
-                                monthlyG = mg.trim().replace(',', '.').toDoubleOrNull() ?: 5000.0,
-                                monthlyN = mn.trim().replace(',', '.').toDoubleOrNull() ?: 3200.0,
-                                monthlyK = mk.trim().replace(',', '.').toDoubleOrNull() ?: 2500.0,
-                                monthlyD = md.trim().toIntOrNull() ?: 400
+                                dailyG = parsePtBrDouble(dg, viewModel.dailyGoalGross.value),
+                                dailyN = parsePtBrDouble(dn, viewModel.dailyGoalNet.value),
+                                dailyK = parsePtBrDouble(dk, viewModel.dailyGoalKm.value),
+                                dailyD = parsePtBrInt(dd, viewModel.dailyGoalDeliveries.value),
+                                weeklyG = parsePtBrDouble(wg, viewModel.weeklyGoalGross.value),
+                                weeklyN = parsePtBrDouble(wn, viewModel.weeklyGoalNet.value),
+                                weeklyK = parsePtBrDouble(wk, viewModel.weeklyGoalKm.value),
+                                weeklyD = parsePtBrInt(wd, viewModel.weeklyGoalDeliveries.value),
+                                monthlyG = parsePtBrDouble(mg, viewModel.monthlyGoalGross.value),
+                                monthlyN = parsePtBrDouble(mn, viewModel.monthlyGoalNet.value),
+                                monthlyK = parsePtBrDouble(mk, viewModel.monthlyGoalKm.value),
+                                monthlyD = parsePtBrInt(md, viewModel.monthlyGoalDeliveries.value)
                             )
                             onGoalsSaved?.invoke()
                             onDismiss()
