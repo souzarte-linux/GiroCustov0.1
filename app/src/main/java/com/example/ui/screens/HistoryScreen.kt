@@ -1411,15 +1411,26 @@ fun EditRecordDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            val startOdoVal = startOdo.toDoubleOrNull() ?: 0.0
-                            val endOdoVal = endOdo.toDoubleOrNull() ?: 0.0
-                            val grossVal = gross.toDoubleOrNull() ?: 0.0
-                            val deliveriesVal = deliveries.toIntOrNull() ?: 0
-                            val fuelPriceVal = fuelPrice.toDoubleOrNull() ?: 0.0
-                            val foodExpenseVal = foodExpense.toDoubleOrNull() ?: 0.0
+                            val startOdoVal = startOdo.trim().replace(',', '.').toDoubleOrNull() ?: 0.0
+                            val endOdoVal = endOdo.trim().replace(',', '.').toDoubleOrNull() ?: 0.0
+                            val grossCents = CurrencyUtils.parseToCents(gross, 0L)
+                            val deliveriesVal = deliveries.trim().toIntOrNull() ?: 0
+                            val fuelPriceMillis = CurrencyUtils.parseToFuelPriceMillis(fuelPrice, 0L)
+                            val foodExpenseCents = CurrencyUtils.parseToCents(foodExpense, 0L)
 
-                            if (grossVal > 0.0 && fuelPriceVal > 0.0 && platformState.isNotBlank()) {
-                                onSave(platformState, startOdoVal, endOdoVal, grossVal, deliveriesVal, fuelPriceVal, foodExpenseVal, startTimeState, endTimeState, pauseDurationState)
+                            if (grossCents > 0L && fuelPriceMillis > 0L && platformState.isNotBlank()) {
+                                onSave(
+                                    platformState,
+                                    startOdoVal,
+                                    endOdoVal,
+                                    CurrencyUtils.centsToDouble(grossCents),
+                                    deliveriesVal,
+                                    CurrencyUtils.fuelPriceMillisToDouble(fuelPriceMillis),
+                                    CurrencyUtils.centsToDouble(foodExpenseCents),
+                                    startTimeState,
+                                    endTimeState,
+                                    pauseDurationState
+                                )
                             }
                         },
                         colors = ButtonDefaults.buttonColors(

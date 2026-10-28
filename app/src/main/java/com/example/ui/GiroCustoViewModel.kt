@@ -1824,14 +1824,22 @@ class GiroCustoViewModel @JvmOverloads constructor(
     // Ações de Lançamento Diário
     fun saveDailyRecord(onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
-            val startOdoVal = startOdometer.value.toDoubleOrNull()
-            val endOdoVal = endOdometer.value.toDoubleOrNull()
-            val grossVal = grossEarnings.value.toDoubleOrNull()
-            val deliveriesVal = deliveriesCount.value.toIntOrNull()
-            val fuelPriceVal = fuelPrice.value.toDoubleOrNull()
-            val foodExpenseVal = foodExpense.value.toDoubleOrNull() ?: 0.0
+            val cleanStartOdo = startOdometer.value.trim().replace(',', '.')
+            val startOdoVal = cleanStartOdo.toDoubleOrNull()
+            val cleanEndOdo = endOdometer.value.trim().replace(',', '.')
+            val endOdoVal = cleanEndOdo.toDoubleOrNull()
 
-            if (startOdoVal == null || endOdoVal == null || grossVal == null || deliveriesVal == null || fuelPriceVal == null) {
+            val cleanGross = grossEarnings.value.trim()
+            val grossCents = if (cleanGross.isBlank()) null else CurrencyUtils.parseToCents(cleanGross, -1L).takeIf { it >= 0L }
+
+            val deliveriesVal = deliveriesCount.value.trim().toIntOrNull()
+
+            val cleanFuelPrice = fuelPrice.value.trim()
+            val fuelPriceMillis = if (cleanFuelPrice.isBlank()) null else CurrencyUtils.parseToFuelPriceMillis(cleanFuelPrice, -1L).takeIf { it > 0L }
+
+            val foodExpenseCents = CurrencyUtils.parseToCents(foodExpense.value, 0L)
+
+            if (startOdoVal == null || endOdoVal == null || grossCents == null || deliveriesVal == null || fuelPriceMillis == null) {
                 onError("Por favor, preencha todos os campos obrigatórios corretamente.")
                 return@launch
             }
@@ -1852,17 +1860,17 @@ class GiroCustoViewModel @JvmOverloads constructor(
                     dateString = dateStr,
                     dateTimestamp = timestampToUse,
                     platform = platformVal,
-                    grossEarnings = grossVal,
+                    grossEarnings = grossCents,
                     deliveriesCount = deliveriesVal,
                     startOdometer = startOdoVal,
                     endOdometer = endOdoVal,
-                    fuelPrice = fuelPriceVal,
-                    foodExpense = foodExpenseVal,
+                    fuelPrice = fuelPriceMillis,
+                    foodExpense = foodExpenseCents,
                     startTime = startTime.value.trim(),
                     endTime = endTime.value.trim(),
                     pauseDuration = pauseDuration.value.trim()
                 )
-                
+
                 // Limpar campos para o próximo dia
                 prefillLaunchFields()
                 onSuccess()
@@ -1883,12 +1891,12 @@ class GiroCustoViewModel @JvmOverloads constructor(
         dateString: String,
         dateTimestamp: Long,
         platform: String,
-        grossEarnings: Double,
+        grossEarnings: Long,
         deliveriesCount: Int,
         startOdometer: Double,
         endOdometer: Double,
-        fuelPrice: Double,
-        foodExpense: Double,
+        fuelPrice: Long,
+        foodExpense: Long,
         startTime: String = "",
         endTime: String = "",
         pauseDuration: String = "",
@@ -1922,6 +1930,40 @@ class GiroCustoViewModel @JvmOverloads constructor(
             }
         }
     }
+
+    fun updateDailyRecord(
+        recordId: Long,
+        dateString: String,
+        dateTimestamp: Long,
+        platform: String,
+        grossEarnings: Double,
+        deliveriesCount: Int,
+        startOdometer: Double,
+        endOdometer: Double,
+        fuelPrice: Double,
+        foodExpense: Double,
+        startTime: String = "",
+        endTime: String = "",
+        pauseDuration: String = "",
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) = updateDailyRecord(
+        recordId = recordId,
+        dateString = dateString,
+        dateTimestamp = dateTimestamp,
+        platform = platform,
+        grossEarnings = CurrencyUtils.toCents(grossEarnings),
+        deliveriesCount = deliveriesCount,
+        startOdometer = startOdometer,
+        endOdometer = endOdometer,
+        fuelPrice = CurrencyUtils.toFuelPriceMillis(fuelPrice),
+        foodExpense = CurrencyUtils.toCents(foodExpense),
+        startTime = startTime,
+        endTime = endTime,
+        pauseDuration = pauseDuration,
+        onSuccess = onSuccess,
+        onError = onError
+    )
 
     // Estimativas em Tempo Real para o Lançamento Diário
     data class FormState(

@@ -506,4 +506,28 @@ class ViewModelCalculationsTest {
         )
         assertEquals(2, customMetrics.recordsCount)
     }
+
+    @Test
+    fun testSaveDailyRecord_withCommaSeparatedInputs_savesSuccessfully() = runTest {
+        // Reproduz exatamente o cenário do usuário:
+        // Faturamento: "150,50", Combustível: "5,899", Alimentação: "25,00", Hodômetros: "10050" / "10099", Entregas: "10"
+        viewModel.startOdometer.value = "10050"
+        viewModel.endOdometer.value = "10099"
+        viewModel.grossEarnings.value = "150,50"
+        viewModel.deliveriesCount.value = "10"
+        viewModel.fuelPrice.value = "5,899"
+        viewModel.foodExpense.value = "25,00"
+        viewModel.platform.value = "iFood"
+
+        var successCalled = false
+        var errorMessage: String? = null
+
+        viewModel.saveDailyRecord(
+            onSuccess = { successCalled = true },
+            onError = { err -> errorMessage = err }
+        )
+
+        assertTrue("Esperava salvar com sucesso, mas falhou com: $errorMessage", successCalled)
+        assertNull(errorMessage)
+    }
 }
