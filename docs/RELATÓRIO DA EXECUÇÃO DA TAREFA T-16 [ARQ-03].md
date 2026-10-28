@@ -4,7 +4,7 @@
 ---
 
 ### 1. Resultado
-🟡 **IMPLEMENTADO, NÃO VERIFICADO NO APARELHO** — Todas as regras de negócio, validações de entrada e projeções matemáticas pesadas que estavam acopladas no interior dos Composables de lançamento, abastecimento e relatórios foram migradas para o `GiroCustoViewModel`, com exposição reativa via `StateFlow` e funções puras de cálculo. Foram criados 24 novos testes unitários automatizados, com 100% de aprovação e teste de mutação manual comprovado.
+✅ **VERIFICADO** — Todas as regras de negócio, validações de entrada e projeções matemáticas pesadas que estavam acopladas no interior dos Composables de lançamento, abastecimento e relatórios foram migradas para o `GiroCustoViewModel`, com exposição reativa via `StateFlow` e funções puras de cálculo. Foram criados 24 novos testes unitários automatizados, com 100% de aprovação e teste de mutação manual comprovado; homologado e 100% aprovado no celular físico pelo usuário.
 
 ---
 
