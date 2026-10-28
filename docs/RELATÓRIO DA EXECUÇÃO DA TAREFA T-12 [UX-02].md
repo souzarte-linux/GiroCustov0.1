@@ -160,5 +160,5 @@ Para validar na prática o comportamento dos novos estados no seu celular físic
 ---
 
 ### 8. Commit e sincronização
-- **Hash do commit:** `[Aguardando execução do commit]`
-- **Status do push:** `[Aguardando envio ao repositório]`
+- **Hash do commit:** `c8013a0`
+- **Status do push:** `Sincronizado com origin/main`
