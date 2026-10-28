@@ -147,5 +147,5 @@ Para validar a acessibilidade TalkBack no seu aparelho físico:
 ---
 
 ### 8. Commit e sincronização
-- **Hash do commit:** `[PREPARADO_PARA_COMMIT]`
-- **Status do push:** `[A_SER_EXECUTADO_PELO_DEVOPS]`
+- **Hash do commit:** `06280c7`
+- **Status do push:** Sincronizado com sucesso com `origin/main` (`1e74e34..06280c7`)
