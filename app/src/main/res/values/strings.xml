@@ -149,4 +149,12 @@
     <string name="cd_launch_odometer_error">Erro Hodômetro</string>
     <string name="refill_error_empty_station">Por favor, digite o Posto.</string>
     <string name="refill_error_invalid_inputs">Preencha preço, litros e odômetro com valores válidos.</string>
+
+    <!-- Strings formatadas e parametrizadas de validação e feedback (T-17 [TST-01]) -->
+    <string name="err_inverted_odometer">Hodômetro final não pode ser menor que o inicial.</string>
+    <string name="err_exceeds_tank_capacity">Atenção: A quantidade informada (%1$.1f L) ultrapassa a capacidade máxima do tanque (%2$.1f L) cadastrada para o %3$s.</string>
+    <string name="calculated_distance_km">Distância calculada: %1$.1f km</string>
+    <string name="calculated_total_price">Total calculado: R$ %1$.2f</string>
+    <string name="calculated_liters">Litros calculados: %1$.2f L</string>
+    <string name="calculated_price_per_liter">Preço por litro calculado: R$ %1$.3f</string>
 </resources>

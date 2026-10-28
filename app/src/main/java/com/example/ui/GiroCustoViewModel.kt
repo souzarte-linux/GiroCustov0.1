@@ -78,6 +78,130 @@ data class RefillCalculationResult(
     val updatedTotalPaid: String? = null
 )
 
+/**
+ * Objeto com cálculos matemáticos e regras de negócio puras (sem dependência do framework Android).
+ * Permite execução ultrarrápida em testes unitários puros JVM (T-17).
+ */
+object GiroCustoDomainCalculations {
+
+    // 1. Hodômetro e Distância Diária (LaunchScreen)
+    fun calculateDailyDistance(startOdo: String, endOdo: String): LaunchDistanceState {
+        val startVal = startOdo.replace(",", ".").toDoubleOrNull()
+        val endVal = endOdo.replace(",", ".").toDoubleOrNull()
+        if (startVal == null || endVal == null) {
+            return LaunchDistanceState.None
+        }
+        val diffKm = endVal - startVal
+        return if (diffKm >= 0.0) {
+            val formatted = String.format(Locale.GERMAN, "%.1f", diffKm)
+            LaunchDistanceState.Valid(diffKm, formatted)
+        } else {
+            LaunchDistanceState.NegativeError
+        }
+    }
+
+    // 2. Validação e Cálculo de Abastecimento (FuelRefillsScreen)
+    fun isValidFuelInput(pricePerLiterStr: String, litersStr: String, odometerStr: String): Boolean {
+        val price = pricePerLiterStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val lts = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val odo = odometerStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+        return price > 0.0 && lts > 0.0 && odo > 0.0
+    }
+
+    fun checkExceedsTankCapacity(litersStr: String, tankCapacity: Double): Boolean {
+        val currentLiters = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+        return tankCapacity > 0.0 && currentLiters > tankCapacity
+    }
+
+    fun computeRefillTotal(pricePerLiterStr: String, litersStr: String, discountStr: String, totalPaidStr: String): Double {
+        val totalExplicit = totalPaidStr.replace(",", ".").toDoubleOrNull()
+        if (totalExplicit != null) return totalExplicit.coerceAtLeast(0.0)
+        val price = pricePerLiterStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val lts = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val disc = discountStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+        return (price * lts - disc).coerceAtLeast(0.0)
+    }
+
+    fun calculateRefillMultiDirectional(
+        pricePerLiterStr: String,
+        litersStr: String,
+        discountStr: String,
+        totalPaidStr: String,
+        focusedField: String?
+    ): RefillCalculationResult {
+        val price = pricePerLiterStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val lts = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val disc = discountStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val total = totalPaidStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+
+        val priceEmpty = pricePerLiterStr.isBlank() || price <= 0.0
+        val ltsEmpty = litersStr.isBlank() || lts <= 0.0
+        val totalEmpty = totalPaidStr.isBlank() || total <= 0.0
+
+        val filledCount = listOf(!priceEmpty, !ltsEmpty, !totalEmpty).count { it }
+
+        var newPrice: String? = null
+        var newLts: String? = null
+        var newTotal: String? = null
+
+        if (filledCount == 2) {
+            if (priceEmpty && !ltsEmpty && !totalEmpty && focusedField != "price") {
+                val autoPrice = ((total + disc) / lts).coerceAtLeast(0.0)
+                if (autoPrice.isFinite() && autoPrice > 0.0) {
+                    val autoPriceStr = String.format(Locale.US, "%.2f", autoPrice)
+                    val currentPrice = pricePerLiterStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+                    if (Math.abs(currentPrice - autoPrice) > 0.009) {
+                        newPrice = autoPriceStr
+                    }
+                }
+            } else if (ltsEmpty && !priceEmpty && !totalEmpty && focusedField != "liters") {
+                val autoLts = ((total + disc) / price).coerceAtLeast(0.0)
+                if (autoLts.isFinite() && autoLts > 0.0) {
+                    val autoLtsStr = String.format(Locale.US, "%.2f", autoLts)
+                    val currentLts = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+                    if (Math.abs(currentLts - autoLts) > 0.009) {
+                        newLts = autoLtsStr
+                    }
+                }
+            } else if (totalEmpty && !priceEmpty && !ltsEmpty && focusedField != "total") {
+                val autoTotal = (price * lts - disc).coerceAtLeast(0.0)
+                val autoTotalStr = String.format(Locale.US, "%.2f", autoTotal)
+                val currentTotal = totalPaidStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+                if (Math.abs(currentTotal - autoTotal) > 0.009) {
+                    newTotal = autoTotalStr
+                }
+            }
+        } else if (filledCount == 3) {
+            when (focusedField) {
+                "price", "liters", "discount" -> {
+                    val autoTotal = (price * lts - disc).coerceAtLeast(0.0)
+                    val autoTotalStr = String.format(Locale.US, "%.2f", autoTotal)
+                    val currentTotal = totalPaidStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+                    if (Math.abs(currentTotal - autoTotal) > 0.009) {
+                        newTotal = autoTotalStr
+                    }
+                }
+                "total" -> {
+                    val autoLts = ((total + disc) / price).coerceAtLeast(0.0)
+                    if (autoLts.isFinite() && autoLts > 0.0) {
+                        val autoLtsStr = String.format(Locale.US, "%.2f", autoLts)
+                        val currentLts = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+                        if (Math.abs(currentLts - autoLts) > 0.009) {
+                            newLts = autoLtsStr
+                        }
+                    }
+                }
+            }
+        }
+
+        return RefillCalculationResult(
+            updatedPricePerLiter = newPrice,
+            updatedLiters = newLts,
+            updatedTotalPaid = newTotal
+        )
+    }
+}
+
 data class ReportsFilterState(
     val period: Period = Period.SEMANA,
     val customStart: Long = 0L,
@@ -507,23 +631,11 @@ class GiroCustoViewModel @JvmOverloads constructor(
         appPrefs.edit().putBoolean("is_dark_theme", newVal).apply()
     }
 
-    // --- T-16 [ARQ-03]: Elevação de Regras de Negócio e Cálculos Matemáticos ---
+    // --- T-16 [ARQ-03] e T-17 [TST-01]: Cálculos Matemáticos e Regras de Negócio Puros ---
 
     // 1. Hodômetro e Distância Diária (LaunchScreen)
-    fun calculateDailyDistance(startOdo: String, endOdo: String): LaunchDistanceState {
-        val startVal = startOdo.replace(",", ".").toDoubleOrNull()
-        val endVal = endOdo.replace(",", ".").toDoubleOrNull()
-        if (startVal == null || endVal == null) {
-            return LaunchDistanceState.None
-        }
-        val diffKm = endVal - startVal
-        return if (diffKm >= 0.0) {
-            val formatted = String.format(Locale.GERMAN, "%.1f", diffKm)
-            LaunchDistanceState.Valid(diffKm, formatted)
-        } else {
-            LaunchDistanceState.NegativeError
-        }
-    }
+    fun calculateDailyDistance(startOdo: String, endOdo: String): LaunchDistanceState =
+        GiroCustoDomainCalculations.calculateDailyDistance(startOdo, endOdo)
 
     val launchCalculatedDistance: StateFlow<LaunchDistanceState> = combine(
         startOdometer,
@@ -539,92 +651,19 @@ class GiroCustoViewModel @JvmOverloads constructor(
         discountStr: String,
         totalPaidStr: String,
         focusedField: String?
-    ): RefillCalculationResult {
-        val price = pricePerLiterStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val lts = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val disc = discountStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val total = totalPaidStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-
-        val priceEmpty = pricePerLiterStr.isBlank() || price <= 0.0
-        val ltsEmpty = litersStr.isBlank() || lts <= 0.0
-        val totalEmpty = totalPaidStr.isBlank() || total <= 0.0
-
-        val filledCount = listOf(!priceEmpty, !ltsEmpty, !totalEmpty).count { it }
-
-        var newPrice: String? = null
-        var newLts: String? = null
-        var newTotal: String? = null
-
-        if (filledCount == 2) {
-            if (priceEmpty && !ltsEmpty && !totalEmpty && focusedField != "price") {
-                val autoPrice = ((total + disc) / lts).coerceAtLeast(0.0)
-                if (autoPrice.isFinite() && autoPrice > 0.0) {
-                    val autoPriceStr = String.format(Locale.US, "%.2f", autoPrice)
-                    val currentPrice = pricePerLiterStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-                    if (Math.abs(currentPrice - autoPrice) > 0.009) {
-                        newPrice = autoPriceStr
-                    }
-                }
-            } else if (ltsEmpty && !priceEmpty && !totalEmpty && focusedField != "liters") {
-                val autoLts = ((total + disc) / price).coerceAtLeast(0.0)
-                if (autoLts.isFinite() && autoLts > 0.0) {
-                    val autoLtsStr = String.format(Locale.US, "%.2f", autoLts)
-                    val currentLts = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-                    if (Math.abs(currentLts - autoLts) > 0.009) {
-                        newLts = autoLtsStr
-                    }
-                }
-            } else if (totalEmpty && !priceEmpty && !ltsEmpty && focusedField != "total") {
-                val autoTotal = (price * lts - disc).coerceAtLeast(0.0)
-                val autoTotalStr = String.format(Locale.US, "%.2f", autoTotal)
-                val currentTotal = totalPaidStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-                if (Math.abs(currentTotal - autoTotal) > 0.009) {
-                    newTotal = autoTotalStr
-                }
-            }
-        } else if (filledCount == 3) {
-            when (focusedField) {
-                "price", "liters", "discount" -> {
-                    val autoTotal = (price * lts - disc).coerceAtLeast(0.0)
-                    val autoTotalStr = String.format(Locale.US, "%.2f", autoTotal)
-                    val currentTotal = totalPaidStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-                    if (Math.abs(currentTotal - autoTotal) > 0.009) {
-                        newTotal = autoTotalStr
-                    }
-                }
-                "total" -> {
-                    val autoLts = ((total + disc) / price).coerceAtLeast(0.0)
-                    if (autoLts.isFinite() && autoLts > 0.0) {
-                        val autoLtsStr = String.format(Locale.US, "%.2f", autoLts)
-                        val currentLts = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-                        if (Math.abs(currentLts - autoLts) > 0.009) {
-                            newLts = autoLtsStr
-                        }
-                    }
-                }
-            }
-        }
-
-        return RefillCalculationResult(
-            updatedPricePerLiter = newPrice,
-            updatedLiters = newLts,
-            updatedTotalPaid = newTotal
+    ): RefillCalculationResult =
+        GiroCustoDomainCalculations.calculateRefillMultiDirectional(
+            pricePerLiterStr, litersStr, discountStr, totalPaidStr, focusedField
         )
-    }
 
-    fun checkExceedsTankCapacity(litersStr: String, tankCapacity: Double): Boolean {
-        val currentLiters = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        return tankCapacity > 0.0 && currentLiters > tankCapacity
-    }
+    fun checkExceedsTankCapacity(litersStr: String, tankCapacity: Double): Boolean =
+        GiroCustoDomainCalculations.checkExceedsTankCapacity(litersStr, tankCapacity)
 
-    fun computeRefillTotal(pricePerLiterStr: String, litersStr: String, discountStr: String, totalPaidStr: String): Double {
-        val totalExplicit = totalPaidStr.replace(",", ".").toDoubleOrNull()
-        if (totalExplicit != null) return totalExplicit.coerceAtLeast(0.0)
-        val price = pricePerLiterStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val lts = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val disc = discountStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        return (price * lts - disc).coerceAtLeast(0.0)
-    }
+    fun computeRefillTotal(pricePerLiterStr: String, litersStr: String, discountStr: String, totalPaidStr: String): Double =
+        GiroCustoDomainCalculations.computeRefillTotal(pricePerLiterStr, litersStr, discountStr, totalPaidStr)
+
+    fun isValidFuelInput(pricePerLiterStr: String, litersStr: String, odometerStr: String): Boolean =
+        GiroCustoDomainCalculations.isValidFuelInput(pricePerLiterStr, litersStr, odometerStr)
 
     // 3. Métricas e Projeções Financeiras de Relatórios (ReportsScreen)
     fun calculateReportMetrics(
