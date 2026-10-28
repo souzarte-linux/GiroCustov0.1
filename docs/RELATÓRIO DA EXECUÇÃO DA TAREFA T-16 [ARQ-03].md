@@ -183,5 +183,5 @@ Para certificar a tarefa no celular físico, siga este roteiro de verificação:
 ---
 
 ### 8. Commit e sincronização
-- **Hash do commit:** `PENDENTE` (será gerado a seguir)
-- **Status do push:** `PENDENTE`
+- **Hash do commit:** `6480c7e`
+- **Status do push:** Sincronizado com sucesso com `origin/main` (`git push origin main`)
