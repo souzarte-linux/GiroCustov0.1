@@ -3,6 +3,7 @@ package com.example.network.supabase
 import android.util.Log
 import androidx.room.withTransaction
 import com.example.data.*
+import com.example.util.CurrencyUtils
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -179,7 +180,7 @@ class SupabaseSyncManager(
             restApi.upsertFuelRefills(dtos)
             db.withTransaction {
                 for (dto in dtos) {
-                    val local = pendingRefills.firstOrNull { it.remoteId == dto.id || (it.remoteId.isBlank() && it.dateTimestamp == dto.dateTimestamp && it.totalPaid == dto.totalPaid) }
+                    val local = pendingRefills.firstOrNull { it.remoteId == dto.id || (it.remoteId.isBlank() && it.dateTimestamp == dto.dateTimestamp && it.totalPaid == CurrencyUtils.toCents(dto.totalPaid)) }
                     if (local != null) {
                         fuelRefillDao.updateRefill(local.copy(remoteId = dto.id, syncStatus = SyncStatus.SYNCED))
                     }
@@ -369,7 +370,7 @@ class SupabaseSyncManager(
                 var existing = fuelRefillDao.getRefillByRemoteId(dto.id)
                 if (existing == null) {
                     existing = fuelRefillDao.getAllRefillsOrderedByOdometer(targetVehicleId).firstOrNull {
-                        it.remoteId.isBlank() && it.dateTimestamp == dto.dateTimestamp && it.totalPaid == dto.totalPaid
+                        it.remoteId.isBlank() && it.dateTimestamp == dto.dateTimestamp && it.totalPaid == CurrencyUtils.toCents(dto.totalPaid)
                     }
                 }
 

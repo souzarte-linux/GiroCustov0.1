@@ -56,6 +56,7 @@ import com.example.ui.ViaCepUiState
 import com.example.util.BiometricHelper
 import com.example.util.BrazilianCepVisualTransformation
 import com.example.util.BrazilianPhoneVisualTransformation
+import com.example.util.CurrencyUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -1476,7 +1477,7 @@ private fun MyVehiclesSection(
                             }
 
                             Text(
-                                text = String.format(Locale.GERMAN, "R$ %.2f/mês (%dd)", vehicle.monthlyFixedCosts, vehicle.plannedWorkDays),
+                                text = "${CurrencyUtils.formatCents(vehicle.monthlyFixedCosts)}/mês (${vehicle.plannedWorkDays}d)",
                                 color = ColorTextMuted,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
@@ -1606,7 +1607,7 @@ private fun PartsWearSection(
                                     fontSize = 14.sp
                                 )
                                 Text(
-                                    text = String.format(Locale.GERMAN, "Troca: R$ %.2f | Vida útil: %d km", part.price, part.lifespanKm.toInt()),
+                                    text = "Troca: ${CurrencyUtils.formatCents(part.price)} | Vida útil: ${part.lifespanKm.toInt()} km",
                                     fontSize = 11.sp,
                                     color = ColorTextMuted
                                 )
@@ -1726,7 +1727,7 @@ private fun VehicleFormSection(
     var consumption by remember { mutableStateOf(if (vehicle.id == 0L) (if (selectedVehicleType == "MOTO") "40.0" else "12.0") else vehicle.averageConsumption.toString()) }
     var fuelType by remember { mutableStateOf(vehicle.fuelType.ifBlank { "Gasolina" }) }
     var tankCapacity by remember { mutableStateOf(if (vehicle.id == 0L) (if (selectedVehicleType == "MOTO") "16.0" else "50.0") else vehicle.tankCapacity.toString()) }
-    var fixedCosts by remember { mutableStateOf(if (vehicle.id == 0L) "180.0" else vehicle.monthlyFixedCosts.toString()) }
+    var fixedCosts by remember { mutableStateOf(if (vehicle.id == 0L) "180.0" else CurrencyUtils.centsToDouble(vehicle.monthlyFixedCosts).toString()) }
     var plannedDays by remember { mutableStateOf(if (vehicle.id == 0L) "22" else vehicle.plannedWorkDays.toString()) }
     var currentOdometer by remember { mutableStateOf(if (vehicle.id == 0L) "0.0" else vehicle.currentOdometer.toString()) }
 
@@ -2495,7 +2496,7 @@ private fun VehicleFormSection(
 
                 val consVal = consumption.toDoubleOrNull() ?: (if (selectedVehicleType == "MOTO") 40.0 else 12.0)
                 val tankVal = tankCapacity.toDoubleOrNull() ?: (if (selectedVehicleType == "MOTO") 16.0 else 50.0)
-                val fCostsVal = fixedCosts.toDoubleOrNull() ?: 180.0
+                val fCostsVal = CurrencyUtils.parseToCents(fixedCosts, 18000L)
                 val pDaysVal = plannedDays.toIntOrNull() ?: 22
                 val odoVal = currentOdometer.toDoubleOrNull() ?: 0.0
 
@@ -2658,7 +2659,7 @@ private fun ProfileEditPartDialog(
     onSave: (String, Double, Double, Double) -> Unit
 ) {
     var name by remember { mutableStateOf(part.name) }
-    var price by remember { mutableStateOf(part.price.toString()) }
+    var price by remember { mutableStateOf(CurrencyUtils.centsToDouble(part.price).toString()) }
     var lifespan by remember { mutableStateOf(part.lifespanKm.toString()) }
     var runKm by remember { mutableStateOf(part.runKmSinceChange.toString()) }
 

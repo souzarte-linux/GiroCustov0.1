@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.*
+import com.example.util.CurrencyUtils
 import com.example.ui.EstimationDetail
 import com.example.ui.GiroCustoViewModel
 import kotlinx.coroutines.Dispatchers
@@ -96,10 +97,10 @@ class RepositoryAndEstimationTest {
         val records = repository.allRecordsFlow.first()
         assertEquals(1, records.size)
         val record = records[0]
-        assertEquals(12.50, record.fuelCost, 0.001)
-        assertEquals(5.50, record.wearCost, 0.001)
-        assertEquals(10.00, record.proportionalFixedCost, 0.001)
-        assertEquals(57.00, record.netProfit, 0.001)
+        assertEquals(12.50, CurrencyUtils.centsToDouble(record.fuelCost), 0.001)
+        assertEquals(5.50, CurrencyUtils.centsToDouble(record.wearCost), 0.001)
+        assertEquals(10.00, CurrencyUtils.centsToDouble(record.proportionalFixedCost), 0.001)
+        assertEquals(57.00, CurrencyUtils.centsToDouble(record.netProfit), 0.001)
 
         // Verify vehicle current odometer is updated to endOdometer (since it's the only and most recent record)
         val updatedVehicle = repository.getVehicle()
@@ -336,7 +337,7 @@ class RepositoryAndEstimationTest {
         )[GiroCustoViewModel::class.java]
 
         // Wait for asynchronous database flows to initialize and propagate standard values to ViewModel
-        viewModel.vehicle.first { it != null && it.monthlyFixedCosts == 200.0 }
+        viewModel.vehicle.first { it != null && it.monthlyFixedCosts == CurrencyUtils.toCents(200.0) }
         viewModel.parts.first { it.isNotEmpty() && it.any { p -> p.name == "Pneu" } }
         runCurrent()
 
@@ -784,7 +785,7 @@ class RepositoryAndEstimationTest {
         val latest1 = repository.getLatestFuelRefill(testVehicleId)
         assertNotNull(latest1)
         assertEquals(10000.0, latest1!!.odometer, 0.001)
-        assertEquals(5.50, latest1.pricePerLiter, 0.001)
+        assertEquals(5.50, CurrencyUtils.fuelPriceMillisToDouble(latest1.pricePerLiter), 0.001)
 
         // Com apenas 1 tanque cheio, consumo real ainda é null
         assertNull(repository.calculateLatestRealConsumption(testVehicleId))
@@ -869,7 +870,7 @@ class RepositoryAndEstimationTest {
         // Último abastecimento:
         val latest4 = repository.getLatestFuelRefill(testVehicleId)
         assertEquals(10600.0, latest4!!.odometer, 0.001)
-        assertEquals(6.00, latest4.pricePerLiter, 0.001)
+        assertEquals(6.00, CurrencyUtils.fuelPriceMillisToDouble(latest4.pricePerLiter), 0.001)
 
         // latestReal deve ser 50.0 km/L (último trecho de 250km / 5L)
         val latestReal2 = repository.calculateLatestRealConsumption(testVehicleId)
@@ -899,7 +900,7 @@ class RepositoryAndEstimationTest {
 
         val records = repository.allRecordsFlow.first()
         val record = records.first { it.dateTimestamp == 5000L }
-        assertEquals(10.00, record.fuelCost, 0.001)
+        assertEquals(10.00, CurrencyUtils.centsToDouble(record.fuelCost), 0.001)
 
         // 7. Testar updateDailyRecord também usando consumo real médio
         // Atualiza para 170 km rodados: 170 / 42.5 * 5.00 = 20.00
@@ -918,7 +919,7 @@ class RepositoryAndEstimationTest {
 
         val updatedRecord = db.dailyRecordDao().getRecordById(record.id)
         assertNotNull(updatedRecord)
-        assertEquals(20.00, updatedRecord!!.fuelCost, 0.001)
+        assertEquals(20.00, CurrencyUtils.centsToDouble(updatedRecord!!.fuelCost), 0.001)
 
         // 8. Testar deleteFuelRefill preservando averageConsumption
         repository.deleteFuelRefill(latest4)
@@ -943,14 +944,14 @@ class RepositoryAndEstimationTest {
 
         var allMaintenance = repository.maintenanceRecordsForVehicleFlow(1L).first()
         assertEquals(1, allMaintenance.size)
-        assertEquals(150.0, allMaintenance[0].value, 0.001)
+        assertEquals(150.0, CurrencyUtils.centsToDouble(allMaintenance[0].value), 0.001)
 
         // Update
-        val updatedMaintenance = allMaintenance[0].copy(value = 180.0, description = "Troca de óleo e filtro")
+        val updatedMaintenance = allMaintenance[0].copy(value = CurrencyUtils.toCents(180.0), description = "Troca de óleo e filtro")
         repository.saveMaintenanceRecord(updatedMaintenance)
         allMaintenance = repository.maintenanceRecordsForVehicleFlow(1L).first()
         assertEquals(1, allMaintenance.size)
-        assertEquals(180.0, allMaintenance[0].value, 0.001)
+        assertEquals(180.0, CurrencyUtils.centsToDouble(allMaintenance[0].value), 0.001)
         assertEquals("Troca de óleo e filtro", allMaintenance[0].description)
 
         // Delete
@@ -977,7 +978,7 @@ class RepositoryAndEstimationTest {
         // Filter between day2 and day3: should include maintenance2 and maintenance3 (sum = 500.0)
         val filtered = com.example.ui.util.filterByPeriod(list, com.example.ui.Period.PERSONALIZADO, day2, day3) { it.dateTimestamp }
         assertEquals(2, filtered.size)
-        assertEquals(500.0, filtered.sumOf { it.value }, 0.001)
+        assertEquals(500.0, CurrencyUtils.centsToDouble(filtered.sumOf { it.value }), 0.001)
 
         // 3. Test isolated behavior of the period filter in the ViewModel
         val viewModel = GiroCustoViewModel(ApplicationProvider.getApplicationContext() as Application)

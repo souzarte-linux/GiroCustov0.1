@@ -10,6 +10,7 @@ import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.data.*
+import com.example.util.CurrencyUtils
 import com.example.network.supabase.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -390,9 +391,9 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // Abre agora com Room versão 14 executando MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13 e MIGRATION_13_14
+        // Abre agora com Room versão 15 executando as migrações até 15
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_9_10, GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14)
+            .addMigrations(GiroCustoDatabase.MIGRATION_9_10, GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15)
             .allowMainThreadQueries()
             .build()
 
@@ -609,9 +610,9 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // Abre agora com Room versão 14 executando MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13 e MIGRATION_13_14
+        // Abre agora com Room versão 15 executando as migrações até 15
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14)
+            .addMigrations(GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15)
             .allowMainThreadQueries()
             .build()
 
@@ -865,9 +866,9 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // Abre agora com Room versão 14 executando MIGRATION_11_12, MIGRATION_12_13 e MIGRATION_13_14
+        // Abre agora com Room versão 15 executando as migrações até 15
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14)
+            .addMigrations(GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15)
             .allowMainThreadQueries()
             .build()
 
@@ -1167,9 +1168,9 @@ class SupabaseSyncAndMigrationTest {
 
         dbV13.close()
 
-        // 6. Confirmação de abertura e consultas do Room em versão 14 com DAOs
+        // 6. Confirmação de abertura e consultas do Room em versão 15 com DAOs
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14)
+            .addMigrations(GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15)
             .allowMainThreadQueries()
             .build()
 
@@ -1339,14 +1340,15 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // 2. Abre com Room v14 aplicando cadeia completa 9->10->11->12->13->14
+        // 2. Abre com Room v15 aplicando cadeia completa 9->10->11->12->13->14->15
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
             .addMigrations(
                 GiroCustoDatabase.MIGRATION_9_10,
                 GiroCustoDatabase.MIGRATION_10_11,
                 GiroCustoDatabase.MIGRATION_11_12,
                 GiroCustoDatabase.MIGRATION_12_13,
-                GiroCustoDatabase.MIGRATION_13_14
+                GiroCustoDatabase.MIGRATION_13_14,
+                GiroCustoDatabase.MIGRATION_14_15
             )
             .allowMainThreadQueries()
             .build()
@@ -1492,7 +1494,7 @@ class SupabaseSyncAndMigrationTest {
         assertEquals(5L, entity.id)
         assertEquals("part-uuid-77", entity.remoteId)
         assertEquals("Pneu Traseiro", entity.name)
-        assertEquals(220.0, entity.price, 0.001)
+        assertEquals(220.0, CurrencyUtils.centsToDouble(entity.price), 0.001)
         assertEquals(SyncStatus.SYNCED, entity.syncStatus)
         assertFalse(entity.isDeleted)
     }
@@ -1539,7 +1541,7 @@ class SupabaseSyncAndMigrationTest {
         assertEquals("rec-uuid-33", entity.remoteId)
         assertEquals("2026-10-21", entity.dateString)
         assertEquals("Uber Eats", entity.platform)
-        assertEquals(280.50, entity.grossEarnings, 0.001)
+        assertEquals(280.50, CurrencyUtils.centsToDouble(entity.grossEarnings), 0.001)
         assertEquals("07:30", entity.startTime)
         assertEquals("18:00", entity.endTime)
         assertEquals("01:30", entity.pauseDuration)
@@ -1677,7 +1679,7 @@ class SupabaseSyncAndMigrationTest {
             pricePerLiter = 4.19,
             liters = 12.5,
             discount = 2.0,
-            totalPaid = 50.375,
+            totalPaid = 50.38,
             odometer = 15800.0,
             isFullTank = true,
             paymentMethod = "Cartão de Débito",
@@ -1693,7 +1695,7 @@ class SupabaseSyncAndMigrationTest {
         assertEquals("refill-uuid-11", dto.id)
         assertEquals(remoteVehicleId, dto.vehicleId)
         assertEquals("Ipiranga", dto.gasStation)
-        assertEquals(50.375, dto.totalPaid, 0.001)
+        assertEquals(50.38, dto.totalPaid, 0.001)
 
         val entity = dto.toEntity(existingId = 7L, localVehicleId = 1L)
         assertEquals(7L, entity.id)

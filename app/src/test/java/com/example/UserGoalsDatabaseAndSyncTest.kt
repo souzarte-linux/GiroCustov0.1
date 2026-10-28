@@ -8,6 +8,7 @@ import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.data.*
+import com.example.util.CurrencyUtils
 import com.example.network.supabase.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -161,16 +162,16 @@ class UserGoalsDatabaseAndSyncTest {
 
         dbV14.close()
 
-        // 7. Confirmação de abertura do Room na versão 14 com DAOs
+        // 7. Confirmação de abertura do Room na versão 15 com DAOs
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_13_14)
+            .addMigrations(GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15)
             .allowMainThreadQueries()
             .build()
 
         val loadedGoals = roomDb.userGoalsDao().getUserGoals()
         assertNotNull(loadedGoals)
-        assertEquals(250.0, loadedGoals?.dailyGoalGross ?: 0.0, 0.001)
-        assertEquals(160.0, loadedGoals?.dailyGoalNet ?: 0.0, 0.001)
+        assertEquals(250.0, CurrencyUtils.centsToDouble(loadedGoals?.dailyGoalGross ?: 0L), 0.001)
+        assertEquals(160.0, CurrencyUtils.centsToDouble(loadedGoals?.dailyGoalNet ?: 0L), 0.001)
         assertEquals("goal-uuid-1", loadedGoals?.remoteId)
         roomDb.close()
     }
@@ -206,15 +207,15 @@ class UserGoalsDatabaseAndSyncTest {
         val retrieved = userGoalsDao.getUserGoals()
         assertNotNull(retrieved)
         assertEquals(1, retrieved?.id)
-        assertEquals(220.0, retrieved?.dailyGoalGross ?: 0.0, 0.001)
-        assertEquals(140.0, retrieved?.dailyGoalNet ?: 0.0, 0.001)
+        assertEquals(220.0, CurrencyUtils.centsToDouble(retrieved?.dailyGoalGross ?: 0L), 0.001)
+        assertEquals(140.0, CurrencyUtils.centsToDouble(retrieved?.dailyGoalNet ?: 0L), 0.001)
         assertEquals("remote-1", retrieved?.remoteId)
         assertEquals(SyncStatus.SYNCED, retrieved?.syncStatus)
 
         // Flow emite o valor gravado
         val flowValue = userGoalsDao.getUserGoalsFlow().first()
         assertNotNull(flowValue)
-        assertEquals(220.0, flowValue?.dailyGoalGross ?: 0.0, 0.001)
+        assertEquals(220.0, CurrencyUtils.centsToDouble(flowValue?.dailyGoalGross ?: 0L), 0.001)
 
         // Busca por remoteId
         val byRemote = userGoalsDao.getUserGoalsByRemoteId("remote-1")
@@ -225,10 +226,10 @@ class UserGoalsDatabaseAndSyncTest {
         assertNull(userGoalsDao.getPendingUserGoals())
 
         // Atualização para PENDING_UPDATE
-        userGoalsDao.insertOrUpdateUserGoals(initialGoals.copy(dailyGoalGross = 300.0, syncStatus = SyncStatus.PENDING_UPDATE))
+        userGoalsDao.insertOrUpdateUserGoals(initialGoals.copy(dailyGoalGross = CurrencyUtils.toCents(300.0), syncStatus = SyncStatus.PENDING_UPDATE))
         val pending = userGoalsDao.getPendingUserGoals()
         assertNotNull(pending)
-        assertEquals(300.0, pending?.dailyGoalGross ?: 0.0, 0.001)
+        assertEquals(300.0, CurrencyUtils.centsToDouble(pending?.dailyGoalGross ?: 0L), 0.001)
         assertEquals(SyncStatus.PENDING_UPDATE, pending?.syncStatus)
 
         // Exclusão total
@@ -255,10 +256,10 @@ class UserGoalsDatabaseAndSyncTest {
         assertEquals(0, repository.countPendingChanges())
 
         // Atualização via repositório marca PENDING_UPDATE e gera remoteId se vazio
-        repository.updateUserGoals(goals.copy(dailyGoalGross = 350.0, remoteId = ""))
+        repository.updateUserGoals(goals.copy(dailyGoalGross = CurrencyUtils.toCents(350.0), remoteId = ""))
         val updated = repository.getUserGoals()
         assertNotNull(updated)
-        assertEquals(350.0, updated?.dailyGoalGross ?: 0.0, 0.001)
+        assertEquals(350.0, CurrencyUtils.centsToDouble(updated?.dailyGoalGross ?: 0L), 0.001)
         assertEquals(SyncStatus.PENDING_UPDATE, updated?.syncStatus)
         assertTrue(updated?.remoteId?.isNotBlank() == true)
 
@@ -289,16 +290,16 @@ class UserGoalsDatabaseAndSyncTest {
 
         val migratedGoals = repository.getUserGoals()
         assertNotNull(migratedGoals)
-        assertEquals(280.0, migratedGoals?.dailyGoalGross ?: 0.0, 0.001)
-        assertEquals(180.0, migratedGoals?.dailyGoalNet ?: 0.0, 0.001)
+        assertEquals(280.0, CurrencyUtils.centsToDouble(migratedGoals?.dailyGoalGross ?: 0L), 0.001)
+        assertEquals(180.0, CurrencyUtils.centsToDouble(migratedGoals?.dailyGoalNet ?: 0L), 0.001)
         assertEquals(130.0, migratedGoals?.dailyGoalKm ?: 0.0, 0.001)
         assertEquals(20, migratedGoals?.dailyGoalDeliveries)
-        assertEquals(1600.0, migratedGoals?.weeklyGoalGross ?: 0.0, 0.001)
-        assertEquals(1100.0, migratedGoals?.weeklyGoalNet ?: 0.0, 0.001)
+        assertEquals(1600.0, CurrencyUtils.centsToDouble(migratedGoals?.weeklyGoalGross ?: 0L), 0.001)
+        assertEquals(1100.0, CurrencyUtils.centsToDouble(migratedGoals?.weeklyGoalNet ?: 0L), 0.001)
         assertEquals(750.0, migratedGoals?.weeklyGoalKm ?: 0.0, 0.001)
         assertEquals(110, migratedGoals?.weeklyGoalDeliveries)
-        assertEquals(6500.0, migratedGoals?.monthlyGoalGross ?: 0.0, 0.001)
-        assertEquals(4200.0, migratedGoals?.monthlyGoalNet ?: 0.0, 0.001)
+        assertEquals(6500.0, CurrencyUtils.centsToDouble(migratedGoals?.monthlyGoalGross ?: 0L), 0.001)
+        assertEquals(4200.0, CurrencyUtils.centsToDouble(migratedGoals?.monthlyGoalNet ?: 0L), 0.001)
         assertEquals(3100.0, migratedGoals?.monthlyGoalKm ?: 0.0, 0.001)
         assertEquals(480, migratedGoals?.monthlyGoalDeliveries)
         assertEquals(SyncStatus.PENDING_UPDATE, migratedGoals?.syncStatus)
@@ -324,16 +325,16 @@ class UserGoalsDatabaseAndSyncTest {
 
         val defaultGoals = repository.getUserGoals()
         assertNotNull(defaultGoals)
-        assertEquals(200.0, defaultGoals?.dailyGoalGross ?: 0.0, 0.001)
-        assertEquals(130.0, defaultGoals?.dailyGoalNet ?: 0.0, 0.001)
+        assertEquals(200.0, CurrencyUtils.centsToDouble(defaultGoals?.dailyGoalGross ?: 0L), 0.001)
+        assertEquals(130.0, CurrencyUtils.centsToDouble(defaultGoals?.dailyGoalNet ?: 0L), 0.001)
         assertEquals(100.0, defaultGoals?.dailyGoalKm ?: 0.0, 0.001)
         assertEquals(15, defaultGoals?.dailyGoalDeliveries)
-        assertEquals(1200.0, defaultGoals?.weeklyGoalGross ?: 0.0, 0.001)
-        assertEquals(800.0, defaultGoals?.weeklyGoalNet ?: 0.0, 0.001)
+        assertEquals(1200.0, CurrencyUtils.centsToDouble(defaultGoals?.weeklyGoalGross ?: 0L), 0.001)
+        assertEquals(800.0, CurrencyUtils.centsToDouble(defaultGoals?.weeklyGoalNet ?: 0L), 0.001)
         assertEquals(600.0, defaultGoals?.weeklyGoalKm ?: 0.0, 0.001)
         assertEquals(90, defaultGoals?.weeklyGoalDeliveries)
-        assertEquals(5000.0, defaultGoals?.monthlyGoalGross ?: 0.0, 0.001)
-        assertEquals(3200.0, defaultGoals?.monthlyGoalNet ?: 0.0, 0.001)
+        assertEquals(5000.0, CurrencyUtils.centsToDouble(defaultGoals?.monthlyGoalGross ?: 0L), 0.001)
+        assertEquals(3200.0, CurrencyUtils.centsToDouble(defaultGoals?.monthlyGoalNet ?: 0L), 0.001)
         assertEquals(2500.0, defaultGoals?.monthlyGoalKm ?: 0.0, 0.001)
         assertEquals(400, defaultGoals?.monthlyGoalDeliveries)
         assertEquals(SyncStatus.SYNCED, defaultGoals?.syncStatus)
@@ -351,7 +352,7 @@ class UserGoalsDatabaseAndSyncTest {
 
         // Não deve ser sobrescrito
         val currentGoals = repository.getUserGoals()
-        assertEquals(999.0, currentGoals?.dailyGoalGross ?: 0.0, 0.001)
+        assertEquals(999.0, CurrencyUtils.centsToDouble(currentGoals?.dailyGoalGross ?: 0L), 0.001)
     }
 
     // =========================================================================
@@ -435,8 +436,8 @@ class UserGoalsDatabaseAndSyncTest {
         val updatedLocal = userGoalsDao.getUserGoals()
         assertNotNull(updatedLocal)
         assertEquals("rem-goal-newer", updatedLocal?.remoteId)
-        assertEquals(380.0, updatedLocal?.dailyGoalGross ?: 0.0, 0.001)
-        assertEquals(250.0, updatedLocal?.dailyGoalNet ?: 0.0, 0.001)
+        assertEquals(380.0, CurrencyUtils.centsToDouble(updatedLocal?.dailyGoalGross ?: 0L), 0.001)
+        assertEquals(250.0, CurrencyUtils.centsToDouble(updatedLocal?.dailyGoalNet ?: 0L), 0.001)
         assertEquals(SyncStatus.SYNCED, updatedLocal?.syncStatus)
     }
 
@@ -482,7 +483,7 @@ class UserGoalsDatabaseAndSyncTest {
 
         // O dado local offline NÃO deve ter sido sobrescrito pelo remoto defasado
         val currentLocal = userGoalsDao.getUserGoals()
-        assertEquals(450.0, currentLocal?.dailyGoalGross ?: 0.0, 0.001)
+        assertEquals(450.0, CurrencyUtils.centsToDouble(currentLocal?.dailyGoalGross ?: 0L), 0.001)
         assertEquals(SyncStatus.PENDING_UPDATE, currentLocal?.syncStatus)
     }
 

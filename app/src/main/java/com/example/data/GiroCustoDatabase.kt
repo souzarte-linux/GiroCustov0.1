@@ -10,7 +10,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Vehicle::class, VehiclePart::class, DailyRecord::class, UserProfile::class, Platform::class, FuelRefill::class, MaintenanceRecord::class, UserGoals::class],
-    version = 14,
+    version = 15,
     exportSchema = true
 )
 abstract class GiroCustoDatabase : RoomDatabase() {
@@ -258,6 +258,240 @@ abstract class GiroCustoDatabase : RoomDatabase() {
             }
         }
 
+        // MIGRAÇÃO SIMPLIFICADA: sem dados reais (pré-lançamento). NÃO replicar este padrão após o lançamento.
+        val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // 1. vehicle (monthlyFixedCosts: REAL -> INTEGER)
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `vehicle_new` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`model` TEXT NOT NULL, " +
+                        "`averageConsumption` REAL NOT NULL, " +
+                        "`fuelType` TEXT NOT NULL, " +
+                        "`monthlyFixedCosts` INTEGER NOT NULL, " +
+                        "`plannedWorkDays` INTEGER NOT NULL, " +
+                        "`currentOdometer` REAL NOT NULL, " +
+                        "`active` INTEGER NOT NULL, " +
+                        "`vehicleType` TEXT NOT NULL, " +
+                        "`brand` TEXT NOT NULL, " +
+                        "`manufacturingYear` TEXT NOT NULL, " +
+                        "`tankCapacity` REAL NOT NULL, " +
+                        "`hasTopBox` INTEGER NOT NULL, " +
+                        "`hasDeliveryBag` INTEGER NOT NULL, " +
+                        "`carBodyType` TEXT NOT NULL, " +
+                        "`remoteId` TEXT NOT NULL, " +
+                        "`syncStatus` TEXT NOT NULL, " +
+                        "`updatedAt` INTEGER NOT NULL, " +
+                        "`isDeleted` INTEGER NOT NULL" +
+                    ")"
+                )
+                db.execSQL(
+                    "INSERT INTO `vehicle_new` SELECT " +
+                        "`id`, `model`, `averageConsumption`, `fuelType`, " +
+                        "CAST(ROUND(`monthlyFixedCosts` * 100) AS INTEGER), " +
+                        "`plannedWorkDays`, `currentOdometer`, `active`, `vehicleType`, `brand`, " +
+                        "`manufacturingYear`, `tankCapacity`, `hasTopBox`, `hasDeliveryBag`, `carBodyType`, " +
+                        "`remoteId`, `syncStatus`, `updatedAt`, `isDeleted` " +
+                        "FROM `vehicle`"
+                )
+                db.execSQL("DROP TABLE `vehicle`")
+                db.execSQL("ALTER TABLE `vehicle_new` RENAME TO `vehicle`")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicle_active_isDeleted` ON `vehicle` (`active`, `isDeleted`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicle_remoteId` ON `vehicle` (`remoteId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicle_syncStatus` ON `vehicle` (`syncStatus`)")
+
+                // 2. vehicle_parts (price: REAL -> INTEGER)
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `vehicle_parts_new` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`vehicleId` INTEGER NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`price` INTEGER NOT NULL, " +
+                        "`lifespanKm` REAL NOT NULL, " +
+                        "`runKmSinceChange` REAL NOT NULL, " +
+                        "`remoteId` TEXT NOT NULL, " +
+                        "`syncStatus` TEXT NOT NULL, " +
+                        "`updatedAt` INTEGER NOT NULL, " +
+                        "`isDeleted` INTEGER NOT NULL" +
+                    ")"
+                )
+                db.execSQL(
+                    "INSERT INTO `vehicle_parts_new` SELECT " +
+                        "`id`, `vehicleId`, `name`, " +
+                        "CAST(ROUND(`price` * 100) AS INTEGER), " +
+                        "`lifespanKm`, `runKmSinceChange`, `remoteId`, `syncStatus`, `updatedAt`, `isDeleted` " +
+                        "FROM `vehicle_parts`"
+                )
+                db.execSQL("DROP TABLE `vehicle_parts`")
+                db.execSQL("ALTER TABLE `vehicle_parts_new` RENAME TO `vehicle_parts`")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicle_parts_vehicleId` ON `vehicle_parts` (`vehicleId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicle_parts_remoteId` ON `vehicle_parts` (`remoteId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicle_parts_syncStatus` ON `vehicle_parts` (`syncStatus`)")
+
+                // 3. daily_records (7 campos monetários: REAL -> INTEGER)
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `daily_records_new` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`dateString` TEXT NOT NULL, " +
+                        "`dateTimestamp` INTEGER NOT NULL, " +
+                        "`platform` TEXT NOT NULL, " +
+                        "`grossEarnings` INTEGER NOT NULL, " +
+                        "`deliveriesCount` INTEGER NOT NULL, " +
+                        "`startOdometer` REAL NOT NULL, " +
+                        "`endOdometer` REAL NOT NULL, " +
+                        "`fuelPrice` INTEGER NOT NULL, " +
+                        "`foodExpense` INTEGER NOT NULL, " +
+                        "`fuelCost` INTEGER NOT NULL, " +
+                        "`wearCost` INTEGER NOT NULL, " +
+                        "`proportionalFixedCost` INTEGER NOT NULL, " +
+                        "`netProfit` INTEGER NOT NULL, " +
+                        "`startTime` TEXT NOT NULL, " +
+                        "`endTime` TEXT NOT NULL, " +
+                        "`pauseDuration` TEXT NOT NULL, " +
+                        "`remoteId` TEXT NOT NULL, " +
+                        "`syncStatus` TEXT NOT NULL, " +
+                        "`updatedAt` INTEGER NOT NULL, " +
+                        "`isDeleted` INTEGER NOT NULL" +
+                    ")"
+                )
+                db.execSQL(
+                    "INSERT INTO `daily_records_new` SELECT " +
+                        "`id`, `dateString`, `dateTimestamp`, `platform`, " +
+                        "CAST(ROUND(`grossEarnings` * 100) AS INTEGER), " +
+                        "`deliveriesCount`, `startOdometer`, `endOdometer`, " +
+                        "CAST(ROUND(`fuelPrice` * 1000) AS INTEGER), " +
+                        "CAST(ROUND(`foodExpense` * 100) AS INTEGER), " +
+                        "CAST(ROUND(`fuelCost` * 100) AS INTEGER), " +
+                        "CAST(ROUND(`wearCost` * 100) AS INTEGER), " +
+                        "CAST(ROUND(`proportionalFixedCost` * 100) AS INTEGER), " +
+                        "CAST(ROUND(`netProfit` * 100) AS INTEGER), " +
+                        "`startTime`, `endTime`, `pauseDuration`, " +
+                        "`remoteId`, `syncStatus`, `updatedAt`, `isDeleted` " +
+                        "FROM `daily_records`"
+                )
+                db.execSQL("DROP TABLE `daily_records`")
+                db.execSQL("ALTER TABLE `daily_records_new` RENAME TO `daily_records`")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_daily_records_isDeleted_dateTimestamp` ON `daily_records` (`isDeleted`, `dateTimestamp`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_daily_records_remoteId` ON `daily_records` (`remoteId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_daily_records_syncStatus` ON `daily_records` (`syncStatus`)")
+
+                // 4. fuel_refills (pricePerLiter, discount, totalPaid: REAL -> INTEGER)
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `fuel_refills_new` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`vehicleId` INTEGER NOT NULL, " +
+                        "`dateTimestamp` INTEGER NOT NULL, " +
+                        "`dateString` TEXT NOT NULL, " +
+                        "`gasStation` TEXT NOT NULL, " +
+                        "`fuelType` TEXT NOT NULL, " +
+                        "`pricePerLiter` INTEGER NOT NULL, " +
+                        "`liters` REAL NOT NULL, " +
+                        "`discount` INTEGER NOT NULL, " +
+                        "`totalPaid` INTEGER NOT NULL, " +
+                        "`odometer` REAL NOT NULL, " +
+                        "`isFullTank` INTEGER NOT NULL, " +
+                        "`paymentMethod` TEXT NOT NULL, " +
+                        "`isInstallment` INTEGER NOT NULL, " +
+                        "`installmentsCount` INTEGER NOT NULL, " +
+                        "`remoteId` TEXT NOT NULL, " +
+                        "`syncStatus` TEXT NOT NULL, " +
+                        "`updatedAt` INTEGER NOT NULL, " +
+                        "`isDeleted` INTEGER NOT NULL" +
+                    ")"
+                )
+                db.execSQL(
+                    "INSERT INTO `fuel_refills_new` SELECT " +
+                        "`id`, `vehicleId`, `dateTimestamp`, `dateString`, `gasStation`, `fuelType`, " +
+                        "CAST(ROUND(`pricePerLiter` * 1000) AS INTEGER), " +
+                        "`liters`, " +
+                        "CAST(ROUND(`discount` * 100) AS INTEGER), " +
+                        "CAST(ROUND(`totalPaid` * 100) AS INTEGER), " +
+                        "`odometer`, `isFullTank`, `paymentMethod`, `isInstallment`, `installmentsCount`, " +
+                        "`remoteId`, `syncStatus`, `updatedAt`, `isDeleted` " +
+                        "FROM `fuel_refills`"
+                )
+                db.execSQL("DROP TABLE `fuel_refills`")
+                db.execSQL("ALTER TABLE `fuel_refills_new` RENAME TO `fuel_refills`")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fuel_refills_vehicleId_dateTimestamp` ON `fuel_refills` (`vehicleId`, `dateTimestamp`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fuel_refills_vehicleId_odometer` ON `fuel_refills` (`vehicleId`, `odometer`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fuel_refills_remoteId` ON `fuel_refills` (`remoteId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fuel_refills_syncStatus` ON `fuel_refills` (`syncStatus`)")
+
+                // 5. maintenance_records (value: REAL -> INTEGER)
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `maintenance_records_new` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`vehicleId` INTEGER NOT NULL, " +
+                        "`dateTimestamp` INTEGER NOT NULL, " +
+                        "`dateString` TEXT NOT NULL, " +
+                        "`description` TEXT NOT NULL, " +
+                        "`location` TEXT NOT NULL, " +
+                        "`value` INTEGER NOT NULL, " +
+                        "`odometer` REAL NOT NULL, " +
+                        "`remoteId` TEXT NOT NULL, " +
+                        "`syncStatus` TEXT NOT NULL, " +
+                        "`updatedAt` INTEGER NOT NULL, " +
+                        "`isDeleted` INTEGER NOT NULL" +
+                    ")"
+                )
+                db.execSQL(
+                    "INSERT INTO `maintenance_records_new` SELECT " +
+                        "`id`, `vehicleId`, `dateTimestamp`, `dateString`, `description`, `location`, " +
+                        "CAST(ROUND(`value` * 100) AS INTEGER), " +
+                        "`odometer`, `remoteId`, `syncStatus`, `updatedAt`, `isDeleted` " +
+                        "FROM `maintenance_records`"
+                )
+                db.execSQL("DROP TABLE `maintenance_records`")
+                db.execSQL("ALTER TABLE `maintenance_records_new` RENAME TO `maintenance_records`")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_maintenance_records_vehicleId_dateTimestamp` ON `maintenance_records` (`vehicleId`, `dateTimestamp`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_maintenance_records_remoteId` ON `maintenance_records` (`remoteId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_maintenance_records_syncStatus` ON `maintenance_records` (`syncStatus`)")
+
+                // 6. user_goals (6 campos monetários: REAL -> INTEGER)
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `user_goals_new` (" +
+                        "`id` INTEGER NOT NULL, " +
+                        "`dailyGoalGross` INTEGER NOT NULL, " +
+                        "`dailyGoalNet` INTEGER NOT NULL, " +
+                        "`dailyGoalKm` REAL NOT NULL, " +
+                        "`dailyGoalDeliveries` INTEGER NOT NULL, " +
+                        "`weeklyGoalGross` INTEGER NOT NULL, " +
+                        "`weeklyGoalNet` INTEGER NOT NULL, " +
+                        "`weeklyGoalKm` REAL NOT NULL, " +
+                        "`weeklyGoalDeliveries` INTEGER NOT NULL, " +
+                        "`monthlyGoalGross` INTEGER NOT NULL, " +
+                        "`monthlyGoalNet` INTEGER NOT NULL, " +
+                        "`monthlyGoalKm` REAL NOT NULL, " +
+                        "`monthlyGoalDeliveries` INTEGER NOT NULL, " +
+                        "`remoteId` TEXT NOT NULL DEFAULT '', " +
+                        "`syncStatus` TEXT NOT NULL DEFAULT 'SYNCED', " +
+                        "`updatedAt` INTEGER NOT NULL DEFAULT 0, " +
+                        "`isDeleted` INTEGER NOT NULL DEFAULT 0, " +
+                        "PRIMARY KEY(`id`)" +
+                    ")"
+                )
+                db.execSQL(
+                    "INSERT INTO `user_goals_new` SELECT " +
+                        "`id`, " +
+                        "CAST(ROUND(`dailyGoalGross` * 100) AS INTEGER), " +
+                        "CAST(ROUND(`dailyGoalNet` * 100) AS INTEGER), " +
+                        "`dailyGoalKm`, `dailyGoalDeliveries`, " +
+                        "CAST(ROUND(`weeklyGoalGross` * 100) AS INTEGER), " +
+                        "CAST(ROUND(`weeklyGoalNet` * 100) AS INTEGER), " +
+                        "`weeklyGoalKm`, `weeklyGoalDeliveries`, " +
+                        "CAST(ROUND(`monthlyGoalGross` * 100) AS INTEGER), " +
+                        "CAST(ROUND(`monthlyGoalNet` * 100) AS INTEGER), " +
+                        "`monthlyGoalKm`, `monthlyGoalDeliveries`, " +
+                        "`remoteId`, `syncStatus`, `updatedAt`, `isDeleted` " +
+                        "FROM `user_goals`"
+                )
+                db.execSQL("DROP TABLE `user_goals`")
+                db.execSQL("ALTER TABLE `user_goals_new` RENAME TO `user_goals`")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_goals_remoteId` ON `user_goals` (`remoteId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_user_goals_syncStatus` ON `user_goals` (`syncStatus`)")
+            }
+        }
+
         fun getDatabase(context: Context): GiroCustoDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -265,7 +499,7 @@ abstract class GiroCustoDatabase : RoomDatabase() {
                     GiroCustoDatabase::class.java,
                     "giro_custo_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
                 .build()
                 INSTANCE = instance
                 instance

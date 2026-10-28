@@ -33,6 +33,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.data.DailyRecord
+import com.example.util.CurrencyUtils
 import com.example.data.Vehicle
 import com.example.data.VehiclePart
 import com.example.data.MaintenanceRecord
@@ -81,16 +82,16 @@ fun DashboardScreen(
     }
 
     // Cálculos de Métricas
-    val totalGross = filteredRecords.sumOf { it.grossEarnings }
-    val totalFuel = filteredRecords.sumOf { it.fuelCost }
-    val totalWear = filteredRecords.sumOf { it.wearCost }
-    val totalFixed = filteredRecords.sumOf { it.proportionalFixedCost }
-    val totalFood = filteredRecords.sumOf { it.foodExpense }
+    val totalGross = CurrencyUtils.centsToDouble(filteredRecords.sumOf { it.grossEarnings })
+    val totalFuel = CurrencyUtils.centsToDouble(filteredRecords.sumOf { it.fuelCost })
+    val totalWear = CurrencyUtils.centsToDouble(filteredRecords.sumOf { it.wearCost })
+    val totalFixed = CurrencyUtils.centsToDouble(filteredRecords.sumOf { it.proportionalFixedCost })
+    val totalFood = CurrencyUtils.centsToDouble(filteredRecords.sumOf { it.foodExpense })
     val totalExpenses = totalFuel + totalWear + totalFixed + totalFood
     val netProfit = totalGross - totalExpenses
 
     // Total gasto em manutenção corretiva no período
-    val totalMaintenance = filteredMaintenanceRecords.sumOf { it.value }
+    val totalMaintenance = CurrencyUtils.centsToDouble(filteredMaintenanceRecords.sumOf { it.value })
     // Lucro líquido real do período (lucro operacional deduzido do gasto pontual de manutenção)
     val realNetProfit = netProfit - totalMaintenance
     
@@ -639,8 +640,8 @@ fun DashboardScreen(
         val todayRecords = remember(records, todayStr) { records.filter { it.dateString == todayStr } }
         
         // Conquistas Atuais
-        val dailyGrossAct = todayRecords.sumOf { it.grossEarnings }
-        val dailyNetAct = todayRecords.sumOf { it.netProfit }
+        val dailyGrossAct = CurrencyUtils.centsToDouble(todayRecords.sumOf { it.grossEarnings })
+        val dailyNetAct = CurrencyUtils.centsToDouble(todayRecords.sumOf { it.netProfit })
         val dailyKmAct = todayRecords.sumOf { it.kmRodados }
         val dailyDelAct = todayRecords.sumOf { it.deliveriesCount }
 
@@ -648,8 +649,8 @@ fun DashboardScreen(
             val limit = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000
             records.filter { it.dateTimestamp >= limit }
         }
-        val weeklyGrossAct = weeklyRecords.sumOf { it.grossEarnings }
-        val weeklyNetAct = weeklyRecords.sumOf { it.netProfit }
+        val weeklyGrossAct = CurrencyUtils.centsToDouble(weeklyRecords.sumOf { it.grossEarnings })
+        val weeklyNetAct = CurrencyUtils.centsToDouble(weeklyRecords.sumOf { it.netProfit })
         val weeklyKmAct = weeklyRecords.sumOf { it.kmRodados }
         val weeklyDelAct = weeklyRecords.sumOf { it.deliveriesCount }
 
@@ -657,8 +658,8 @@ fun DashboardScreen(
             val (startMonth, endMonth) = getCurrentMonthRange()
             records.filter { it.dateTimestamp in startMonth..endMonth }
         }
-        val monthlyGrossAct = monthlyRecords.sumOf { it.grossEarnings }
-        val monthlyNetAct = monthlyRecords.sumOf { it.netProfit }
+        val monthlyGrossAct = CurrencyUtils.centsToDouble(monthlyRecords.sumOf { it.grossEarnings })
+        val monthlyNetAct = CurrencyUtils.centsToDouble(monthlyRecords.sumOf { it.netProfit })
         val monthlyKmAct = monthlyRecords.sumOf { it.kmRodados }
         val monthlyDelAct = monthlyRecords.sumOf { it.deliveriesCount }
 

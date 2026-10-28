@@ -11,6 +11,7 @@ import com.example.network.viacep.*
 import com.example.network.fipe.*
 import com.example.ui.navigation.RootNavState
 import com.example.util.BiometricHelper
+import com.example.util.CurrencyUtils
 import com.example.util.GoogleAuthHelper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -679,14 +680,14 @@ class GiroCustoViewModel @JvmOverloads constructor(
         val filteredMaint = filterByPeriod(maintenanceRecords, selectedPeriod, customStart, customEnd) { it.dateTimestamp }
         val chronological = filtered.take(7).sortedBy { it.dateTimestamp }
 
-        val totalEarnings = filtered.sumOf { it.grossEarnings }
-        val totalFuel = filtered.sumOf { it.fuelCost }
-        val totalWear = filtered.sumOf { it.wearCost }
-        val totalFixed = filtered.sumOf { it.proportionalFixedCost }
-        val totalFood = filtered.sumOf { it.foodExpense }
+        val totalEarnings = CurrencyUtils.centsToDouble(filtered.sumOf { it.grossEarnings })
+        val totalFuel = CurrencyUtils.centsToDouble(filtered.sumOf { it.fuelCost })
+        val totalWear = CurrencyUtils.centsToDouble(filtered.sumOf { it.wearCost })
+        val totalFixed = CurrencyUtils.centsToDouble(filtered.sumOf { it.proportionalFixedCost })
+        val totalFood = CurrencyUtils.centsToDouble(filtered.sumOf { it.foodExpense })
         val totalExpenses = totalFuel + totalWear + totalFixed + totalFood
 
-        val totalMaint = filteredMaint.sumOf { it.value }
+        val totalMaint = CurrencyUtils.centsToDouble(filteredMaint.sumOf { it.value })
         val realExpenses = totalExpenses + totalMaint
         val netProfit = totalEarnings - totalExpenses
         val realNetProfit = netProfit - totalMaint
@@ -806,25 +807,29 @@ class GiroCustoViewModel @JvmOverloads constructor(
 
         // Migração transparente de preferências legadas de metas para Room se necessário
         viewModelScope.launch {
-            repository.migrateLegacyGoalsIfNeeded(getApplication())
+            try {
+                repository.migrateLegacyGoalsIfNeeded(getApplication())
+            } catch (e: IllegalStateException) {
+                // Previne falha de fechamento de conexão em encerramento de testes/lifecycle
+            }
         }
 
         // Integração com userGoalsFlow do Room para alimentar os StateFlows
         viewModelScope.launch {
             repository.userGoalsFlow.collect { goals ->
                 if (goals != null) {
-                    dailyGoalGross.value = goals.dailyGoalGross
-                    dailyGoalNet.value = goals.dailyGoalNet
+                    dailyGoalGross.value = CurrencyUtils.centsToDouble(goals.dailyGoalGross)
+                    dailyGoalNet.value = CurrencyUtils.centsToDouble(goals.dailyGoalNet)
                     dailyGoalKm.value = goals.dailyGoalKm
                     dailyGoalDeliveries.value = goals.dailyGoalDeliveries
 
-                    weeklyGoalGross.value = goals.weeklyGoalGross
-                    weeklyGoalNet.value = goals.weeklyGoalNet
+                    weeklyGoalGross.value = CurrencyUtils.centsToDouble(goals.weeklyGoalGross)
+                    weeklyGoalNet.value = CurrencyUtils.centsToDouble(goals.weeklyGoalNet)
                     weeklyGoalKm.value = goals.weeklyGoalKm
                     weeklyGoalDeliveries.value = goals.weeklyGoalDeliveries
 
-                    monthlyGoalGross.value = goals.monthlyGoalGross
-                    monthlyGoalNet.value = goals.monthlyGoalNet
+                    monthlyGoalGross.value = CurrencyUtils.centsToDouble(goals.monthlyGoalGross)
+                    monthlyGoalNet.value = CurrencyUtils.centsToDouble(goals.monthlyGoalNet)
                     monthlyGoalKm.value = goals.monthlyGoalKm
                     monthlyGoalDeliveries.value = goals.monthlyGoalDeliveries
                 } else {
@@ -1596,8 +1601,8 @@ class GiroCustoViewModel @JvmOverloads constructor(
         if (lastRecord != null || currentVehicle != null) {
             val defaultStartOdo = lastRecord?.endOdometer ?: currentVehicle?.currentOdometer ?: 0.0
             startOdometer.value = String.format(Locale.US, "%.1f", defaultStartOdo)
-            val defaultFuelPrice = latestRefill?.pricePerLiter?.takeIf { it > 0.0 }
-                ?: lastRecord?.fuelPrice?.takeIf { it > 0.0 }
+            val defaultFuelPrice: Double = latestRefill?.pricePerLiter?.takeIf { it > 0L }?.let { CurrencyUtils.fuelPriceMillisToDouble(it) }
+                ?: lastRecord?.fuelPrice?.takeIf { it > 0L }?.let { CurrencyUtils.fuelPriceMillisToDouble(it) }
                 ?: 5.80
             fuelPrice.value = String.format(Locale.US, "%.2f", defaultFuelPrice)
         } else {
@@ -1642,16 +1647,16 @@ class GiroCustoViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             val userGoals = UserGoals(
                 id = 1,
-                dailyGoalGross = dailyG,
-                dailyGoalNet = dailyN,
+                dailyGoalGross = CurrencyUtils.toCents(dailyG),
+                dailyGoalNet = CurrencyUtils.toCents(dailyN),
                 dailyGoalKm = dailyK,
                 dailyGoalDeliveries = dailyD,
-                weeklyGoalGross = weeklyG,
-                weeklyGoalNet = weeklyN,
+                weeklyGoalGross = CurrencyUtils.toCents(weeklyG),
+                weeklyGoalNet = CurrencyUtils.toCents(weeklyN),
                 weeklyGoalKm = weeklyK,
                 weeklyGoalDeliveries = weeklyD,
-                monthlyGoalGross = monthlyG,
-                monthlyGoalNet = monthlyN,
+                monthlyGoalGross = CurrencyUtils.toCents(monthlyG),
+                monthlyGoalNet = CurrencyUtils.toCents(monthlyN),
                 monthlyGoalKm = monthlyK,
                 monthlyGoalDeliveries = monthlyD
             )
@@ -1688,7 +1693,7 @@ class GiroCustoViewModel @JvmOverloads constructor(
                 model = model,
                 averageConsumption = consumption,
                 fuelType = fuelType,
-                monthlyFixedCosts = fixedCosts,
+                monthlyFixedCosts = CurrencyUtils.toCents(fixedCosts),
                 plannedWorkDays = workDays,
                 vehicleType = vehicleType,
                 brand = brand,
@@ -1785,7 +1790,7 @@ class GiroCustoViewModel @JvmOverloads constructor(
     fun addPart(name: String, price: Double, lifespan: Double, vehicleId: Long? = null) {
         viewModelScope.launch {
             val vId = vehicleId ?: vehicle.value?.id ?: 0L
-            val part = VehiclePart(vehicleId = vId, name = name, price = price, lifespanKm = lifespan, runKmSinceChange = 0.0)
+            val part = VehiclePart(vehicleId = vId, name = name, price = CurrencyUtils.toCents(price), lifespanKm = lifespan, runKmSinceChange = 0.0)
             repository.savePart(part)
         }
     }
@@ -1793,7 +1798,7 @@ class GiroCustoViewModel @JvmOverloads constructor(
     fun updatePart(partId: Long, name: String, price: Double, lifespan: Double, runKmSinceChange: Double, vehicleId: Long? = null) {
         viewModelScope.launch {
             val vId = vehicleId ?: vehicle.value?.id ?: 0L
-            val part = VehiclePart(id = partId, vehicleId = vId, name = name, price = price, lifespanKm = lifespan, runKmSinceChange = runKmSinceChange)
+            val part = VehiclePart(id = partId, vehicleId = vId, name = name, price = CurrencyUtils.toCents(price), lifespanKm = lifespan, runKmSinceChange = runKmSinceChange)
             repository.updatePart(part)
         }
     }
@@ -1971,7 +1976,7 @@ class GiroCustoViewModel @JvmOverloads constructor(
 
         // Custos fixos proporcionais
         val proportionalFixed = if (activeVehicle.plannedWorkDays > 0) {
-            activeVehicle.monthlyFixedCosts / activeVehicle.plannedWorkDays
+            CurrencyUtils.centsToDouble(activeVehicle.monthlyFixedCosts) / activeVehicle.plannedWorkDays
         } else {
             0.0
         }

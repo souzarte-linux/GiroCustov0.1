@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.withContext
+import com.example.util.CurrencyUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -156,43 +157,48 @@ class GiroCustoRepository(
     }
 
     suspend fun migrateLegacyGoalsIfNeeded(context: Context) = withContext(ioDispatcher) {
-        if (userGoalsDao.getUserGoals() != null) return@withContext
-        val legacyPrefs = context.getSharedPreferences("giro_custo_goals", Context.MODE_PRIVATE)
-        val hasLegacyGoals = legacyPrefs.contains("daily_goal_gross")
-        val goals = if (hasLegacyGoals) {
-            UserGoals(
-                id = 1,
-                dailyGoalGross = legacyPrefs.getFloat("daily_goal_gross", 200.0f).toDouble(),
-                dailyGoalNet = legacyPrefs.getFloat("daily_goal_net", 130.0f).toDouble(),
-                dailyGoalKm = legacyPrefs.getFloat("daily_goal_km", 100.0f).toDouble(),
-                dailyGoalDeliveries = legacyPrefs.getInt("daily_goal_deliveries", 15),
-                weeklyGoalGross = legacyPrefs.getFloat("weekly_goal_gross", 1200.0f).toDouble(),
-                weeklyGoalNet = legacyPrefs.getFloat("weekly_goal_net", 800.0f).toDouble(),
-                weeklyGoalKm = legacyPrefs.getFloat("weekly_goal_km", 600.0f).toDouble(),
-                weeklyGoalDeliveries = legacyPrefs.getInt("weekly_goal_deliveries", 90),
-                monthlyGoalGross = legacyPrefs.getFloat("monthly_goal_gross", 5000.0f).toDouble(),
-                monthlyGoalNet = legacyPrefs.getFloat("monthly_goal_net", 3200.0f).toDouble(),
-                monthlyGoalKm = legacyPrefs.getFloat("monthly_goal_km", 2500.0f).toDouble(),
-                monthlyGoalDeliveries = legacyPrefs.getInt("monthly_goal_deliveries", 400),
-                syncStatus = SyncStatus.PENDING_UPDATE,
-                updatedAt = System.currentTimeMillis()
-            )
-        } else {
-            UserGoals(
-                id = 1,
-                syncStatus = SyncStatus.SYNCED
-            )
-        }
-        userGoalsDao.insertOrUpdateUserGoals(goals)
+        try {
+            if (userGoalsDao.getUserGoals() != null) return@withContext
+            val legacyPrefs = context.getSharedPreferences("giro_custo_goals", Context.MODE_PRIVATE)
+            val hasLegacyGoals = legacyPrefs.contains("daily_goal_gross")
+            val goals = if (hasLegacyGoals) {
+                UserGoals(
+                    id = 1,
+                    dailyGoalGross = CurrencyUtils.toCents(legacyPrefs.getFloat("daily_goal_gross", 200.0f).toDouble()),
+                    dailyGoalNet = CurrencyUtils.toCents(legacyPrefs.getFloat("daily_goal_net", 130.0f).toDouble()),
+                    dailyGoalKm = legacyPrefs.getFloat("daily_goal_km", 100.0f).toDouble(),
+                    dailyGoalDeliveries = legacyPrefs.getInt("daily_goal_deliveries", 15),
+                    weeklyGoalGross = CurrencyUtils.toCents(legacyPrefs.getFloat("weekly_goal_gross", 1200.0f).toDouble()),
+                    weeklyGoalNet = CurrencyUtils.toCents(legacyPrefs.getFloat("weekly_goal_net", 800.0f).toDouble()),
+                    weeklyGoalKm = legacyPrefs.getFloat("weekly_goal_km", 600.0f).toDouble(),
+                    weeklyGoalDeliveries = legacyPrefs.getInt("weekly_goal_deliveries", 90),
+                    monthlyGoalGross = CurrencyUtils.toCents(legacyPrefs.getFloat("monthly_goal_gross", 5000.0f).toDouble()),
+                    monthlyGoalNet = CurrencyUtils.toCents(legacyPrefs.getFloat("monthly_goal_net", 3200.0f).toDouble()),
+                    monthlyGoalKm = legacyPrefs.getFloat("monthly_goal_km", 2500.0f).toDouble(),
+                    monthlyGoalDeliveries = legacyPrefs.getInt("monthly_goal_deliveries", 400),
+                    syncStatus = SyncStatus.PENDING_UPDATE,
+                    updatedAt = System.currentTimeMillis()
+                )
+            } else {
+                UserGoals(
+                    id = 1,
+                    syncStatus = SyncStatus.SYNCED
+                )
+            }
+            userGoalsDao.insertOrUpdateUserGoals(goals)
 
-        if (legacyPrefs.contains("is_dark_theme")) {
-            val isDark = legacyPrefs.getBoolean("is_dark_theme", true)
-            context.getSharedPreferences("giro_custo_preferences", Context.MODE_PRIVATE)
-                .edit().putBoolean("is_dark_theme", isDark).apply()
-            context.getSharedPreferences("giro_custo_app_prefs", Context.MODE_PRIVATE)
-                .edit().putBoolean("is_dark_theme", isDark).apply()
+            if (legacyPrefs.contains("is_dark_theme")) {
+                val isDark = legacyPrefs.getBoolean("is_dark_theme", true)
+                context.getSharedPreferences("giro_custo_preferences", Context.MODE_PRIVATE)
+                    .edit().putBoolean("is_dark_theme", isDark).apply()
+                context.getSharedPreferences("giro_custo_app_prefs", Context.MODE_PRIVATE)
+                    .edit().putBoolean("is_dark_theme", isDark).apply()
+            }
+            legacyPrefs.edit().clear().apply()
+        } catch (e: IllegalStateException) {
+            // DB pool fechado durante o encerramento do app ou teardown de testes
+            android.util.Log.d("GiroCustoRepo", "Conexão de banco indisponível durante migração de metas: ${e.message}")
         }
-        legacyPrefs.edit().clear().apply()
     }
 
     suspend fun getPlatformById(id: Long): Platform? = platformDao.getPlatformById(id)
@@ -342,12 +348,12 @@ class GiroCustoRepository(
         dateString: String,
         dateTimestamp: Long,
         platform: String,
-        grossEarnings: Double,
+        grossEarnings: Long,
         deliveriesCount: Int,
         startOdometer: Double,
         endOdometer: Double,
-        fuelPrice: Double,
-        foodExpense: Double,
+        fuelPrice: Long,
+        foodExpense: Long,
         startTime: String = "",
         endTime: String = "",
         pauseDuration: String = ""
@@ -359,7 +365,7 @@ class GiroCustoRepository(
             // 1. Obter peças para calcular o custo de desgaste acumulado do veículo ativo
             val parts = partDao.getPartsForVehicle(vehicle.id)
             val totalWearCostPerKm = parts.sumOf { it.wearCostPerKm }
-            val wearCost = kmRodados * totalWearCostPerKm
+            val wearCost = CurrencyUtils.toCents(kmRodados * totalWearCostPerKm)
 
             // 2. Calcular custos restantes
             val realAvgConsumption = calculateRealAverageConsumption(vehicle.id)
@@ -369,14 +375,14 @@ class GiroCustoRepository(
                 vehicle.averageConsumption
             }
             val fuelCost = if (effectiveConsumption > 0) {
-                (kmRodados / effectiveConsumption) * fuelPrice
+                CurrencyUtils.computeFuelTotalCents(kmRodados / effectiveConsumption, fuelPrice, 0L)
             } else {
-                0.0
+                0L
             }
             val proportionalFixedCost = if (vehicle.plannedWorkDays > 0) {
-                vehicle.monthlyFixedCosts / vehicle.plannedWorkDays
+                CurrencyUtils.divideByInt(vehicle.monthlyFixedCosts, vehicle.plannedWorkDays)
             } else {
-                0.0
+                0L
             }
             val netProfit = grossEarnings - fuelCost - wearCost - proportionalFixedCost - foodExpense
 
@@ -424,8 +430,7 @@ class GiroCustoRepository(
         }
     }
 
-    suspend fun updateDailyRecord(
-        recordId: Long,
+    suspend fun insertDailyRecord(
         dateString: String,
         dateTimestamp: Long,
         platform: String,
@@ -435,6 +440,35 @@ class GiroCustoRepository(
         endOdometer: Double,
         fuelPrice: Double,
         foodExpense: Double,
+        startTime: String = "",
+        endTime: String = "",
+        pauseDuration: String = ""
+    ) = insertDailyRecord(
+        dateString = dateString,
+        dateTimestamp = dateTimestamp,
+        platform = platform,
+        grossEarnings = CurrencyUtils.toCents(grossEarnings),
+        deliveriesCount = deliveriesCount,
+        startOdometer = startOdometer,
+        endOdometer = endOdometer,
+        fuelPrice = CurrencyUtils.toFuelPriceMillis(fuelPrice),
+        foodExpense = CurrencyUtils.toCents(foodExpense),
+        startTime = startTime,
+        endTime = endTime,
+        pauseDuration = pauseDuration
+    )
+
+    suspend fun updateDailyRecord(
+        recordId: Long,
+        dateString: String,
+        dateTimestamp: Long,
+        platform: String,
+        grossEarnings: Long,
+        deliveriesCount: Int,
+        startOdometer: Double,
+        endOdometer: Double,
+        fuelPrice: Long,
+        foodExpense: Long,
         startTime: String = "",
         endTime: String = "",
         pauseDuration: String = ""
@@ -450,7 +484,7 @@ class GiroCustoRepository(
             // 1. Obter peças para calcular o custo de desgaste acumulado do veículo ativo
             val parts = partDao.getPartsForVehicle(vehicle.id)
             val totalWearCostPerKm = parts.sumOf { it.wearCostPerKm }
-            val wearCost = kmRodados * totalWearCostPerKm
+            val wearCost = CurrencyUtils.toCents(kmRodados * totalWearCostPerKm)
 
             // 2. Calcular custos restantes
             val realAvgConsumption = calculateRealAverageConsumption(vehicle.id)
@@ -460,14 +494,14 @@ class GiroCustoRepository(
                 vehicle.averageConsumption
             }
             val fuelCost = if (effectiveConsumption > 0) {
-                (kmRodados / effectiveConsumption) * fuelPrice
+                CurrencyUtils.computeFuelTotalCents(kmRodados / effectiveConsumption, fuelPrice, 0L)
             } else {
-                0.0
+                0L
             }
             val proportionalFixedCost = if (vehicle.plannedWorkDays > 0) {
-                vehicle.monthlyFixedCosts / vehicle.plannedWorkDays
+                CurrencyUtils.divideByInt(vehicle.monthlyFixedCosts, vehicle.plannedWorkDays)
             } else {
-                0.0
+                0L
             }
             val netProfit = grossEarnings - fuelCost - wearCost - proportionalFixedCost - foodExpense
 
@@ -518,6 +552,36 @@ class GiroCustoRepository(
             }
         }
     }
+
+    suspend fun updateDailyRecord(
+        recordId: Long,
+        dateString: String,
+        dateTimestamp: Long,
+        platform: String,
+        grossEarnings: Double,
+        deliveriesCount: Int,
+        startOdometer: Double,
+        endOdometer: Double,
+        fuelPrice: Double,
+        foodExpense: Double,
+        startTime: String = "",
+        endTime: String = "",
+        pauseDuration: String = ""
+    ) = updateDailyRecord(
+        recordId = recordId,
+        dateString = dateString,
+        dateTimestamp = dateTimestamp,
+        platform = platform,
+        grossEarnings = CurrencyUtils.toCents(grossEarnings),
+        deliveriesCount = deliveriesCount,
+        startOdometer = startOdometer,
+        endOdometer = endOdometer,
+        fuelPrice = CurrencyUtils.toFuelPriceMillis(fuelPrice),
+        foodExpense = CurrencyUtils.toCents(foodExpense),
+        startTime = startTime,
+        endTime = endTime,
+        pauseDuration = pauseDuration
+    )
 
     suspend fun checkAndSeedData() {
         // Banco de dados deve permanecer limpo quando vazio.
@@ -618,7 +682,7 @@ class GiroCustoRepository(
     suspend fun averageFuelPrice(vehicleId: Long): Double {
         val refills = fuelRefillDao.getAllRefillsOrderedByOdometer(vehicleId)
         if (refills.isEmpty()) return 0.0
-        return refills.map { it.pricePerLiter }.average()
+        return refills.map { CurrencyUtils.fuelPriceMillisToDouble(it.pricePerLiter) }.average()
     }
 
     suspend fun averageLitersPerRefill(vehicleId: Long): Double {
@@ -671,7 +735,7 @@ class GiroCustoRepository(
                     model = "Honda CG 160 Titan",
                     averageConsumption = 40.0,
                     fuelType = "Gasolina",
-                    monthlyFixedCosts = 180.0,
+                    monthlyFixedCosts = 18000L,
                     plannedWorkDays = 22,
                     currentOdometer = 15350.0,
                     active = true,
@@ -686,12 +750,12 @@ class GiroCustoRepository(
             var parts = partDao.getPartsForVehicle(vehicle.id)
             if (parts.isEmpty()) {
                 val initialParts = listOf(
-                    VehiclePart(vehicleId = vehicle.id, name = "Óleo do Motor", price = 45.0, lifespanKm = 1500.0, runKmSinceChange = 1300.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                    VehiclePart(vehicleId = vehicle.id, name = "Kit Relação (Coroa/Pinhão/Corrente)", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 4500.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                    VehiclePart(vehicleId = vehicle.id, name = "Pneu Traseiro", price = 220.0, lifespanKm = 12000.0, runKmSinceChange = 11000.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                    VehiclePart(vehicleId = vehicle.id, name = "Pneu Dianteiro", price = 180.0, lifespanKm = 15000.0, runKmSinceChange = 3000.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                    VehiclePart(vehicleId = vehicle.id, name = "Pastilhas de Freio", price = 40.0, lifespanKm = 6000.0, runKmSinceChange = 1200.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                    VehiclePart(vehicleId = vehicle.id, name = "Lona de Freio Traseira", price = 35.0, lifespanKm = 10000.0, runKmSinceChange = 2500.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT)
+                    VehiclePart(vehicleId = vehicle.id, name = "Óleo do Motor", price = 4500L, lifespanKm = 1500.0, runKmSinceChange = 1300.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                    VehiclePart(vehicleId = vehicle.id, name = "Kit Relação (Coroa/Pinhão/Corrente)", price = 18000L, lifespanKm = 15000.0, runKmSinceChange = 4500.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                    VehiclePart(vehicleId = vehicle.id, name = "Pneu Traseiro", price = 22000L, lifespanKm = 12000.0, runKmSinceChange = 11000.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                    VehiclePart(vehicleId = vehicle.id, name = "Pneu Dianteiro", price = 18000L, lifespanKm = 15000.0, runKmSinceChange = 3000.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                    VehiclePart(vehicleId = vehicle.id, name = "Pastilhas de Freio", price = 4000L, lifespanKm = 6000.0, runKmSinceChange = 1200.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
+                    VehiclePart(vehicleId = vehicle.id, name = "Lona de Freio Traseira", price = 3500L, lifespanKm = 10000.0, runKmSinceChange = 2500.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT)
                 )
                 for (part in initialParts) {
                     partDao.insertPart(part)
@@ -699,8 +763,8 @@ class GiroCustoRepository(
                 parts = partDao.getPartsForVehicle(vehicle.id)
             }
 
-            val totalWearCostPerKm = parts.sumOf { it.price / it.lifespanKm }.takeIf { it > 0 } ?: 0.075
-            val fixedCostPerDay = if (vehicle.plannedWorkDays > 0) vehicle.monthlyFixedCosts / vehicle.plannedWorkDays else (180.0 / 22.0)
+            val totalWearCostPerKm = parts.sumOf { it.wearCostPerKm }.takeIf { it > 0.0 } ?: 0.075
+            val fixedCostPerDay = if (vehicle.plannedWorkDays > 0) CurrencyUtils.divideByInt(vehicle.monthlyFixedCosts, vehicle.plannedWorkDays) else (18000L / 22)
             val consumption = if (vehicle.averageConsumption > 0) vehicle.averageConsumption else 40.0
 
             val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
@@ -737,13 +801,13 @@ class GiroCustoRepository(
                 val dateStr = dateFormat.format(cal.time)
                 val timestamp = cal.timeInMillis
 
-                val gross = 160.0 + ((index + 1) * 13) % 110
+                val gross = CurrencyUtils.toCents(160.0 + ((index + 1) * 13) % 110)
                 val deliveries = 10 + ((index + 1) * 3) % 12
-                val food = 15.0 + ((index + 1) * 4) % 16
-                val fuelPriceVal = 5.75 + ((index + 1) * 2) % 5 * 0.05
+                val food = CurrencyUtils.toCents(15.0 + ((index + 1) * 4) % 16)
+                val fuelPriceVal = CurrencyUtils.toFuelPriceMillis(5.75 + ((index + 1) * 2) % 5 * 0.05)
 
-                val fuelCost = (km / consumption) * fuelPriceVal
-                val wearCost = km * totalWearCostPerKm
+                val fuelCost = CurrencyUtils.computeFuelTotalCents(km / consumption, fuelPriceVal, 0L)
+                val wearCost = CurrencyUtils.toCents(km * totalWearCostPerKm)
                 val net = gross - fuelCost - wearCost - fixedCostPerDay - food
                 val selectedPlatform = platforms[index % platforms.size]
 
@@ -767,7 +831,6 @@ class GiroCustoRepository(
                     netProfit = net,
                     startTime = "08:00",
                     endTime = "17:30",
-                    pauseDuration = "01:00"
                 )
                 recordDao.insertRecord(record)
 

@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.MaintenanceRecord
 import com.example.ui.GiroCustoViewModel
+import com.example.util.CurrencyUtils
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -108,7 +109,7 @@ fun MaintenanceScreen(viewModel: GiroCustoViewModel) {
                     dateString = "",
                     description = "",
                     location = "",
-                    value = 0.0,
+                    value = 0L,
                     odometer = 0.0
                 )
             } else {
@@ -118,7 +119,7 @@ fun MaintenanceScreen(viewModel: GiroCustoViewModel) {
                     dateString = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date()),
                     description = "",
                     location = "",
-                    value = 0.0,
+                    value = 0L,
                     odometer = activeVehicle!!.currentOdometer
                 )
             }
@@ -222,7 +223,7 @@ fun MaintenanceListSection(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = currencyFormat.format(totalCost),
+                        text = CurrencyUtils.formatCents(totalCost),
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -281,7 +282,7 @@ fun MaintenanceListSection(
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = currencyFormat.format(record.value),
+                                        text = CurrencyUtils.formatCents(record.value),
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary
@@ -366,7 +367,7 @@ fun MaintenanceFormSection(
 ) {
     var description by remember { mutableStateOf(if (isEdit) record.description else "") }
     var location by remember { mutableStateOf(if (isEdit) record.location else "") }
-    var valueStr by remember { mutableStateOf(if (isEdit) record.value.toString() else "") }
+    var valueStr by remember { mutableStateOf(if (isEdit) CurrencyUtils.centsToDouble(record.value).toString() else "") }
     var odometerStr by remember { mutableStateOf(if (isEdit) record.odometer.toString() else "") }
     
     var dateTimestamp by remember { mutableStateOf(record.dateTimestamp) }
@@ -508,14 +509,14 @@ fun MaintenanceFormSection(
 
             Button(
                 onClick = {
-                    val value = valueStr.replace(",", ".").toDoubleOrNull() ?: 0.0
+                    val valueCents = CurrencyUtils.parseToCents(valueStr)
                     val odo = odometerStr.replace(",", ".").toDoubleOrNull() ?: 0.0
 
                     if (description.isBlank()) {
                         Toast.makeText(context, "Por favor, digite uma descrição.", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
-                    if (value <= 0) {
+                    if (valueCents <= 0L) {
                         Toast.makeText(context, "Por favor, insira um valor pago válido.", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
@@ -531,7 +532,7 @@ fun MaintenanceFormSection(
                         dateString = dateString,
                         description = description,
                         location = location,
-                        value = value,
+                        value = valueCents,
                         odometer = odo
                     )
                     onSave(newRecord)

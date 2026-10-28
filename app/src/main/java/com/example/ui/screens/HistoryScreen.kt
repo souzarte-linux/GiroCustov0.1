@@ -37,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.data.DailyRecord
+import com.example.util.CurrencyUtils
 import com.example.ui.GiroCustoViewModel
 import com.example.ui.Period
 import com.example.ui.SyncState
@@ -710,7 +711,7 @@ fun HistoryRecordCard(
                         Column {
                             Text("Ganhos Brutos", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
-                                text = String.format(Locale.GERMAN, "R$ %.2f", record.grossEarnings),
+                                text = String.format(Locale.GERMAN, "R$ %.2f", CurrencyUtils.centsToDouble(record.grossEarnings)),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -745,7 +746,7 @@ fun HistoryRecordCard(
                         Column {
                             Text("Custo Combustível", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
-                                text = String.format(Locale.GERMAN, "R$ %.2f", record.fuelCost),
+                                text = String.format(Locale.GERMAN, "R$ %.2f", CurrencyUtils.centsToDouble(record.fuelCost)),
                                 fontWeight = FontWeight.Normal,
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -755,7 +756,7 @@ fun HistoryRecordCard(
                         Column {
                             Text("Desgaste/Peças", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
-                                text = String.format(Locale.GERMAN, "R$ %.2f", record.wearCost),
+                                text = String.format(Locale.GERMAN, "R$ %.2f", CurrencyUtils.centsToDouble(record.wearCost)),
                                 fontWeight = FontWeight.Normal,
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -765,7 +766,7 @@ fun HistoryRecordCard(
                         Column {
                             Text("Alimentação", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
-                                text = String.format(Locale.GERMAN, "R$ %.2f", record.foodExpense),
+                                text = String.format(Locale.GERMAN, "R$ %.2f", CurrencyUtils.centsToDouble(record.foodExpense)),
                                 fontWeight = FontWeight.Normal,
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -800,7 +801,7 @@ fun HistoryRecordCard(
                     )
                 }
                 Text(
-                    text = String.format(Locale.GERMAN, "R$ %.2f", record.netProfit),
+                    text = String.format(Locale.GERMAN, "R$ %.2f", CurrencyUtils.centsToDouble(record.netProfit)),
                     fontWeight = FontWeight.Black,
                     fontSize = 16.sp,
                     color = if (record.netProfit >= 0) Color(0xFF10B981) else Color(0xFFF43F5E)
@@ -974,8 +975,8 @@ fun groupRecordsHierarchically(records: List<DailyRecord>, isAscending: Boolean)
                     weekItems.add(HistoryListItem.DayHeader(representativeTimestamp, dayLabel))
                     for (rec in dayRecords) {
                         weekItems.add(HistoryListItem.RecordRow(rec))
-                        weekGross += rec.grossEarnings
-                        weekNet += rec.netProfit
+                        weekGross += CurrencyUtils.centsToDouble(rec.grossEarnings)
+                        weekNet += CurrencyUtils.centsToDouble(rec.netProfit)
                     }
                 }
 
@@ -1192,10 +1193,10 @@ fun EditRecordDialog(
     var platformState by remember { mutableStateOf(record.platform) }
     var startOdo by remember { mutableStateOf(record.startOdometer.toString()) }
     var endOdo by remember { mutableStateOf(record.endOdometer.toString()) }
-    var gross by remember { mutableStateOf(record.grossEarnings.toString()) }
+    var gross by remember { mutableStateOf(CurrencyUtils.centsToDouble(record.grossEarnings).toString()) }
     var deliveries by remember { mutableStateOf(record.deliveriesCount.toString()) }
-    var fuelPrice by remember { mutableStateOf(record.fuelPrice.toString()) }
-    var foodExpense by remember { mutableStateOf(record.foodExpense.toString()) }
+    var fuelPrice by remember { mutableStateOf(CurrencyUtils.fuelPriceMillisToDouble(record.fuelPrice).toString()) }
+    var foodExpense by remember { mutableStateOf(CurrencyUtils.centsToDouble(record.foodExpense).toString()) }
     var startTimeState by remember { mutableStateOf(record.startTime) }
     var endTimeState by remember { mutableStateOf(record.endTime) }
     var pauseDurationState by remember { mutableStateOf(record.pauseDuration) }

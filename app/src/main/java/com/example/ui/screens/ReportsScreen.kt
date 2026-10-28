@@ -39,6 +39,7 @@ import com.example.data.DailyRecord
 import com.example.data.Vehicle
 import com.example.data.VehiclePart
 import com.example.data.MaintenanceRecord
+import com.example.util.CurrencyUtils
 import com.example.ui.Period
 import com.example.ui.SyncState
 import com.example.ui.components.CustomPeriodDialog
@@ -758,8 +759,8 @@ fun ExpenseLegendItem(label: String, color: Color, pct: Float, value: Double) {
 // Custom SVG line-style graph with Bezier curve
 @Composable
 fun NetProfitCurveChart(records: List<DailyRecord>) {
-    val maxProfit = (records.maxOfOrNull { it.netProfit } ?: 100.0).coerceAtLeast(10.0)
-    val minProfit = (records.minOfOrNull { it.netProfit } ?: 0.0).coerceAtMost(0.0)
+    val maxProfit = (records.maxOfOrNull { CurrencyUtils.centsToDouble(it.netProfit) } ?: 100.0).coerceAtLeast(10.0)
+    val minProfit = (records.minOfOrNull { CurrencyUtils.centsToDouble(it.netProfit) } ?: 0.0).coerceAtMost(0.0)
     val profitRange = (maxProfit - minProfit).coerceAtLeast(10.0)
 
     val emerald = Color(0xFF10B981) // Emerald accent green
@@ -775,7 +776,7 @@ fun NetProfitCurveChart(records: List<DailyRecord>) {
         
         val points = records.mapIndexed { idx, record ->
             val x = idx * stepX
-            val yPct = (record.netProfit - minProfit) / profitRange
+            val yPct = (CurrencyUtils.centsToDouble(record.netProfit) - minProfit) / profitRange
             val y = height - (yPct * height).toFloat()
             Offset(x, y)
         }
@@ -859,7 +860,9 @@ fun NetProfitCurveChart(records: List<DailyRecord>) {
 // Custom bar-based comparison chart (Faturamento vs Lucro)
 @Composable
 fun ProductivityComparisonChart(records: List<DailyRecord>) {
-    val maxVal = records.maxOfOrNull { it.grossEarnings.coerceAtLeast(it.netProfit) } ?: 100.0
+    val maxVal = records.maxOfOrNull { 
+        CurrencyUtils.centsToDouble(it.grossEarnings).coerceAtLeast(CurrencyUtils.centsToDouble(it.netProfit)) 
+    } ?: 100.0
     val maxScale = (maxVal * 1.15).coerceAtLeast(10.0)
 
     val colorGross = Color(0xFF00B0FF)
@@ -878,7 +881,7 @@ fun ProductivityComparisonChart(records: List<DailyRecord>) {
             val sectionX = idx * sectionWidth
             
             // Faturamento Bar
-            val grossH = (record.grossEarnings / maxScale) * height
+            val grossH = (CurrencyUtils.centsToDouble(record.grossEarnings) / maxScale) * height
             val grossX = sectionX + (sectionWidth / 2f) - barWidth - spacing
             val grossY = height - grossH
             drawRect(
@@ -888,7 +891,7 @@ fun ProductivityComparisonChart(records: List<DailyRecord>) {
             )
 
             // Lucro Líquido Bar
-            val netH = (record.netProfit.coerceAtLeast(0.0) / maxScale) * height
+            val netH = (CurrencyUtils.centsToDouble(record.netProfit).coerceAtLeast(0.0) / maxScale) * height
             val netX = sectionX + (sectionWidth / 2f) + spacing
             val netY = height - netH
             drawRect(

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.*
+import com.example.util.CurrencyUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -76,15 +77,16 @@ class JuneSeedingTest {
             assertTrue("Km rodados should be positive", km > 0)
             
             // Check that calculations match
-            val expectedFuelCost = (km / 40.0) * record.fuelPrice
-            assertEquals(expectedFuelCost, record.fuelCost, 0.001)
+            val fuelPriceDouble = CurrencyUtils.fuelPriceMillisToDouble(record.fuelPrice)
+            val expectedFuelCost = (km / 40.0) * fuelPriceDouble
+            assertEquals(expectedFuelCost, CurrencyUtils.centsToDouble(record.fuelCost), 0.01)
 
             // Gross earnings and net profit must be positive and consistent
             assertTrue("Gross earnings should be positive", record.grossEarnings > 0)
             assertEquals(
-                record.grossEarnings - record.fuelCost - record.wearCost - record.proportionalFixedCost - record.foodExpense,
-                record.netProfit,
-                0.001
+                CurrencyUtils.centsToDouble(record.grossEarnings - record.fuelCost - record.wearCost - record.proportionalFixedCost - record.foodExpense),
+                CurrencyUtils.centsToDouble(record.netProfit),
+                0.01
             )
         }
 

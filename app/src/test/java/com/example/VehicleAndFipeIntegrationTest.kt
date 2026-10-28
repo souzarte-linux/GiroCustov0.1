@@ -9,6 +9,7 @@ import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.*
+import com.example.util.CurrencyUtils
 import com.example.network.fipe.*
 import com.example.network.supabase.SupabaseClient
 import com.example.ui.FipeUiState
@@ -877,7 +878,7 @@ class VehicleAndFipeIntegrationTest {
         // kmRodados = 100.0
         // wearCost = 100.0 * 0.030 = 3.00 R$ (se usasse peças do carro, seria 10.00 R$)
         assertEquals(100.0, recordMoto.endOdometer - recordMoto.startOdometer, 0.001)
-        assertEquals(3.00, recordMoto.wearCost, 0.001)
+        assertEquals(3.00, CurrencyUtils.centsToDouble(recordMoto.wearCost), 0.001)
 
         // Verificar que apenas as peças da Moto tiveram runKmSinceChange incrementado
         val motoPartsAfterRecord = db.vehiclePartDao().getPartsForVehicle(motoId)
@@ -912,7 +913,7 @@ class VehicleAndFipeIntegrationTest {
         // kmRodados = 50.0
         // wearCost = 50.0 * 0.070 = 3.50 R$
         assertEquals(50.0, recordCarro.endOdometer - recordCarro.startOdometer, 0.001)
-        assertEquals(3.50, recordCarro.wearCost, 0.001)
+        assertEquals(3.50, CurrencyUtils.centsToDouble(recordCarro.wearCost), 0.001)
 
         // Verificar desgaste após expediente do carro:
         // Peças do carro devem ter recebido 50.0 km
@@ -1195,9 +1196,9 @@ class VehicleAndFipeIntegrationTest {
         rawDb.close()
         helper.close()
 
-        // 2. Abrir o banco com Room versão 14 executando as migrações até a versão 14
+        // 2. Abrir o banco com Room versão 15 executando as migrações até a versão 15
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14)
+            .addMigrations(GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15)
             .allowMainThreadQueries()
             .build()
 

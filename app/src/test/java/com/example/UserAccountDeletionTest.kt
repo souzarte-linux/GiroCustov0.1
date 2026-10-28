@@ -7,6 +7,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.data.*
 import com.example.network.supabase.*
 import com.example.ui.GiroCustoViewModel
+import com.example.util.CurrencyUtils
 import com.example.util.UserDataExportHelper
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -420,7 +421,7 @@ class UserAccountDeletionTest {
         // NENHUM DADO LOCAL PODE SER APAGADO:
         assertTrue("O banco Room local deve permanecer rigorosamente intacto", repository.hasAnyLocalData())
         assertNotNull("As metas locais devem permanecer intactas", inMemoryDb.userGoalsDao().getUserGoals())
-        assertEquals(400.0, inMemoryDb.userGoalsDao().getUserGoals()!!.dailyGoalGross, 0.001)
+        assertEquals(400.0, CurrencyUtils.centsToDouble(inMemoryDb.userGoalsDao().getUserGoals()!!.dailyGoalGross), 0.001)
         assertEquals(1, inMemoryDb.vehicleDao().getAllVehicles().size)
         assertEquals("Yamaha Fazer 250", inMemoryDb.vehicleDao().getAllVehicles()[0].model)
 

@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.*
+import com.example.util.CurrencyUtils
 import com.example.network.supabase.*
 import com.example.ui.GiroCustoViewModel
 import com.squareup.moshi.Moshi
@@ -232,8 +233,8 @@ class UserGoalsSyncTest {
         assertNotNull("Meta deve existir no Room após o PUSH", syncedGoal)
         assertEquals(SyncStatus.SYNCED, syncedGoal?.syncStatus)
         assertEquals("goal-uuid-push-1", syncedGoal?.remoteId)
-        assertEquals(250.0, syncedGoal?.dailyGoalGross ?: 0.0, 0.001)
-        assertEquals(160.0, syncedGoal?.dailyGoalNet ?: 0.0, 0.001)
+        assertEquals(250.0, CurrencyUtils.centsToDouble(syncedGoal?.dailyGoalGross ?: 0L), 0.001)
+        assertEquals(160.0, CurrencyUtils.centsToDouble(syncedGoal?.dailyGoalNet ?: 0L), 0.001)
 
         // 5. Validação detalhada no MockWebServer: takeRequest()
         val recordedRequest = mockWebServer.takeRequest(5, TimeUnit.SECONDS)
@@ -331,14 +332,14 @@ class UserGoalsSyncTest {
         assertNotNull("Meta deve existir no Room", updatedLocal)
         assertEquals(1, updatedLocal?.id)
         assertEquals("goal-uuid-remote-newer", updatedLocal?.remoteId)
-        assertEquals(380.0, updatedLocal?.dailyGoalGross ?: 0.0, 0.001)
-        assertEquals(240.0, updatedLocal?.dailyGoalNet ?: 0.0, 0.001)
+        assertEquals(380.0, CurrencyUtils.centsToDouble(updatedLocal?.dailyGoalGross ?: 0L), 0.001)
+        assertEquals(240.0, CurrencyUtils.centsToDouble(updatedLocal?.dailyGoalNet ?: 0L), 0.001)
         assertEquals(140.0, updatedLocal?.dailyGoalKm ?: 0.0, 0.001)
         assertEquals(22, updatedLocal?.dailyGoalDeliveries)
-        assertEquals(2200.0, updatedLocal?.weeklyGoalGross ?: 0.0, 0.001)
-        assertEquals(1400.0, updatedLocal?.weeklyGoalNet ?: 0.0, 0.001)
-        assertEquals(9000.0, updatedLocal?.monthlyGoalGross ?: 0.0, 0.001)
-        assertEquals(5800.0, updatedLocal?.monthlyGoalNet ?: 0.0, 0.001)
+        assertEquals(2200.0, CurrencyUtils.centsToDouble(updatedLocal?.weeklyGoalGross ?: 0L), 0.001)
+        assertEquals(1400.0, CurrencyUtils.centsToDouble(updatedLocal?.weeklyGoalNet ?: 0L), 0.001)
+        assertEquals(9000.0, CurrencyUtils.centsToDouble(updatedLocal?.monthlyGoalGross ?: 0L), 0.001)
+        assertEquals(5800.0, CurrencyUtils.centsToDouble(updatedLocal?.monthlyGoalNet ?: 0L), 0.001)
         assertEquals(SyncStatus.SYNCED, updatedLocal?.syncStatus)
         assertEquals(5000L, updatedLocal?.updatedAt)
 
@@ -412,8 +413,8 @@ class UserGoalsSyncTest {
         // 4. A reconciliação preserva o dado local intacto e mantém o status pendente para envio posterior
         val currentLocal = userGoalsDao.getUserGoals()
         assertNotNull("Meta local deve existir", currentLocal)
-        assertEquals(420.0, currentLocal?.dailyGoalGross ?: 0.0, 0.001)
-        assertEquals(280.0, currentLocal?.dailyGoalNet ?: 0.0, 0.001)
+        assertEquals(420.0, CurrencyUtils.centsToDouble(currentLocal?.dailyGoalGross ?: 0L), 0.001)
+        assertEquals(280.0, CurrencyUtils.centsToDouble(currentLocal?.dailyGoalNet ?: 0L), 0.001)
         assertEquals(160.0, currentLocal?.dailyGoalKm ?: 0.0, 0.001)
         assertEquals(24, currentLocal?.dailyGoalDeliveries)
         assertEquals(SyncStatus.PENDING_UPDATE, currentLocal?.syncStatus)
@@ -464,8 +465,8 @@ class UserGoalsSyncTest {
         val currentLocal = userGoalsDao.getUserGoals()
         assertNotNull("Meta local deve continuar existindo", currentLocal)
         assertEquals("goal-uuid-preserved", currentLocal?.remoteId)
-        assertEquals(275.0, currentLocal?.dailyGoalGross ?: 0.0, 0.001)
-        assertEquals(175.0, currentLocal?.dailyGoalNet ?: 0.0, 0.001)
+        assertEquals(275.0, CurrencyUtils.centsToDouble(currentLocal?.dailyGoalGross ?: 0L), 0.001)
+        assertEquals(175.0, CurrencyUtils.centsToDouble(currentLocal?.dailyGoalNet ?: 0L), 0.001)
         assertEquals(115.0, currentLocal?.dailyGoalKm ?: 0.0, 0.001)
         assertEquals(17, currentLocal?.dailyGoalDeliveries)
         assertEquals(SyncStatus.SYNCED, currentLocal?.syncStatus)
@@ -521,7 +522,7 @@ class UserGoalsSyncTest {
         // Confirma metas do Usuário A presentes no Room
         val loadedGoalsA = userGoalsDao.getUserGoals()
         assertNotNull(loadedGoalsA)
-        assertEquals(350.0, loadedGoalsA?.dailyGoalGross ?: 0.0, 0.001)
+        assertEquals(350.0, CurrencyUtils.centsToDouble(loadedGoalsA?.dailyGoalGross ?: 0L), 0.001)
         assertEquals("goal-uuid-A", loadedGoalsA?.remoteId)
 
         // 2. Simular login do Usuário B no SupabaseClient
@@ -582,15 +583,15 @@ class UserGoalsSyncTest {
         assertNotNull("Room deve conter as metas da Conta B", loadedGoalsB)
         assertEquals(1, loadedGoalsB?.id)
         assertEquals("goal-uuid-B", loadedGoalsB?.remoteId)
-        assertEquals(500.0, loadedGoalsB?.dailyGoalGross ?: 0.0, 0.001)
-        assertEquals(320.0, loadedGoalsB?.dailyGoalNet ?: 0.0, 0.001)
+        assertEquals(500.0, CurrencyUtils.centsToDouble(loadedGoalsB?.dailyGoalGross ?: 0L), 0.001)
+        assertEquals(320.0, CurrencyUtils.centsToDouble(loadedGoalsB?.dailyGoalNet ?: 0L), 0.001)
         assertEquals(180.0, loadedGoalsB?.dailyGoalKm ?: 0.0, 0.001)
         assertEquals(28, loadedGoalsB?.dailyGoalDeliveries)
-        assertEquals(3000.0, loadedGoalsB?.weeklyGoalGross ?: 0.0, 0.001)
+        assertEquals(3000.0, CurrencyUtils.centsToDouble(loadedGoalsB?.weeklyGoalGross ?: 0L), 0.001)
         assertEquals(SyncStatus.SYNCED, loadedGoalsB?.syncStatus)
 
         // c) Confirma que NENHUM resquício da Conta A (R$ 350,00) restou
-        assertNotEquals(350.0, loadedGoalsB?.dailyGoalGross ?: 0.0, 0.001)
+        assertNotEquals(350.0, CurrencyUtils.centsToDouble(loadedGoalsB?.dailyGoalGross ?: 0L), 0.001)
         assertNotEquals("goal-uuid-A", loadedGoalsB?.remoteId)
 
         // d) Confirma que a preferência de tema permaneceu intacta

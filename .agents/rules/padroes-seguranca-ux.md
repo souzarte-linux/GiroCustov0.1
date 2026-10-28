@@ -80,3 +80,10 @@ Contexto: uso rápido, na rua, com uma mão, sol forte, interrupções frequente
 - Arquivos novos até 800 linhas; telas e ViewModel muito grandes são divididos em tarefas de refatoração separadas.
 - Dinheiro: código novo usa centavos (`Long`) ou `BigDecimal` com arredondamento explícito. `Double` não é permitido para novo valor monetário.
 - Cada alteração de interface vem com `@Preview` (claro e escuro) e teste de UI com `testTag` semântico.
+
+## Regra: migrações do Room
+1. É PROIBIDO usar fallbackToDestructiveMigration() ou fallbackToDestructiveMigrationOnDowngrade() em qualquer build (debug, release, releaseCheck).
+2. Toda mudança de esquema exige, sempre juntos: (a) aumentar a version em @Database; (b) criar uma Migration explícita e registrá-la com addMigrations(); (c) gerar e versionar no Git o JSON em schemas/ (exportSchema = true); (d) escrever teste com MigrationTestHelper.
+3. Fase atual (pré-lançamento, sem dados reais): a migração pode ser simplificada (apagar e recriar a tabela, sem copiar dados). Toda migração simplificada deve ter, logo acima dela, este comentário: "// MIGRAÇÃO SIMPLIFICADA: sem dados reais (pré-lançamento). NÃO replicar este padrão após o lançamento."
+4. Quem decide que o app saiu da fase pré-lançamento é SOMENTE o dono do projeto, declarando isso por escrito. Até lá vale o item 3. Depois disso, toda migração nova DEVE preservar os dados (criar tabela nova, copiar os dados, apagar a antiga, renomear, recriar índices). Em caso de dúvida sobre a fase, PERGUNTE antes de escrever a migração.
+5. Os arquivos da pasta schemas/ nunca podem ser ignorados no .gitignore nem editados à mão.

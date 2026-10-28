@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.data.FuelRefill
+import com.example.util.CurrencyUtils
 import com.example.ui.ConsumptionAlertLevel
 import com.example.ui.FuelConsumptionComparisonState
 import com.example.ui.GiroCustoViewModel
@@ -128,9 +129,9 @@ fun FuelRefillsScreen(viewModel: GiroCustoViewModel) {
                     dateString = "",
                     gasStation = "",
                     fuelType = "Gasolina Comum",
-                    pricePerLiter = 0.0,
+                    pricePerLiter = 0L,
                     liters = 0.0,
-                    totalPaid = 0.0,
+                    totalPaid = 0L,
                     odometer = 0.0,
                     isFullTank = true,
                     paymentMethod = "PIX"
@@ -142,9 +143,9 @@ fun FuelRefillsScreen(viewModel: GiroCustoViewModel) {
                     dateString = "",
                     gasStation = "",
                     fuelType = "Gasolina Comum",
-                    pricePerLiter = 0.0,
+                    pricePerLiter = 0L,
                     liters = 0.0,
-                    totalPaid = 0.0,
+                    totalPaid = 0L,
                     odometer = 0.0,
                     isFullTank = true,
                     paymentMethod = "PIX"
@@ -344,7 +345,7 @@ fun RefillsListSection(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(String.format(Locale.getDefault(), "%.2f L", refill.liters), fontSize = 14.sp)
-                                    Text(String.format(Locale.getDefault(), "R$ %.2f", refill.totalPaid), fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+                                    Text(CurrencyUtils.formatCents(refill.totalPaid), fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Row(
@@ -602,10 +603,10 @@ fun RefillFormSection(
 ) {
     var gasStation by remember { mutableStateOf(if (isEdit) refill.gasStation else "") }
     var selectedFuelType by remember { mutableStateOf(if (isEdit) refill.fuelType else "Gasolina Comum") }
-    var pricePerLiterStr by remember { mutableStateOf(if (isEdit) refill.pricePerLiter.toString() else "") }
+    var pricePerLiterStr by remember { mutableStateOf(if (isEdit) CurrencyUtils.fuelPriceMillisToDouble(refill.pricePerLiter).toString() else "") }
     var litersStr by remember { mutableStateOf(if (isEdit) refill.liters.toString() else "") }
-    var discountStr by remember { mutableStateOf(if (isEdit) refill.discount.toString() else "0.0") }
-    var totalPaidStr by remember { mutableStateOf(if (isEdit) refill.totalPaid.toString() else "") }
+    var discountStr by remember { mutableStateOf(if (isEdit) CurrencyUtils.centsToDouble(refill.discount).toString() else "0.0") }
+    var totalPaidStr by remember { mutableStateOf(if (isEdit) CurrencyUtils.centsToDouble(refill.totalPaid).toString() else "") }
     var odometerStr by remember { mutableStateOf(if (isEdit) refill.odometer.toString() else "") }
     var isFullTank by remember { mutableStateOf(if (isEdit) refill.isFullTank else true) }
     var paymentMethod by remember { mutableStateOf(if (isEdit) refill.paymentMethod else "PIX") }
@@ -1498,10 +1499,10 @@ fun RefillFormSection(
                         dateString = dateStr,
                         gasStation = gasStation,
                         fuelType = selectedFuelType,
-                        pricePerLiter = price,
+                        pricePerLiter = CurrencyUtils.toFuelPriceMillis(price),
                         liters = lts,
-                        discount = disc,
-                        totalPaid = total,
+                        discount = CurrencyUtils.toCents(disc),
+                        totalPaid = CurrencyUtils.toCents(total),
                         odometer = odo,
                         isFullTank = isFullTank,
                         paymentMethod = paymentMethod,

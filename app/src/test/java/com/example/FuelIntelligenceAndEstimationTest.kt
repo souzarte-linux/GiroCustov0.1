@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.*
+import com.example.util.CurrencyUtils
 import com.example.ui.ConsumptionAlertLevel
 import com.example.ui.FuelConsumptionComparisonState
 import com.example.ui.FuelCostEstimationInfo
@@ -736,8 +737,8 @@ class FuelIntelligenceAndEstimationTest {
         )
         val records = repository.allRecordsFlow.first()
         val recordInverted = records.first()
-        assertEquals(0.0, recordInverted.fuelCost, 0.001)
-        assertEquals(0.0, recordInverted.wearCost, 0.001)
+        assertEquals(0.0, CurrencyUtils.centsToDouble(recordInverted.fuelCost), 0.001)
+        assertEquals(0.0, CurrencyUtils.centsToDouble(recordInverted.wearCost), 0.001)
 
         // 2. Atualização corrigindo odômetro para 100 km rodados:
         // Sem abastecimentos reais -> Usa o consumo cadastrado (15.0 km/L)
@@ -755,7 +756,7 @@ class FuelIntelligenceAndEstimationTest {
             foodExpense = 10.0
         )
         val updatedRecord1 = db.dailyRecordDao().getRecordById(recordInverted.id)!!
-        assertEquals(40.00, updatedRecord1.fuelCost, 0.001)
+        assertEquals(40.00, CurrencyUtils.centsToDouble(updatedRecord1.fuelCost), 0.001)
 
         // 3. Adiciona dois abastecimentos cheios gerando consumo real de 20.0 km/L
         repository.saveFuelRefill(FuelRefill(id = 0L, vehicleId = testVehicleId, dateTimestamp = 2000L, dateString = "02/08/2026", gasStation = "P1", fuelType = "Gasolina", pricePerLiter = 6.00, liters = 10.0, totalPaid = 60.0, odometer = 10100.0, isFullTank = true, paymentMethod = "PIX"))
@@ -776,7 +777,7 @@ class FuelIntelligenceAndEstimationTest {
             foodExpense = 0.0
         )
         val recordWithReal = repository.allRecordsFlow.first().first { it.dateTimestamp == 4000L }
-        assertEquals(30.00, recordWithReal.fuelCost, 0.001)
+        assertEquals(30.00, CurrencyUtils.centsToDouble(recordWithReal.fuelCost), 0.001)
     }
 }
 

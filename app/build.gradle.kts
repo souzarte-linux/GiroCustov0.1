@@ -81,6 +81,7 @@ android {
   testOptions { unitTests { isIncludeAndroidResources = true } }
   sourceSets {
     getByName("debug").assets.srcDirs(files("$projectDir/schemas"))
+    getByName("test").assets.srcDirs(files("$projectDir/schemas"))
   }
 }
 

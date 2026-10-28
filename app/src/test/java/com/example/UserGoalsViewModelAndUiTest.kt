@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.*
+import com.example.util.CurrencyUtils
 import com.example.network.supabase.AuthSession
 import com.example.network.supabase.SupabaseClient
 import com.example.ui.GiroCustoViewModel
@@ -184,8 +185,8 @@ class UserGoalsViewModelAndUiTest {
 
         val persisted = userGoalsDao.getUserGoals()
         assertNotNull("Metas devem ter sido persistidas no Room", persisted)
-        assertEquals(250.0, persisted!!.dailyGoalGross, 0.001)
-        assertEquals(160.0, persisted.dailyGoalNet, 0.001)
+        assertEquals(250.0, CurrencyUtils.centsToDouble(persisted!!.dailyGoalGross), 0.001)
+        assertEquals(160.0, CurrencyUtils.centsToDouble(persisted.dailyGoalNet), 0.001)
         assertEquals(110.0, persisted.dailyGoalKm, 0.001)
         assertEquals(18, persisted.dailyGoalDeliveries)
         assertEquals(SyncStatus.PENDING_UPDATE, persisted.syncStatus)
