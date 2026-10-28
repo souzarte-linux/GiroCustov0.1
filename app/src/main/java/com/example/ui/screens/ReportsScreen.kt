@@ -69,73 +69,27 @@ fun ReportsScreen(
     val scrollState = rememberScrollState()
     var showCustomPeriodDialog by remember { mutableStateOf(false) }
 
-    // Filtrar registros por período usando o utilitário compartilhado para o Reports
-    val filteredRecords = remember(records, selectedPeriod, customStart, customEnd) {
-        filterByPeriod(records, selectedPeriod, customStart, customEnd) { it.dateTimestamp }
-    }
-
-    // Filtrar manutenções corretivas pelo mesmo período para o Reports
-    val filteredMaintenanceRecords = remember(maintenanceRecords, selectedPeriod, customStart, customEnd) {
-        filterByPeriod(maintenanceRecords, selectedPeriod, customStart, customEnd) { it.dateTimestamp }
-    }
-
-    // 1. Gráfico de Evolução de Lucro Líquido (Baseado nos registros filtrados)
-    val chronologicalRecords = remember(filteredRecords) {
-        filteredRecords.take(7).sortedBy { it.dateTimestamp }
-    }
-
-    // Cálculos Gerais do Período
-    val totalEarnings = filteredRecords.sumOf { it.grossEarnings }
-    val totalFuel = filteredRecords.sumOf { it.fuelCost }
-    val totalWear = filteredRecords.sumOf { it.wearCost }
-    val totalFixed = filteredRecords.sumOf { it.proportionalFixedCost }
-    val totalFood = filteredRecords.sumOf { it.foodExpense }
-    val totalExpenses = totalFuel + totalWear + totalFixed + totalFood
-
-    // Total gasto em manutenção corretiva no período
-    val totalMaintenance = filteredMaintenanceRecords.sumOf { it.value }
-    val realExpenses = totalExpenses + totalMaintenance
-    val netProfit = totalEarnings - totalExpenses
-    val realNetProfit = netProfit - totalMaintenance
-
-    val totalDeliveries = filteredRecords.sumOf { it.deliveriesCount }
-
-    // Destaques de Recordes
-    val bestDay = remember(filteredRecords) {
-        filteredRecords.maxByOrNull { it.netProfit }
-    }
-    val worstDay = remember(filteredRecords) {
-        filteredRecords.minByOrNull { it.netProfit }
-    }
-
-    // Projeções futuras baseadas nos registros filtrados
-    val avgEarningsPerDay = if (filteredRecords.isNotEmpty()) totalEarnings / filteredRecords.size else 0.0
-    val avgProfitPerDay = if (filteredRecords.isNotEmpty()) realNetProfit / filteredRecords.size else 0.0
-    val avgKmPerDay = if (filteredRecords.isNotEmpty()) filteredRecords.sumOf { it.kmRodados } / filteredRecords.size else 0.0
-
-    // Métricas de Jornada e Rendimento por Hora
-    val totalWorkMinutes = filteredRecords.sumOf { it.totalWorkMinutes }
-    val totalWorkHours = totalWorkMinutes / 60.0
-    val totalPauseMinutes = filteredRecords.sumOf { it.pauseMinutes }
-    val grossPerHour = if (totalWorkHours > 0) totalEarnings / totalWorkHours else 0.0
-    val netPerHour = if (totalWorkHours > 0) realNetProfit / totalWorkHours else 0.0
-    val avgHoursPerShift = if (filteredRecords.isNotEmpty()) totalWorkHours / filteredRecords.size else 0.0
-
-    val workHoursPart = totalWorkMinutes / 60
-    val workMinPart = totalWorkMinutes % 60
-    val formattedTotalWork = "${workHoursPart}h ${String.format(Locale.GERMAN, "%02d", workMinPart)}m"
-
-    val pauseHoursPart = totalPauseMinutes / 60
-    val pauseMinPart = totalPauseMinutes % 60
-    val formattedTotalPause = "${pauseHoursPart}h ${String.format(Locale.GERMAN, "%02d", pauseMinPart)}m"
-
-    // Meta Mensal configurada para ver se alcança nas projeções
+    // T-16 [ARQ-03]: Coleta métricas de relatório calculadas de forma reativa no ViewModel
+    val viewModelMetrics by viewModel.reportMetrics.collectAsStateWithLifecycle()
     val monthlyNGoal by viewModel.monthlyGoalNet.collectAsStateWithLifecycle()
-    val monthlyWorkingDays = vehicle?.plannedWorkDays ?: 22
-    val projectedMonthlyProfit = avgProfitPerDay * monthlyWorkingDays
-    val projectedMonthlyEarnings = avgEarningsPerDay * monthlyWorkingDays
-
     val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
+
+    val metrics = remember(records, maintenanceRecords, selectedPeriod, customStart, customEnd, monthlyNGoal, viewModelMetrics) {
+        if (records.isNotEmpty() && viewModelMetrics.recordsCount == 0) {
+            // Suporte para quando uma lista específica é passada diretamente (ex.: testes ou previews isolados)
+            viewModel.calculateReportMetrics(
+                records = records,
+                maintenanceRecords = maintenanceRecords,
+                selectedPeriod = selectedPeriod,
+                customStart = customStart,
+                customEnd = customEnd,
+                plannedWorkDays = vehicle?.plannedWorkDays ?: 22,
+                monthlyGoalNet = monthlyNGoal
+            )
+        } else {
+            viewModelMetrics
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -297,7 +251,7 @@ fun ReportsScreen(
             )
         }
 
-        if (records.isEmpty()) {
+        if (records.isEmpty() && metrics.recordsCount == 0) {
             EmptyStateCard(
                 title = stringResource(R.string.empty_reports_title),
                 subtitle = stringResource(R.string.empty_reports_no_records_subtitle),
@@ -307,7 +261,7 @@ fun ReportsScreen(
                 secondaryActionText = stringResource(R.string.empty_action_refill),
                 onSecondaryAction = onNavigateToRefill
             )
-        } else if (filteredRecords.isEmpty()) {
+        } else if (metrics.filteredRecords.isEmpty()) {
             EmptyStateCard(
                 title = stringResource(R.string.empty_reports_title),
                 subtitle = stringResource(R.string.empty_reports_filter_subtitle),
@@ -339,14 +293,14 @@ fun ReportsScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (chronologicalRecords.isNotEmpty()) {
+                if (metrics.chronologicalRecords.isNotEmpty()) {
                     // Render do Gráfico Vetorial em Canvas
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(180.dp)
                     ) {
-                        NetProfitCurveChart(records = chronologicalRecords)
+                        NetProfitCurveChart(records = metrics.chronologicalRecords)
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -357,7 +311,7 @@ fun ReportsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         val displayFormat = SimpleDateFormat("dd/MM", Locale.getDefault())
-                        chronologicalRecords.forEach { record ->
+                        metrics.chronologicalRecords.forEach { record ->
                             val cal = Calendar.getInstance().apply { timeInMillis = record.dateTimestamp }
                             Text(
                                 text = displayFormat.format(cal.time),
@@ -403,21 +357,8 @@ fun ReportsScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Valores de Custo
-                val totalFuelCost = filteredRecords.sumOf { it.fuelCost }
-                val totalWearCost = filteredRecords.sumOf { it.wearCost }
-                val totalFixedCost = filteredRecords.sumOf { it.proportionalFixedCost }
-                val totalFoodCost = filteredRecords.sumOf { it.foodExpense }
-                val totalMaintenanceCost = filteredMaintenanceRecords.sumOf { it.value }
-                val sumAllExpenses = totalFuelCost + totalWearCost + totalFixedCost + totalFoodCost + totalMaintenanceCost
-
-                if (sumAllExpenses > 0) {
-                    val pctFuel = (totalFuelCost / sumAllExpenses).toFloat()
-                    val pctWear = (totalWearCost / sumAllExpenses).toFloat()
-                    val pctFixed = (totalFixedCost / sumAllExpenses).toFloat()
-                    val pctFood = (totalFoodCost / sumAllExpenses).toFloat()
-                    val pctMaintenance = (totalMaintenanceCost / sumAllExpenses).toFloat()
-
+                // Valores de Custo (T-16 [ARQ-03] calculados pelo ViewModel)
+                if (metrics.sumAllExpenses > 0) {
                     // Barra Segmentada
                     Row(
                         modifier = Modifier
@@ -425,22 +366,22 @@ fun ReportsScreen(
                             .height(20.dp)
                             .clip(RoundedCornerShape(6.dp))
                     ) {
-                        if (pctFuel > 0) Box(modifier = Modifier.fillMaxHeight().weight(pctFuel.coerceAtLeast(0.01f)).background(Color(0xFFFF9100)))
-                        if (pctFood > 0) Box(modifier = Modifier.fillMaxHeight().weight(pctFood.coerceAtLeast(0.01f)).background(Color(0xFF00B0FF)))
-                        if (pctWear > 0) Box(modifier = Modifier.fillMaxHeight().weight(pctWear.coerceAtLeast(0.01f)).background(Color(0xFFEF5350)))
-                        if (pctFixed > 0) Box(modifier = Modifier.fillMaxHeight().weight(pctFixed.coerceAtLeast(0.01f)).background(Color(0xFFAB47BC)))
-                        if (pctMaintenance > 0) Box(modifier = Modifier.fillMaxHeight().weight(pctMaintenance.coerceAtLeast(0.01f)).background(Color(0xFFFBBF24)))
+                        if (metrics.pctFuel > 0) Box(modifier = Modifier.fillMaxHeight().weight(metrics.pctFuel.coerceAtLeast(0.01f)).background(Color(0xFFFF9100)))
+                        if (metrics.pctFood > 0) Box(modifier = Modifier.fillMaxHeight().weight(metrics.pctFood.coerceAtLeast(0.01f)).background(Color(0xFF00B0FF)))
+                        if (metrics.pctWear > 0) Box(modifier = Modifier.fillMaxHeight().weight(metrics.pctWear.coerceAtLeast(0.01f)).background(Color(0xFFEF5350)))
+                        if (metrics.pctFixed > 0) Box(modifier = Modifier.fillMaxHeight().weight(metrics.pctFixed.coerceAtLeast(0.01f)).background(Color(0xFFAB47BC)))
+                        if (metrics.pctMaintenance > 0) Box(modifier = Modifier.fillMaxHeight().weight(metrics.pctMaintenance.coerceAtLeast(0.01f)).background(Color(0xFFFBBF24)))
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
                     // Legendas com percentual e valor
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ExpenseLegendItem(label = "Combustível", color = Color(0xFFFF9100), pct = pctFuel, value = totalFuelCost)
-                        ExpenseLegendItem(label = "Alimentação", color = Color(0xFF00B0FF), pct = pctFood, value = totalFoodCost)
-                        ExpenseLegendItem(label = "Desgaste / Peças", color = Color(0xFFEF5350), pct = pctWear, value = totalWearCost)
-                        ExpenseLegendItem(label = "Custos Fixos", color = Color(0xFFAB47BC), pct = pctFixed, value = totalFixedCost)
-                        ExpenseLegendItem(label = "Manut. Corretiva", color = Color(0xFFFBBF24), pct = pctMaintenance, value = totalMaintenanceCost)
+                        ExpenseLegendItem(label = "Combustível", color = Color(0xFFFF9100), pct = metrics.pctFuel, value = metrics.totalFuelCost)
+                        ExpenseLegendItem(label = "Alimentação", color = Color(0xFF00B0FF), pct = metrics.pctFood, value = metrics.totalFoodCost)
+                        ExpenseLegendItem(label = "Desgaste / Peças", color = Color(0xFFEF5350), pct = metrics.pctWear, value = metrics.totalWearCost)
+                        ExpenseLegendItem(label = "Custos Fixos", color = Color(0xFFAB47BC), pct = metrics.pctFixed, value = metrics.totalFixedCost)
+                        ExpenseLegendItem(label = "Manut. Corretiva", color = Color(0xFFFBBF24), pct = metrics.pctMaintenance, value = metrics.totalMaintenanceCost)
                     }
                 } else {
                     Text("Nenhuma despesa registrada para cálculo.", fontSize = 12.sp, color = Color(0xFF94A3B8), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
@@ -471,13 +412,13 @@ fun ReportsScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (chronologicalRecords.isNotEmpty()) {
+                if (metrics.chronologicalRecords.isNotEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(160.dp)
                     ) {
-                        ProductivityComparisonChart(records = chronologicalRecords)
+                        ProductivityComparisonChart(records = metrics.chronologicalRecords)
                     }
                     
                     Spacer(modifier = Modifier.height(12.dp))
@@ -546,7 +487,7 @@ fun ReportsScreen(
                             color = Color(0xFF94A3B8)
                         )
                         Text(
-                            text = String.format(Locale.GERMAN, "R$ %.2f /h", netPerHour),
+                            text = String.format(Locale.GERMAN, "R$ %.2f /h", metrics.netPerHour),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,
@@ -561,7 +502,7 @@ fun ReportsScreen(
                             color = Color(0xFF94A3B8)
                         )
                         Text(
-                            text = String.format(Locale.GERMAN, "R$ %.2f /h", grossPerHour),
+                            text = String.format(Locale.GERMAN, "R$ %.2f /h", metrics.grossPerHour),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,
@@ -583,7 +524,7 @@ fun ReportsScreen(
                         Text("Tempo Efetivo", fontSize = 11.sp, color = Color(0xFF94A3B8))
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = formattedTotalWork,
+                            text = metrics.formattedTotalWork,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color.White
@@ -594,7 +535,7 @@ fun ReportsScreen(
                         Text("Tempo em Pausa", fontSize = 11.sp, color = Color(0xFF94A3B8))
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = formattedTotalPause,
+                            text = metrics.formattedTotalPause,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color(0xFFFBBF24)
@@ -605,7 +546,7 @@ fun ReportsScreen(
                         Text("Média / Turno", fontSize = 11.sp, color = Color(0xFF94A3B8))
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = String.format(Locale.GERMAN, "%.1fh", avgHoursPerShift),
+                            text = String.format(Locale.GERMAN, "%.1fh", metrics.avgHoursPerShift),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color(0xFFE2E8F0)
@@ -616,7 +557,7 @@ fun ReportsScreen(
         }
 
         // 5. DESTAQUES DE RECORDES (Melhor e Pior turnos) (Professional Polish Slate/Green Cards Style)
-        if (bestDay != null || worstDay != null) {
+        if (metrics.bestDay != null || metrics.worstDay != null) {
             Text(
                 text = "DESTAQUES E RECORDES",
                 fontSize = 11.sp,
@@ -629,7 +570,7 @@ fun ReportsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                if (bestDay != null) {
+                if (metrics.bestDay != null) {
                     Card(
                         modifier = Modifier.weight(1f),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF022C22)), // Dark emerald container
@@ -642,14 +583,14 @@ fun ReportsScreen(
                             Spacer(modifier = Modifier.height(4.dp))
                             Text("Melhor Turno", fontSize = 11.sp, color = Color(0xFF34D399))
                             Text(
-                                    text = String.format(Locale.GERMAN, "R$ %.2f", bestDay.netProfit),
+                                    text = String.format(Locale.GERMAN, "R$ %.2f", metrics.bestDay.netProfit),
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = FontFamily.Monospace,
                                     color = Color.White
                             )
                             Text(
-                                    text = "no dia ${bestDay.dateString}",
+                                    text = "no dia ${metrics.bestDay.dateString}",
                                     fontSize = 10.sp,
                                     color = Color(0xFF94A3B8)
                             )
@@ -657,7 +598,7 @@ fun ReportsScreen(
                     }
                 }
 
-                if (worstDay != null) {
+                if (metrics.worstDay != null) {
                     Card(
                         modifier = Modifier.weight(1f),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF2E1018)), // deep ruby/dark charcoal
@@ -670,14 +611,14 @@ fun ReportsScreen(
                             Spacer(modifier = Modifier.height(4.dp))
                             Text("Menor Turno", fontSize = 11.sp, color = Color(0xFFFDA4AF))
                             Text(
-                                    text = String.format(Locale.GERMAN, "R$ %.2f", worstDay.netProfit),
+                                    text = String.format(Locale.GERMAN, "R$ %.2f", metrics.worstDay.netProfit),
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = FontFamily.Monospace,
                                     color = Color.White
                             )
                             Text(
-                                    text = "no dia ${worstDay.dateString}",
+                                    text = "no dia ${metrics.worstDay.dateString}",
                                     fontSize = 10.sp,
                                     color = Color(0xFF94A3B8)
                             )
@@ -708,7 +649,7 @@ fun ReportsScreen(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Simulação para o mês se trabalhar os $monthlyWorkingDays dias planejados no ritmo atual:",
+                    text = "Simulação para o mês se trabalhar os ${metrics.monthlyWorkingDays} dias planejados no ritmo atual:",
                     fontSize = 11.sp,
                     color = Color(0xFF94A3B8)
                 )
@@ -722,7 +663,7 @@ fun ReportsScreen(
                     Column {
                         Text("Projeção de Faturamento", fontSize = 11.sp, color = Color(0xFF94A3B8))
                         Text(
-                            text = String.format(Locale.GERMAN, "R$ %.2f", projectedMonthlyEarnings),
+                            text = String.format(Locale.GERMAN, "R$ %.2f", metrics.projectedMonthlyEarnings),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,
@@ -732,7 +673,7 @@ fun ReportsScreen(
                     Column(horizontalAlignment = Alignment.End) {
                         Text("Projeção de Lucro Limpo", fontSize = 11.sp, color = Color(0xFF94A3B8))
                         Text(
-                            text = String.format(Locale.GERMAN, "R$ %.2f", projectedMonthlyProfit),
+                            text = String.format(Locale.GERMAN, "R$ %.2f", metrics.projectedMonthlyProfit),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,
@@ -746,7 +687,7 @@ fun ReportsScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Progresso em relação ao Alvo Mensal
-                val pctOfGoal = if (monthlyNGoal > 0) (projectedMonthlyProfit / monthlyNGoal).coerceIn(0.0, 1.5) else 1.0
+                val pctOfGoal = metrics.pctOfGoal
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween

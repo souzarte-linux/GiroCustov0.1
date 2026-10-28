@@ -37,9 +37,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.Vehicle
 import com.example.data.VehiclePart
 import com.example.data.Platform
+import com.example.R
+import androidx.compose.ui.res.stringResource
 import com.example.ui.EstimationDetail
 import com.example.ui.FuelCostEstimationInfo
 import com.example.ui.GiroCustoViewModel
+import com.example.ui.LaunchDistanceState
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -55,6 +58,7 @@ fun LaunchScreen(
 
     val startOdo by viewModel.startOdometer.collectAsStateWithLifecycle()
     val endOdo by viewModel.endOdometer.collectAsStateWithLifecycle()
+    val distanceState by viewModel.launchCalculatedDistance.collectAsStateWithLifecycle()
     val gross by viewModel.grossEarnings.collectAsStateWithLifecycle()
     val deliveries by viewModel.deliveriesCount.collectAsStateWithLifecycle()
     val fuelPr by viewModel.fuelPrice.collectAsStateWithLifecycle()
@@ -377,12 +381,9 @@ fun LaunchScreen(
                     )
                 }
 
-                // Exibição Dinâmica de Distância Calculada (KM rodados no dia)
-                val startVal = startOdo.replace(",", ".").toDoubleOrNull()
-                val endVal = endOdo.replace(",", ".").toDoubleOrNull()
-                if (startVal != null && endVal != null) {
-                    val diffKm = endVal - startVal
-                    if (diffKm >= 0.0) {
+                // Exibição Dinâmica de Distância Calculada (KM rodados no dia) (T-16 [ARQ-03])
+                when (val dist = distanceState) {
+                    is LaunchDistanceState.Valid -> {
                         Surface(
                             color = if (isDark) Color(0xFF064E3B).copy(alpha = 0.4f) else Color(0xFFD1FAE5),
                             shape = RoundedCornerShape(10.dp),
@@ -400,19 +401,19 @@ fun LaunchScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Filled.DirectionsCar,
-                                        contentDescription = "Distância Percorrida",
+                                        contentDescription = stringResource(R.string.cd_launch_distance_travelled),
                                         tint = Color(0xFF10B981),
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Text(
-                                        text = "Distância calculada no dia:",
+                                        text = stringResource(R.string.launch_distance_calculated_label),
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = if (isDark) Color(0xFFE2E8F0) else Color(0xFF0F172A)
                                     )
                                 }
                                 Text(
-                                    text = "${String.format(Locale.GERMAN, "%.1f", diffKm)} KM",
+                                    text = "${dist.formattedKm} KM",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = FontFamily.Monospace,
@@ -420,7 +421,8 @@ fun LaunchScreen(
                                 )
                             }
                         }
-                    } else {
+                    }
+                    is LaunchDistanceState.NegativeError -> {
                         Surface(
                             color = if (isDark) Color(0xFF7F1D1D).copy(alpha = 0.3f) else Color(0xFFFEE2E2),
                             shape = RoundedCornerShape(10.dp),
@@ -434,18 +436,21 @@ fun LaunchScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Filled.Warning,
-                                    contentDescription = "Erro Hodômetro",
+                                    contentDescription = stringResource(R.string.cd_launch_odometer_error),
                                     tint = Color(0xFFEF4444),
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Text(
-                                    text = "Hodômetro final não pode ser menor que o inicial.",
+                                    text = stringResource(R.string.launch_distance_odometer_error),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = Color(0xFFEF4444)
                                 )
                             }
                         }
+                    }
+                    LaunchDistanceState.None -> {
+                        // Sem exibição quando hodômetros não preenchidos
                     }
                 }
 

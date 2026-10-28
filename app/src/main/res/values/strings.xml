@@ -141,4 +141,12 @@
     <string name="cd_offline_icon">Ícone de modo offline</string>
     <string name="cd_error_icon">Ícone de alerta de erro</string>
     <string name="cd_empty_state_icon">Ícone ilustrativo de lista vazia</string>
+
+    <!-- Cálculos e Validações de Formulário (T-16 [ARQ-03]) -->
+    <string name="launch_distance_calculated_label">Distância calculada no dia:</string>
+    <string name="launch_distance_odometer_error">Hodômetro final não pode ser menor que o inicial.</string>
+    <string name="cd_launch_distance_travelled">Distância Percorrida</string>
+    <string name="cd_launch_odometer_error">Erro Hodômetro</string>
+    <string name="refill_error_empty_station">Por favor, digite o Posto.</string>
+    <string name="refill_error_invalid_inputs">Preencha preço, litros e odômetro com valores válidos.</string>
 </resources>
