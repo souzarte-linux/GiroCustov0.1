@@ -12,14 +12,17 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import java.io.IOException
 
 /**
- * Suíte de testes automatizados para resiliência e tratamento de falhas da Overpass API (T-13 [INT-02]).
- * Valida timeouts sincronizados, fallback entre espelhos de servidores e mensagens amigáveis em português do Brasil.
+ * Suíte de testes automatizados para resiliência e tratamento de falhas da Overpass API (T-13 e T-14 [INT-03]).
+ * Valida timeouts sincronizados, fallback entre espelhos de servidores, método POST FormUrlEncoded e mensagens amigáveis em português do Brasil.
  */
+@RunWith(RobolectricTestRunner::class)
 class OverpassApiResilienceTest {
 
     private lateinit var mockServer: MockWebServer
@@ -63,6 +66,10 @@ class OverpassApiResilienceTest {
             endpoints.any { it.contains("kumi.systems") }
         )
         assertTrue(
+            "A lista deve conter o servidor ativo openstreetmap.fr como primário",
+            endpoints.first().contains("openstreetmap.fr")
+        )
+        assertTrue(
             "A lista deve conter o servidor principal overpass-api.de",
             endpoints.any { it.contains("overpass-api.de") }
         )
@@ -70,6 +77,28 @@ class OverpassApiResilienceTest {
             "A lista deve conter o servidor ativo private.coffee",
             endpoints.any { it.contains("private.coffee") }
         )
+    }
+
+    @Test
+    fun testOverpassApi_usesHttpPostAndFormUrlEncoded() = runTest {
+        mockServer.enqueue(MockResponse().setResponseCode(200).setBody("""{"elements":[]}"""))
+
+        val retrofit = Retrofit.Builder()
+            .baseUrl(mockServer.url("/"))
+            .client(OkHttpClient.Builder().build())
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+
+        val service = retrofit.create(OverpassApiService::class.java)
+        service.getNearbyStations(mockServer.url("/api/interpreter").toString(), "test-query")
+
+        val recorded = mockServer.takeRequest()
+        assertEquals("Método HTTP deve ser POST para evitar limitação de URL GET", "POST", recorded.method)
+        assertTrue(
+            "Content-Type deve ser application/x-www-form-urlencoded",
+            recorded.getHeader("Content-Type")?.contains("application/x-www-form-urlencoded") == true
+        )
+        assertEquals("data=test-query", recorded.body.readUtf8())
     }
 
     @Test

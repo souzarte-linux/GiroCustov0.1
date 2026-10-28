@@ -1,11 +1,13 @@
 package com.example.network
 
+import android.util.Log
 import kotlin.math.*
 
 object GasStationRepository {
     val OVERPASS_ENDPOINTS = listOf(
-        "https://overpass-api.de/api/interpreter",
-        "https://overpass.private.coffee/api/interpreter"
+        "https://overpass.openstreetmap.fr/api/interpreter",
+        "https://overpass.private.coffee/api/interpreter",
+        "https://overpass-api.de/api/interpreter"
     )
 
     var endpoints: List<String> = OVERPASS_ENDPOINTS
@@ -77,7 +79,7 @@ object GasStationRepository {
                 return GasStationSearchResult.Success(results)
             } catch (e: Exception) {
                 lastException = e
-                // Fall back to the next endpoint
+                Log.w("GasStationRepo", "Falha no endpoint Overpass: $endpoint - ${e.javaClass.simpleName}: ${e.message}")
             }
         }
 

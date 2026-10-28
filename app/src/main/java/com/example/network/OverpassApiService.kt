@@ -5,26 +5,28 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
-import retrofit2.http.GET
-import retrofit2.http.Query
+import retrofit2.http.Field
+import retrofit2.http.FormUrlEncoded
+import retrofit2.http.POST
 import retrofit2.http.Url
 import java.util.concurrent.TimeUnit
 
 interface OverpassApiService {
-    @GET
+    @FormUrlEncoded
+    @POST
     suspend fun getNearbyStations(
         @Url url: String,
-        @Query("data") data: String
+        @Field("data") data: String
     ): OverpassResponse
 }
 
 private val okHttpClient = OkHttpClient.Builder()
-    .connectTimeout(15, TimeUnit.SECONDS)
-    .readTimeout(25, TimeUnit.SECONDS)
+    .connectTimeout(8, TimeUnit.SECONDS)
+    .readTimeout(15, TimeUnit.SECONDS)
     .addInterceptor { chain ->
         val original = chain.request()
         val request = original.newBuilder()
-            .header("User-Agent", "GiroCusto/1.0")
+            .header("User-Agent", "GiroCustoApp/1.0 (https://github.com/girocusto; contato@girocusto.app)")
             .header("Accept", "application/json")
             .build()
         chain.proceed(request)
@@ -36,7 +38,7 @@ private val moshi = Moshi.Builder()
     .build()
 
 private val retrofit = Retrofit.Builder()
-    .baseUrl("https://overpass-api.de/") // Placeholder baseUrl overridden by dynamic @Url
+    .baseUrl("https://overpass.openstreetmap.fr/") // Endpoint de referência padrão
     .client(okHttpClient)
     .addConverterFactory(MoshiConverterFactory.create(moshi))
     .build()

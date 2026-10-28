@@ -4,22 +4,22 @@ import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
 data class OverpassResponse(
-    val elements: List<OverpassElement>
+    val elements: List<OverpassElement> = emptyList()
 )
 
 @JsonClass(generateAdapter = true)
 data class OverpassCenter(
-    val lat: Double,
-    val lon: Double
+    val lat: Double = 0.0,
+    val lon: Double = 0.0
 )
 
 @JsonClass(generateAdapter = true)
 data class OverpassElement(
-    val id: Long,
-    val lat: Double?,
-    val lon: Double?,
+    val id: Long = 0L,
+    val lat: Double? = null,
+    val lon: Double? = null,
     val center: OverpassCenter? = null,
-    val tags: Map<String, String>?
+    val tags: Map<String, String>? = null
 )
 
 data class GasStationResult(
