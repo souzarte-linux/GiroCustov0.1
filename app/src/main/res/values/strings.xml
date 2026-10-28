@@ -91,4 +91,29 @@
     <string name="fuel_location_rationale_dismiss">Agora Não</string>
     <string name="fuel_location_permission_denied">Permissão de localização necessária para buscar postos próximos.</string>
     <string name="cd_fuel_location_rationale_icon">Ícone de localização GPS</string>
+
+    <!-- Acessibilidade e Descrição de Conteúdo para TalkBack (T-15 [ACC-01]) -->
+    <string name="cd_theme_toggle">Alternar entre modo claro e escuro</string>
+    <string name="cd_select_period">Selecionar período de análise</string>
+    <string name="cd_change_custom_period">Alterar período personalizado</string>
+    <string name="cd_filter_platform">Filtrar por plataforma</string>
+    <string name="cd_sort_by">Selecionar ordenação dos lançamentos</string>
+    <string name="cd_edit_record">Editar lançamento</string>
+    <string name="cd_delete_record">Excluir lançamento</string>
+    <string name="cd_select_start_time">Selecionar hora de início</string>
+    <string name="cd_select_end_time">Selecionar hora de término</string>
+    <string name="cd_select_pause_duration">Selecionar tempo de pausa</string>
+    <string name="cd_back">Voltar à tela anterior</string>
+    <string name="cd_expand_options">Expandir opções de postos</string>
+    <string name="cd_edit_gas_station">Editar dados do posto</string>
+    <string name="cd_add_new_gas_station">Cadastrar novo posto</string>
+    <string name="cd_search_nearby_stations">Buscar postos próximos por GPS</string>
+    <string name="cd_close_station_search">Fechar busca de postos por GPS</string>
+    <string name="cd_select_brand">Selecionar bandeira do posto</string>
+    <string name="cd_search_cep">Buscar endereço pelo CEP</string>
+    <string name="cd_edit_vehicle">Editar veículo</string>
+    <string name="cd_add_part">Adicionar nova peça para monitoramento</string>
+    <string name="cd_edit_part">Editar peça</string>
+    <string name="cd_reset_part_wear">Zerar desgaste da peça</string>
+    <string name="cd_edit_refill">Editar abastecimento</string>
 </resources>

@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.border
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -222,7 +223,7 @@ fun RefillsListSection(
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Adicionar", modifier = Modifier.size(18.dp))
+                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Lançar", fontWeight = FontWeight.Bold)
                 }
@@ -306,7 +307,7 @@ fun RefillsListSection(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onEditClick(refill.id) }
+                                .clickable(onClickLabel = stringResource(R.string.cd_edit_refill)) { onEditClick(refill.id) }
                                 .testTag("refill_item_${refill.id}"),
                             shape = RoundedCornerShape(12.dp)
                         ) {
@@ -741,8 +742,8 @@ fun RefillFormSection(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBack, modifier = Modifier.testTag("back_btn")) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+            IconButton(onClick = onBack, modifier = Modifier.size(48.dp).testTag("back_btn")) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -774,7 +775,7 @@ fun RefillFormSection(
                         IconButton(onClick = { dropdownExpanded = !dropdownExpanded }) {
                             Icon(
                                 imageVector = if (dropdownExpanded) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
-                                contentDescription = "Expandir opções"
+                                contentDescription = stringResource(R.string.cd_expand_options)
                             )
                         }
                     },
@@ -811,11 +812,12 @@ fun RefillFormSection(
                                         onClick = {
                                             stationToEdit = station
                                             showEditStationDialog = true
-                                        }
+                                        },
+                                        modifier = Modifier.size(48.dp)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Filled.Edit,
-                                            contentDescription = "Editar Posto",
+                                            contentDescription = stringResource(R.string.cd_edit_gas_station),
                                             modifier = Modifier.size(20.dp),
                                             tint = MaterialTheme.colorScheme.primary
                                         )
@@ -859,7 +861,7 @@ fun RefillFormSection(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Add,
-                    contentDescription = "Adicionar Novo Posto",
+                    contentDescription = stringResource(R.string.cd_add_new_gas_station),
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -898,7 +900,7 @@ fun RefillFormSection(
                 } else {
                     Icon(
                         imageVector = Icons.Filled.NearMe,
-                        contentDescription = "Buscar posto próximo",
+                        contentDescription = stringResource(R.string.cd_search_nearby_stations),
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -938,12 +940,12 @@ fun RefillFormSection(
                                 viewModel.clearStationSearch() 
                                 selectedStation = null
                             },
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(48.dp).testTag("close_nearby_stations_btn")
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Close,
-                                contentDescription = "Fechar busca por GPS",
-                                modifier = Modifier.size(16.dp),
+                                contentDescription = stringResource(R.string.cd_close_station_search),
+                                modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -1136,6 +1138,7 @@ fun RefillFormSection(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .defaultMinSize(minHeight = 48.dp)
                                         .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
                                         .clickable { brandExpanded = true }
                                         .padding(horizontal = 12.dp, vertical = 14.dp)
@@ -1144,7 +1147,11 @@ fun RefillFormSection(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(selectedBrand, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
-                                    Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Icon(
+                                        Icons.Filled.ArrowDropDown, 
+                                        contentDescription = stringResource(R.string.cd_select_brand), 
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
 
                                 DropdownMenu(
@@ -1512,7 +1519,7 @@ fun RefillFormSection(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Excluir")
+                    Icon(Icons.Filled.Delete, contentDescription = null)
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Excluir")
                 }
@@ -1568,7 +1575,7 @@ fun RefillFormSection(
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Icon(Icons.Filled.Save, contentDescription = "Salvar")
+                Icon(Icons.Filled.Save, contentDescription = null)
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("Salvar")
             }

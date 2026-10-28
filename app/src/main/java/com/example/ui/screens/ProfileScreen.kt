@@ -351,14 +351,14 @@ private fun ProfileSectionsContent(
             IconButton(
                 onClick = { viewModel.toggleTheme() },
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
                     .background(ColorSurfaceCard)
                     .testTag("theme_toggle_btn_profile")
             ) {
                 Icon(
                     imageVector = if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
-                    contentDescription = "Alternar Tema",
+                    contentDescription = stringResource(R.string.cd_theme_toggle),
                     tint = if (isDark) ColorAmber else Color(0xFF64748B),
                     modifier = Modifier.size(20.dp)
                 )
@@ -800,11 +800,13 @@ private fun CadastralDataCard(
                         else -> {
                             IconButton(
                                 onClick = { viewModel.searchCep(cepDigits) },
-                                modifier = Modifier.testTag("profile_cep_search_icon")
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .testTag("profile_cep_search_icon")
                             ) {
                                 Icon(
                                     imageVector = Icons.Filled.Search,
-                                    contentDescription = "Buscar CEP",
+                                    contentDescription = stringResource(R.string.cd_search_cep),
                                     tint = ColorTextMuted
                                 )
                             }
@@ -1435,7 +1437,7 @@ private fun MyVehiclesSection(
                                         .size(48.dp)
                                         .testTag("profile_vehicle_edit_btn_${vehicle.id}")
                                 ) {
-                                    Icon(Icons.Filled.Edit, contentDescription = "Editar", tint = ColorSky, modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.cd_edit_vehicle), tint = ColorSky, modifier = Modifier.size(20.dp))
                                 }
 
                                 IconButton(
@@ -1538,12 +1540,12 @@ private fun PartsWearSection(
             IconButton(
                 onClick = onAddPartClick,
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
                     .background(ColorSurfaceCard)
                     .testTag("profile_add_part_btn")
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "Adicionar Peça", tint = ColorBrandEmerald)
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.cd_add_part), tint = ColorBrandEmerald)
             }
         }
 
@@ -1617,7 +1619,7 @@ private fun PartsWearSection(
                                         .size(48.dp)
                                         .testTag("profile_part_edit_btn_${part.id}")
                                 ) {
-                                    Icon(Icons.Filled.Edit, contentDescription = "Editar Peça", tint = ColorSky, modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.cd_edit_part), tint = ColorSky, modifier = Modifier.size(20.dp))
                                 }
 
                                 IconButton(
@@ -1626,7 +1628,7 @@ private fun PartsWearSection(
                                         .size(48.dp)
                                         .testTag("profile_part_reset_btn_${part.id}")
                                 ) {
-                                    Icon(Icons.Filled.Build, contentDescription = "Zerar Desgaste", tint = ColorBrandEmerald, modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Filled.Build, contentDescription = stringResource(R.string.cd_reset_part_wear), tint = ColorBrandEmerald, modifier = Modifier.size(20.dp))
                                 }
 
                                 IconButton(
@@ -1771,11 +1773,11 @@ private fun VehicleFormSection(
             ) {
                 IconButton(
                     onClick = onBack,
-                    modifier = Modifier.testTag("vehicle_form_back_btn")
+                    modifier = Modifier.size(48.dp).testTag("vehicle_form_back_btn")
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Voltar",
+                        contentDescription = stringResource(R.string.cd_back),
                         tint = ColorTextPrimary
                     )
                 }
@@ -1824,6 +1826,7 @@ private fun VehicleFormSection(
                 Surface(
                     modifier = Modifier
                         .weight(1f)
+                        .defaultMinSize(minHeight = 48.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .clickable {
                             if (!isMotoSelected) {
@@ -1867,6 +1870,7 @@ private fun VehicleFormSection(
                 Surface(
                     modifier = Modifier
                         .weight(1f)
+                        .defaultMinSize(minHeight = 48.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .clickable {
                             if (!isCarSelected) {

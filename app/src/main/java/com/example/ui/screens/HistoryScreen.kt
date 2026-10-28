@@ -33,7 +33,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.animation.*
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.R
 import com.example.data.DailyRecord
 import com.example.ui.GiroCustoViewModel
 import com.example.ui.Period
@@ -131,11 +133,11 @@ fun HistoryScreen(
 
             IconButton(
                 onClick = { viewModel.toggleTheme() },
-                modifier = Modifier.size(36.dp).testTag("theme_toggle_btn_history")
+                modifier = Modifier.size(48.dp).testTag("theme_toggle_btn_history")
             ) {
                 Icon(
                     imageVector = if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
-                    contentDescription = "Alternar Tema",
+                    contentDescription = stringResource(R.string.cd_theme_toggle),
                     tint = if (isDark) Color(0xFFF59E0B) else Color(0xFF64748B),
                     modifier = Modifier.size(20.dp)
                 )
@@ -152,6 +154,7 @@ fun HistoryScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .defaultMinSize(minHeight = 48.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(MaterialTheme.colorScheme.surface)
                         .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(10.dp))
@@ -177,7 +180,7 @@ fun HistoryScreen(
                     )
                     Icon(
                         imageVector = Icons.Filled.ArrowDropDown,
-                        contentDescription = "Selecionar Período",
+                        contentDescription = stringResource(R.string.cd_select_period),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                     )
@@ -231,6 +234,7 @@ fun HistoryScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .defaultMinSize(minHeight = 48.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(MaterialTheme.colorScheme.surface)
                         .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(10.dp))
@@ -249,7 +253,7 @@ fun HistoryScreen(
                     )
                     Icon(
                         imageVector = Icons.Filled.ArrowDropDown,
-                        contentDescription = "Filtrar Plataforma",
+                        contentDescription = stringResource(R.string.cd_filter_platform),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                     )
@@ -276,6 +280,7 @@ fun HistoryScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .defaultMinSize(minHeight = 48.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(MaterialTheme.colorScheme.surface)
                         .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(10.dp))
@@ -303,7 +308,7 @@ fun HistoryScreen(
                     )
                     Icon(
                         imageVector = Icons.Filled.ArrowDropDown,
-                        contentDescription = "Ordenar por",
+                        contentDescription = stringResource(R.string.cd_sort_by),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                     )
@@ -331,6 +336,7 @@ fun HistoryScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .defaultMinSize(minHeight = 48.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
                     .clickable { showHistoryCustomPeriodDialog = true }
@@ -344,7 +350,7 @@ fun HistoryScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.DateRange,
-                        contentDescription = "Calendário",
+                        contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
@@ -357,7 +363,7 @@ fun HistoryScreen(
                 }
                 Icon(
                     imageVector = Icons.Filled.Edit,
-                    contentDescription = "Alterar Período",
+                    contentDescription = stringResource(R.string.cd_change_custom_period),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp)
                 )
@@ -543,7 +549,7 @@ fun HistoryRecordCard(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Storefront,
-                        contentDescription = "Plataforma",
+                        contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(16.dp)
                     )
@@ -563,7 +569,7 @@ fun HistoryRecordCard(
 
                     Icon(
                         imageVector = Icons.Filled.DateRange,
-                        contentDescription = "Data",
+                        contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(14.dp)
                     )
@@ -587,24 +593,24 @@ fun HistoryRecordCard(
                 ) {
                     IconButton(
                         onClick = onEditClick,
-                        modifier = Modifier.size(28.dp).testTag("edit_record_btn_${record.id}")
+                        modifier = Modifier.size(48.dp).testTag("edit_record_btn_${record.id}")
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Edit,
-                            contentDescription = "Editar Lançamento",
+                            contentDescription = stringResource(R.string.cd_edit_record),
                             tint = Color(0xFF38BDF8),
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                     IconButton(
                         onClick = onDeleteClick,
-                        modifier = Modifier.size(28.dp).testTag("delete_record_btn_${record.id}")
+                        modifier = Modifier.size(48.dp).testTag("delete_record_btn_${record.id}")
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Delete,
-                            contentDescription = "Excluir Lançamento",
+                            contentDescription = stringResource(R.string.cd_delete_record),
                             tint = Color(0xFFF43F5E),
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
@@ -1278,15 +1284,18 @@ fun EditRecordDialog(
                         label = { Text("Hora Início", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         placeholder = { Text("08:00") },
                         trailingIcon = {
-                            IconButton(onClick = {
-                                val sParts = startTimeState.split(":")
-                                val initialH = sParts.getOrNull(0)?.toIntOrNull() ?: 8
-                                val initialM = sParts.getOrNull(1)?.toIntOrNull() ?: 0
-                                android.app.TimePickerDialog(context, { _, h, m ->
-                                    startTimeState = String.format(Locale.US, "%02d:%02d", h, m)
-                                }, initialH, initialM, true).show()
-                            }) {
-                                Icon(Icons.Filled.Schedule, contentDescription = "Hora Início", tint = MaterialTheme.colorScheme.primary)
+                            IconButton(
+                                onClick = {
+                                    val sParts = startTimeState.split(":")
+                                    val initialH = sParts.getOrNull(0)?.toIntOrNull() ?: 8
+                                    val initialM = sParts.getOrNull(1)?.toIntOrNull() ?: 0
+                                    android.app.TimePickerDialog(context, { _, h, m ->
+                                        startTimeState = String.format(Locale.US, "%02d:%02d", h, m)
+                                    }, initialH, initialM, true).show()
+                                },
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Icon(Icons.Filled.Schedule, contentDescription = stringResource(R.string.cd_select_start_time), tint = MaterialTheme.colorScheme.primary)
                             }
                         },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
@@ -1302,15 +1311,18 @@ fun EditRecordDialog(
                         label = { Text("Hora Final", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         placeholder = { Text("18:00") },
                         trailingIcon = {
-                            IconButton(onClick = {
-                                val eParts = endTimeState.split(":")
-                                val initialH = eParts.getOrNull(0)?.toIntOrNull() ?: 18
-                                val initialM = eParts.getOrNull(1)?.toIntOrNull() ?: 0
-                                android.app.TimePickerDialog(context, { _, h, m ->
-                                    endTimeState = String.format(Locale.US, "%02d:%02d", h, m)
-                                }, initialH, initialM, true).show()
-                            }) {
-                                Icon(Icons.Filled.Schedule, contentDescription = "Hora Final", tint = MaterialTheme.colorScheme.primary)
+                            IconButton(
+                                onClick = {
+                                    val eParts = endTimeState.split(":")
+                                    val initialH = eParts.getOrNull(0)?.toIntOrNull() ?: 18
+                                    val initialM = eParts.getOrNull(1)?.toIntOrNull() ?: 0
+                                    android.app.TimePickerDialog(context, { _, h, m ->
+                                        endTimeState = String.format(Locale.US, "%02d:%02d", h, m)
+                                    }, initialH, initialM, true).show()
+                                },
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Icon(Icons.Filled.Schedule, contentDescription = stringResource(R.string.cd_select_end_time), tint = MaterialTheme.colorScheme.primary)
                             }
                         },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
@@ -1327,15 +1339,18 @@ fun EditRecordDialog(
                     label = { Text("Total Tempo Pause", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     placeholder = { Text("01:00") },
                     trailingIcon = {
-                        IconButton(onClick = {
-                            val pParts = pauseDurationState.split(":")
-                            val initialH = pParts.getOrNull(0)?.toIntOrNull() ?: 1
-                            val initialM = pParts.getOrNull(1)?.toIntOrNull() ?: 0
-                            android.app.TimePickerDialog(context, { _, h, m ->
-                                pauseDurationState = String.format(Locale.US, "%02d:%02d", h, m)
-                            }, initialH, initialM, true).show()
-                        }) {
-                            Icon(Icons.Filled.Timer, contentDescription = "Pausa", tint = MaterialTheme.colorScheme.primary)
+                        IconButton(
+                            onClick = {
+                                val pParts = pauseDurationState.split(":")
+                                val initialH = pParts.getOrNull(0)?.toIntOrNull() ?: 1
+                                val initialM = pParts.getOrNull(1)?.toIntOrNull() ?: 0
+                                android.app.TimePickerDialog(context, { _, h, m ->
+                                    pauseDurationState = String.format(Locale.US, "%02d:%02d", h, m)
+                                }, initialH, initialM, true).show()
+                            },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(Icons.Filled.Timer, contentDescription = stringResource(R.string.cd_select_pause_duration), tint = MaterialTheme.colorScheme.primary)
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Done),

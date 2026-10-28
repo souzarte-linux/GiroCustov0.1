@@ -138,11 +138,11 @@ fun DashboardScreen(
             ) {
                 IconButton(
                     onClick = { viewModel.toggleTheme() },
-                    modifier = Modifier.size(36.dp).testTag("theme_toggle_btn")
+                    modifier = Modifier.size(48.dp).testTag("theme_toggle_btn")
                 ) {
                     Icon(
                         imageVector = if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
-                        contentDescription = "Alternar Tema",
+                        contentDescription = stringResource(R.string.cd_theme_toggle),
                         tint = if (isDark) Color(0xFFF59E0B) else Color(0xFF64748B),
                         modifier = Modifier.size(20.dp)
                     )
@@ -153,6 +153,7 @@ fun DashboardScreen(
                 Box {
                     Row(
                         modifier = Modifier
+                            .defaultMinSize(minHeight = 48.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .background(MaterialTheme.colorScheme.surface) // Dynamic Surface Charcoal
                             .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(10.dp))
@@ -176,7 +177,7 @@ fun DashboardScreen(
                         )
                         Icon(
                             imageVector = Icons.Filled.ArrowDropDown,
-                            contentDescription = "Selecionar Período",
+                            contentDescription = stringResource(R.string.cd_select_period),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
                         )
@@ -245,6 +246,7 @@ fun DashboardScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .defaultMinSize(minHeight = 48.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
                     .clickable { showCustomPeriodDialog = true }
@@ -258,7 +260,7 @@ fun DashboardScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.DateRange,
-                        contentDescription = "Calendário",
+                        contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
@@ -271,7 +273,7 @@ fun DashboardScreen(
                 }
                 Icon(
                     imageVector = Icons.Filled.Edit,
-                    contentDescription = "Alterar Período",
+                    contentDescription = stringResource(R.string.cd_change_custom_period),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp)
                 )
@@ -450,7 +452,7 @@ fun DashboardScreen(
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.LocalGasStation, "Custo por km", tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
+                        Icon(Icons.Filled.LocalGasStation, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Custo Real / Km", fontSize = 11.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold)
                     }
@@ -484,7 +486,7 @@ fun DashboardScreen(
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.AutoMirrored.Filled.TrendingUp, "Lucro por km", tint = Color(0xFF10B981), modifier = Modifier.size(16.dp))
+                        Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Lucro Líq / Km", fontSize = 11.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold)
                     }
@@ -649,7 +651,7 @@ fun DashboardScreen(
             border = BorderStroke(1.2.dp, Color(0xFF10B981)),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Icon(Icons.Filled.Edit, "Editar Metas", modifier = Modifier.size(18.dp))
+            Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(6.dp))
             Text(stringResource(R.string.goals_adjust_button), fontWeight = FontWeight.Bold, fontSize = 13.sp)
         }
