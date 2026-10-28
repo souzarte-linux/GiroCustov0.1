@@ -40,8 +40,13 @@ import com.example.ui.util.filterByPeriod
 import com.example.ui.util.getCurrentMonthRange
 import com.example.ui.GiroCustoViewModel
 import com.example.ui.Period
+import com.example.ui.SyncState
 import com.example.ui.components.CustomPeriodDialog
+import com.example.ui.components.EmptyStateCard
+import com.example.ui.components.ErrorNotificationCard
 import com.example.ui.components.GiroCustoLogo
+import com.example.ui.components.OfflineNoticeBanner
+import com.example.ui.components.SyncLoadingBanner
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -52,12 +57,16 @@ fun DashboardScreen(
     vehicle: Vehicle?,
     parts: List<VehiclePart>,
     records: List<DailyRecord>,
-    maintenanceRecords: List<MaintenanceRecord>
+    maintenanceRecords: List<MaintenanceRecord>,
+    onNavigateToLaunch: () -> Unit = {},
+    onNavigateToRefill: () -> Unit = {}
 ) {
     val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
     val customStart by viewModel.customStartDate.collectAsStateWithLifecycle()
     val customEnd by viewModel.customEndDate.collectAsStateWithLifecycle()
     val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
+    val syncState by viewModel.syncState.collectAsStateWithLifecycle()
+    val syncErrorMessage by viewModel.syncErrorMessage.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
     var showCustomPeriodDialog by remember { mutableStateOf(false) }
 
@@ -280,8 +289,44 @@ fun DashboardScreen(
             }
         }
 
-        // Card de Lucro Líquido Real (Polished Charcoal & Glowing Emerald Style)
-        Card(
+        // Banners de Estado do Sistema (Sincronização, Modo Offline e Erro)
+        if (syncState == SyncState.SYNCING) {
+            SyncLoadingBanner()
+        }
+
+        if (syncState == SyncState.OFFLINE) {
+            OfflineNoticeBanner()
+        }
+
+        if (syncState == SyncState.ERROR && !syncErrorMessage.isNullOrBlank()) {
+            ErrorNotificationCard(
+                errorMessage = syncErrorMessage ?: "",
+                onRetry = { viewModel.syncNow() },
+                onDismiss = { viewModel.clearSyncError() }
+            )
+        }
+
+        if (records.isEmpty()) {
+            EmptyStateCard(
+                title = stringResource(R.string.empty_dashboard_no_records_title),
+                subtitle = stringResource(R.string.empty_dashboard_no_records_subtitle),
+                icon = Icons.Default.DirectionsCar,
+                primaryActionText = stringResource(R.string.empty_action_launch),
+                onPrimaryAction = onNavigateToLaunch,
+                secondaryActionText = stringResource(R.string.empty_action_refill),
+                onSecondaryAction = onNavigateToRefill
+            )
+        } else if (filteredRecords.isEmpty()) {
+            EmptyStateCard(
+                title = stringResource(R.string.empty_dashboard_filter_title),
+                subtitle = stringResource(R.string.empty_dashboard_filter_subtitle),
+                icon = Icons.Default.FilterList,
+                primaryActionText = stringResource(R.string.empty_action_launch),
+                onPrimaryAction = onNavigateToLaunch
+            )
+        } else {
+            // Card de Lucro Líquido Real (Polished Charcoal & Glowing Emerald Style)
+            Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF064E3B)), // Deep dark green/emerald
             shape = RoundedCornerShape(24.dp), // Rounded-3xl
@@ -666,6 +711,7 @@ fun DashboardScreen(
                     }
                 }
             )
+        }
         }
     }
 

@@ -1,5 +1,3 @@
-// TODO: Implementar menu lateral (drawer) com acesso ao perfil de usuário, substituindo a navegação da aba Veículo.
-
 package com.example.ui.navigation
 
 import androidx.compose.animation.AnimatedContent
@@ -258,10 +256,31 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
                                 DrawerDestination.ABASTECIMENTOS -> FuelRefillsScreen(viewModel)
                                 DrawerDestination.MANUTENCAO -> MaintenanceScreen(viewModel)
                                 DrawerDestination.NUVEM -> CloudSyncScreen(viewModel, onNavigateBack = { drawerDestination = DrawerDestination.NONE })
-                                GiroTab.PAINEL -> DashboardScreen(viewModel, vehicle, parts, records, maintenanceRecords)
+                                GiroTab.PAINEL -> DashboardScreen(
+                                    viewModel = viewModel,
+                                    vehicle = vehicle,
+                                    parts = parts,
+                                    records = records,
+                                    maintenanceRecords = maintenanceRecords,
+                                    onNavigateToLaunch = { currentTab = GiroTab.LANCAR },
+                                    onNavigateToRefill = { drawerDestination = DrawerDestination.ABASTECIMENTOS }
+                                )
                                 GiroTab.LANCAR -> LaunchScreen(viewModel, vehicle, parts)
-                                GiroTab.RELATORIOS -> ReportsScreen(viewModel, vehicle, parts, records, maintenanceRecords)
-                                GiroTab.HISTORICO -> HistoryScreen(viewModel, vehicle, records)
+                                GiroTab.RELATORIOS -> ReportsScreen(
+                                    viewModel = viewModel,
+                                    vehicle = vehicle,
+                                    parts = parts,
+                                    records = records,
+                                    maintenanceRecords = maintenanceRecords,
+                                    onNavigateToLaunch = { currentTab = GiroTab.LANCAR },
+                                    onNavigateToRefill = { drawerDestination = DrawerDestination.ABASTECIMENTOS }
+                                )
+                                GiroTab.HISTORICO -> HistoryScreen(
+                                    viewModel = viewModel,
+                                    vehicle = vehicle,
+                                    records = records,
+                                    onNavigateToLaunch = { currentTab = GiroTab.LANCAR }
+                                )
                             }
                         }
 

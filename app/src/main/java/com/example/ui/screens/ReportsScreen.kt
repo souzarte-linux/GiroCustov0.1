@@ -25,18 +25,27 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.FilterList
+import com.example.R
 import com.example.data.DailyRecord
 import com.example.data.Vehicle
 import com.example.data.VehiclePart
 import com.example.data.MaintenanceRecord
 import com.example.ui.Period
+import com.example.ui.SyncState
 import com.example.ui.components.CustomPeriodDialog
+import com.example.ui.components.EmptyStateCard
+import com.example.ui.components.ErrorNotificationCard
+import com.example.ui.components.OfflineNoticeBanner
+import com.example.ui.components.SyncLoadingBanner
 import com.example.ui.util.filterByPeriod
 import com.example.ui.GiroCustoViewModel
 import java.text.SimpleDateFormat
@@ -48,11 +57,15 @@ fun ReportsScreen(
     vehicle: Vehicle?,
     parts: List<VehiclePart>,
     records: List<DailyRecord>,
-    maintenanceRecords: List<MaintenanceRecord>
+    maintenanceRecords: List<MaintenanceRecord>,
+    onNavigateToLaunch: () -> Unit = {},
+    onNavigateToRefill: () -> Unit = {}
 ) {
     val selectedPeriod by viewModel.reportsSelectedPeriod.collectAsStateWithLifecycle()
     val customStart by viewModel.reportsCustomStartDate.collectAsStateWithLifecycle()
     val customEnd by viewModel.reportsCustomEndDate.collectAsStateWithLifecycle()
+    val syncState by viewModel.syncState.collectAsStateWithLifecycle()
+    val syncErrorMessage by viewModel.syncErrorMessage.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
     var showCustomPeriodDialog by remember { mutableStateOf(false) }
 
@@ -267,8 +280,44 @@ fun ReportsScreen(
             )
         }
 
-        // 1. GRAFICO DE EVOLUÇÃO DO LUCRO LÍQUIDO (Bézier personalizado com Gradiente Verde Esmeralda)
-        Card(
+        // Banners de Estado do Sistema (Sincronização, Modo Offline e Erro)
+        if (syncState == SyncState.SYNCING) {
+            SyncLoadingBanner()
+        }
+
+        if (syncState == SyncState.OFFLINE) {
+            OfflineNoticeBanner()
+        }
+
+        if (syncState == SyncState.ERROR && !syncErrorMessage.isNullOrBlank()) {
+            ErrorNotificationCard(
+                errorMessage = syncErrorMessage ?: "",
+                onRetry = { viewModel.syncNow() },
+                onDismiss = { viewModel.clearSyncError() }
+            )
+        }
+
+        if (records.isEmpty()) {
+            EmptyStateCard(
+                title = stringResource(R.string.empty_reports_title),
+                subtitle = stringResource(R.string.empty_reports_no_records_subtitle),
+                icon = Icons.AutoMirrored.Filled.TrendingUp,
+                primaryActionText = stringResource(R.string.empty_action_launch),
+                onPrimaryAction = onNavigateToLaunch,
+                secondaryActionText = stringResource(R.string.empty_action_refill),
+                onSecondaryAction = onNavigateToRefill
+            )
+        } else if (filteredRecords.isEmpty()) {
+            EmptyStateCard(
+                title = stringResource(R.string.empty_reports_title),
+                subtitle = stringResource(R.string.empty_reports_filter_subtitle),
+                icon = Icons.Default.FilterList,
+                primaryActionText = stringResource(R.string.empty_action_launch),
+                onPrimaryAction = onNavigateToLaunch
+            )
+        } else {
+            // 1. GRAFICO DE EVOLUÇÃO DO LUCRO LÍQUIDO (Bézier personalizado com Gradiente Verde Esmeralda)
+            Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
             shape = RoundedCornerShape(16.dp),
@@ -721,6 +770,7 @@ fun ReportsScreen(
                     trackColor = Color(0xFF2D2D34)
                 )
             }
+        }
         }
     }
 }

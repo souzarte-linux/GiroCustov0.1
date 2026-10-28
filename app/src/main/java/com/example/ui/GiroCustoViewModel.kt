@@ -1081,6 +1081,8 @@ class GiroCustoViewModel @JvmOverloads constructor(
         }
     }
 
+    fun syncNow(onComplete: ((Boolean, String?) -> Unit)? = null) = triggerSync(onComplete)
+
     private suspend fun executeAccountSyncOrTransition(onComplete: ((Boolean, String?) -> Unit)? = null) {
         syncMutex.withLock {
             if (!supabaseClient.isAuthenticated) {
@@ -1190,6 +1192,13 @@ class GiroCustoViewModel @JvmOverloads constructor(
                 _syncErrorMessage.value = msg
                 onComplete?.invoke(false, msg)
             }
+        }
+    }
+
+    fun clearSyncError() {
+        _syncErrorMessage.value = null
+        if (_syncState.value == SyncState.ERROR) {
+            _syncState.value = SyncState.IDLE
         }
     }
 

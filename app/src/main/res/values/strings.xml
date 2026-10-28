@@ -116,4 +116,29 @@
     <string name="cd_edit_part">Editar peça</string>
     <string name="cd_reset_part_wear">Zerar desgaste da peça</string>
     <string name="cd_edit_refill">Editar abastecimento</string>
+
+    <!-- Estados de Carregando, Vazio, Erro e Modo Offline (T-12 [UX-02]) -->
+    <string name="offline_banner_title">Modo Offline</string>
+    <string name="offline_banner_desc">O GiroCusto continua funcionando normalmente sem internet. Seus lançamentos estão seguros no aparelho e serão sincronizados assim que a conexão voltar.</string>
+    <string name="error_sync_title">Não foi possível sincronizar</string>
+    <string name="error_sync_generic_desc">Ocorreu uma falha na conexão. Seus dados locais continuam seguros.</string>
+    <string name="error_retry_btn">Tentar novamente</string>
+    <string name="error_dismiss_btn">Dispensar</string>
+    <string name="empty_dashboard_no_records_title">Nenhum turno lançado ainda</string>
+    <string name="empty_dashboard_no_records_subtitle">Comece registrando o seu primeiro turno de trabalho ou cadastre um abastecimento para acompanhar seus lucros e custos reais.</string>
+    <string name="empty_dashboard_filter_title">Nenhum turno neste período</string>
+    <string name="empty_dashboard_filter_subtitle">Não encontramos lançamentos para o período selecionado. Tente alterar o período acima ou registre um novo turno.</string>
+    <string name="empty_action_launch">Lançar Turno</string>
+    <string name="empty_action_refill">Novo Abastecimento</string>
+    <string name="empty_reports_title">Sem dados para o relatório</string>
+    <string name="empty_reports_no_records_subtitle">Lance seus primeiros turnos ou abastecimentos para visualizar gráficos de lucro líquido, distribuição de custos e projeções de metas.</string>
+    <string name="empty_reports_filter_subtitle">Nenhum registro encontrado para o período selecionado. Ajuste o filtro de período acima ou registre um novo turno.</string>
+    <string name="empty_history_title">Histórico Vazio</string>
+    <string name="empty_history_no_records_subtitle">Seus turnos finalizados aparecerão aqui organizados por dia, semana e mês.</string>
+    <string name="empty_history_filter_title">Nenhum lançamento encontrado</string>
+    <string name="empty_history_filter_subtitle">Nenhum turno corresponde aos filtros de data ou plataforma selecionados.</string>
+    <string name="sync_loading_indicator_title">Sincronizando com a nuvem…</string>
+    <string name="cd_offline_icon">Ícone de modo offline</string>
+    <string name="cd_error_icon">Ícone de alerta de erro</string>
+    <string name="cd_empty_state_icon">Ícone ilustrativo de lista vazia</string>
 </resources>

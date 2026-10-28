@@ -39,7 +39,12 @@ import com.example.R
 import com.example.data.DailyRecord
 import com.example.ui.GiroCustoViewModel
 import com.example.ui.Period
+import com.example.ui.SyncState
 import com.example.ui.components.CustomPeriodDialog
+import com.example.ui.components.EmptyStateCard
+import com.example.ui.components.ErrorNotificationCard
+import com.example.ui.components.OfflineNoticeBanner
+import com.example.ui.components.SyncLoadingBanner
 import com.example.ui.util.filterByPeriod
 import java.text.SimpleDateFormat
 import java.util.*
@@ -58,10 +63,13 @@ enum class HistorySortOption(val label: String) {
 fun HistoryScreen(
     viewModel: GiroCustoViewModel,
     vehicle: com.example.data.Vehicle?,
-    records: List<DailyRecord>
+    records: List<DailyRecord>,
+    onNavigateToLaunch: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
+    val syncState by viewModel.syncState.collectAsStateWithLifecycle()
+    val syncErrorMessage by viewModel.syncErrorMessage.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
     var recordToEdit by remember { mutableStateOf<DailyRecord?>(null) }
@@ -142,6 +150,23 @@ fun HistoryScreen(
                     modifier = Modifier.size(20.dp)
                 )
             }
+        }
+
+        // Banners de Estado do Sistema (Sincronização, Modo Offline e Erro)
+        if (syncState == SyncState.SYNCING) {
+            SyncLoadingBanner()
+        }
+
+        if (syncState == SyncState.OFFLINE) {
+            OfflineNoticeBanner()
+        }
+
+        if (syncState == SyncState.ERROR && !syncErrorMessage.isNullOrBlank()) {
+            ErrorNotificationCard(
+                errorMessage = syncErrorMessage ?: "",
+                onRetry = { viewModel.syncNow() },
+                onDismiss = { viewModel.clearSyncError() }
+            )
         }
 
         // Dropdowns de Filtros
@@ -377,11 +402,23 @@ fun HistoryScreen(
                     .weight(1f),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = if (records.isEmpty()) "Nenhum turno lançado ainda." else "Nenhum lançamento corresponde aos filtros.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 14.sp
-                )
+                if (records.isEmpty()) {
+                    EmptyStateCard(
+                        title = stringResource(R.string.empty_history_title),
+                        subtitle = stringResource(R.string.empty_history_no_records_subtitle),
+                        icon = Icons.Default.History,
+                        primaryActionText = stringResource(R.string.empty_action_launch),
+                        onPrimaryAction = onNavigateToLaunch
+                    )
+                } else {
+                    EmptyStateCard(
+                        title = stringResource(R.string.empty_history_filter_title),
+                        subtitle = stringResource(R.string.empty_history_filter_subtitle),
+                        icon = Icons.Default.FilterList,
+                        primaryActionText = stringResource(R.string.empty_action_launch),
+                        onPrimaryAction = onNavigateToLaunch
+                    )
+                }
             }
         } else {
             LazyColumn(
