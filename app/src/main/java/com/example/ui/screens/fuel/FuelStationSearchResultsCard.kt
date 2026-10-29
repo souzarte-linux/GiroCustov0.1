@@ -5,14 +5,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -33,6 +34,7 @@ fun FuelStationSearchResultsCard(
     onStationSelected: (GasStationResult, String) -> Unit,
     onClose: () -> Unit
 ) {
+    val context = LocalContext.current
     var showMapView by remember { mutableStateOf(false) }
 
     AnimatedVisibility(
@@ -57,7 +59,7 @@ fun FuelStationSearchResultsCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Postos Próximos (GPS)",
+                        text = stringResource(R.string.fuel_gps_nearby_stations_title),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -82,7 +84,7 @@ fun FuelStationSearchResultsCard(
                         modifier = Modifier.padding(vertical = 8.dp)
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                        Text("Buscando postos próximos...", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.fuel_gps_searching_stations), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
 
@@ -111,9 +113,9 @@ fun FuelStationSearchResultsCard(
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(vertical = 4.dp)
                         ) {
-                            Icon(Icons.Filled.List, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.AutoMirrored.Filled.List, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Lista", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.fuel_gps_view_list), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
 
                         ElevatedButton(
@@ -128,7 +130,7 @@ fun FuelStationSearchResultsCard(
                         ) {
                             Icon(Icons.Filled.Map, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Mapa", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.fuel_gps_view_map), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -140,7 +142,7 @@ fun FuelStationSearchResultsCard(
                             selectedStation = selectedStation,
                             onStationSelected = { station ->
                                 val displayName = if (!station.brand.isNullOrBlank()) {
-                                    "${station.name} (${station.brand})"
+                                    context.getString(R.string.fuel_station_with_brand_format, station.name, station.brand)
                                 } else {
                                     station.name
                                 }
@@ -154,12 +156,12 @@ fun FuelStationSearchResultsCard(
                         ) {
                             nearbyStations.take(5).forEach { station ->
                                 val distanceText = if (station.distanceMeters >= 1000) {
-                                    String.format(Locale.getDefault(), "%.1f km", station.distanceMeters / 1000.0)
+                                    stringResource(R.string.fuel_format_distance_km, station.distanceMeters / 1000.0)
                                 } else {
-                                    "${station.distanceMeters.toInt()} m"
+                                    stringResource(R.string.fuel_format_distance_meters, station.distanceMeters.toInt())
                                 }
                                 val displayName = if (!station.brand.isNullOrBlank()) {
-                                    "${station.name} (${station.brand})"
+                                    stringResource(R.string.fuel_station_with_brand_format, station.name, station.brand)
                                 } else {
                                     station.name
                                 }
@@ -200,7 +202,7 @@ fun FuelStationSearchResultsCard(
                                                 )
                                             }
                                             Text(
-                                                text = station.address ?: "Endereço não informado",
+                                                text = station.address ?: stringResource(R.string.fuel_station_no_address),
                                                 fontSize = 11.sp,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                             )

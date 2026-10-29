@@ -51,7 +51,7 @@ fun RefillsListSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Abastecimentos",
+                    text = stringResource(R.string.fuel_screen_title),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -68,7 +68,7 @@ fun RefillsListSection(
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Lançar", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.fuel_btn_launch), fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -85,9 +85,9 @@ fun RefillsListSection(
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Filled.LocalGasStation, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Consumo Médio", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.fuel_summary_avg_consumption), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
-                            text = if (realConsumption != null) String.format(Locale.getDefault(), "%.2f km/L", realConsumption) else "--",
+                            text = if (realConsumption != null) stringResource(R.string.fuel_format_km_l_two_decimals, realConsumption) else stringResource(R.string.fuel_summary_no_data),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -96,9 +96,9 @@ fun RefillsListSection(
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Filled.AttachMoney, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Preço Médio", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.fuel_summary_avg_price), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
-                            text = String.format(Locale.getDefault(), "R$ %.2f", avgFuelPrice),
+                            text = stringResource(R.string.fuel_format_currency, avgFuelPrice),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -107,9 +107,9 @@ fun RefillsListSection(
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Filled.WaterDrop, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Qtd. Média", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.fuel_summary_avg_liters), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
-                            text = String.format(Locale.getDefault(), "%.1f L", avgLiters),
+                            text = stringResource(R.string.fuel_format_liters_one_decimal, avgLiters),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -129,7 +129,7 @@ fun RefillsListSection(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Nenhum abastecimento cadastrado para este veículo.",
+                        text = stringResource(R.string.fuel_empty_list_message),
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
@@ -162,13 +162,13 @@ fun RefillsListSection(
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(refill.gasStation, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                        Text("${refill.fuelType} • ${refill.dateString}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(stringResource(R.string.fuel_item_subtitle, refill.fuelType, refill.dateString), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                     Spacer(modifier = Modifier.width(8.dp))
                                     if (refill.isFullTank) {
                                         SuggestionChip(
                                             onClick = {},
-                                            label = { Text("Tanque Cheio", fontSize = 11.sp) },
+                                            label = { Text(stringResource(R.string.fuel_chip_full_tank), fontSize = 11.sp) },
                                             colors = SuggestionChipDefaults.suggestionChipColors(
                                                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                                                 labelColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -177,7 +177,7 @@ fun RefillsListSection(
                                     } else {
                                         SuggestionChip(
                                             onClick = {},
-                                            label = { Text("Parcial", fontSize = 11.sp) }
+                                            label = { Text(stringResource(R.string.fuel_chip_partial_tank), fontSize = 11.sp) }
                                         )
                                     }
                                 }
@@ -186,7 +186,7 @@ fun RefillsListSection(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text(String.format(Locale.getDefault(), "%.2f L", refill.liters), fontSize = 14.sp)
+                                    Text(stringResource(R.string.fuel_format_liters_two_decimals, refill.liters), fontSize = 14.sp)
                                     Text(CurrencyUtils.formatCents(refill.totalPaid), fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -194,9 +194,13 @@ fun RefillsListSection(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("Odômetro: ${refill.odometer} km", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(stringResource(R.string.fuel_item_odometer, refill.odometer), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text(
-                                        text = "Pago no ${refill.paymentMethod}${if (refill.isInstallment) " (${refill.installmentsCount}x)" else ""}",
+                                        text = if (refill.isInstallment) {
+                                            stringResource(R.string.fuel_item_payment_with_installments, refill.paymentMethod, refill.installmentsCount)
+                                        } else {
+                                            stringResource(R.string.fuel_item_payment, refill.paymentMethod)
+                                        },
                                         fontSize = 12.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )

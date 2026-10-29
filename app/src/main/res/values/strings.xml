@@ -324,4 +324,83 @@
     <string name="history_edit_start_time_label">Hora Início</string>
     <string name="history_edit_end_time_label">Hora Final</string>
     <string name="history_edit_pause_duration_label">Total Tempo Pause</string>
+
+    <!-- Abastecimento e Subcomponentes (T-25C [ACC-02C]) -->
+    <string name="cd_fuel_alert_icon">Alerta</string>
+    <string name="cd_fuel_tank_alert">Alerta Tanque</string>
+    <string name="fuel_no_active_vehicle_title">Selecione ou Cadastre um Veículo Ativo</string>
+    <string name="fuel_no_active_vehicle_desc">Você precisa de um veículo ativo para cadastrar abastecimentos.</string>
+    <string name="refill_toast_updated">Abastecimento atualizado com sucesso!</string>
+    <string name="refill_toast_registered">Abastecimento registrado!</string>
+    <string name="refill_toast_deleted">Abastecimento excluído.</string>
+
+    <string name="fuel_comparison_status_excellent">Excelente Eficiência</string>
+    <string name="fuel_comparison_status_moderate">Consumo Moderado</string>
+    <string name="fuel_comparison_status_high">Consumo Elevado</string>
+    <string name="fuel_comparison_status_collecting">Coletando Dados</string>
+    <string name="fuel_comparison_title">Consumo: Teórico vs Real</string>
+    <string name="fuel_comparison_registered_label">Cadastrado (Teórico)</string>
+    <string name="fuel_comparison_real_label">Seu Consumo Real</string>
+    <string name="fuel_comparison_no_data_km_l">-- km/L</string>
+    <string name="fuel_comparison_diff_more_efficient">+%1$s%% mais eficiente</string>
+    <string name="fuel_comparison_diff_vs_registered">-%1$s%% vs cadastrado</string>
+
+    <string name="refill_title_edit">Editar Abastecimento</string>
+    <string name="refill_title_new">Lançar Abastecimento</string>
+    <string name="refill_form_gas_station_label">Posto de Combustível</string>
+    <string name="refill_station_register_new_question">Cadastrar Novo Posto?</string>
+    <string name="refill_toast_station_renamed">Posto renomeado com sucesso!</string>
+    <string name="refill_form_fuel_type_label">Tipo de Combustível</string>
+    <string name="refill_form_price_per_liter_label">Preço / Litro</string>
+    <string name="refill_form_liters_label">Quantidade (L)</string>
+    <string name="fuel_default_vehicle_name">veículo</string>
+    <string name="refill_form_discount_label">Desconto (R$)</string>
+    <string name="refill_form_total_paid_label">Total Pago (R$)</string>
+    <string name="refill_form_odometer_label">Quilometragem (Odômetro)</string>
+    <string name="refill_form_full_tank_title">Tanque Cheio?</string>
+    <string name="refill_form_full_tank_desc_on">Usado para cálculo de consumo real</string>
+    <string name="refill_form_full_tank_desc_off">Soma litros mas não inicia/fecha trecho</string>
+    <string name="refill_form_payment_method_title">Forma de Pagamento</string>
+    <string name="refill_form_installment_title">Pagamento Parcelado?</string>
+    <string name="refill_form_installment_desc">Marque se dividiu o valor na fatura</string>
+    <string name="refill_form_installments_count_label">Quantidade de Parcelas</string>
+
+    <string name="fuel_screen_title">Abastecimentos</string>
+    <string name="fuel_btn_launch">Lançar</string>
+    <string name="fuel_summary_avg_consumption">Consumo Médio</string>
+    <string name="fuel_summary_no_data">--</string>
+    <string name="fuel_summary_avg_price">Preço Médio</string>
+    <string name="fuel_summary_avg_liters">Qtd. Média</string>
+    <string name="fuel_format_km_l_one_decimal">%1$.1f km/L</string>
+    <string name="fuel_format_km_l_two_decimals">%1$.2f km/L</string>
+    <string name="fuel_format_currency">R$ %1$.2f</string>
+    <string name="fuel_format_liters_one_decimal">%1$.1f L</string>
+    <string name="fuel_format_liters_two_decimals">%1$.2f L</string>
+    <string name="fuel_empty_list_message">Nenhum abastecimento cadastrado para este veículo.</string>
+    <string name="fuel_item_subtitle">%1$s • %2$s</string>
+    <string name="fuel_chip_full_tank">Tanque Cheio</string>
+    <string name="fuel_chip_partial_tank">Parcial</string>
+    <string name="fuel_item_odometer">Odômetro: %1$s km</string>
+    <string name="fuel_item_payment_with_installments">Pago no %1$s (%2$dx)</string>
+    <string name="fuel_item_payment">Pago no %1$s</string>
+
+    <string name="fuel_dialog_new_station_title">Novo Posto de Combustível</string>
+    <string name="fuel_dialog_station_name_label">Nome do Posto</string>
+    <string name="fuel_dialog_station_brand_label">Bandeira</string>
+    <string name="fuel_dialog_station_location_label">Localização / Cidade (Opcional)</string>
+    <string name="fuel_dialog_edit_station_title">Editar Posto de Combustível</string>
+    <string name="fuel_dialog_edit_station_warning">Renomear o posto mudará o nome em todos os abastecimentos passados.</string>
+    <string name="fuel_dialog_tank_exceeded_title">Capacidade do Tanque Excedida</string>
+    <string name="fuel_dialog_tank_exceeded_message">A quantidade informada (%1$.1f L) ultrapassa a capacidade cadastrada para o tanque deste veículo (%2$.1f L).\n\nDeseja confirmar e registrar este abastecimento mesmo assim?</string>
+    <string name="fuel_dialog_tank_exceeded_confirm">Confirmar e Salvar</string>
+    <string name="fuel_dialog_tank_exceeded_dismiss">Revisar</string>
+
+    <string name="fuel_gps_nearby_stations_title">Postos Próximos (GPS)</string>
+    <string name="fuel_gps_searching_stations">Buscando postos próximos…</string>
+    <string name="fuel_gps_view_list">Lista</string>
+    <string name="fuel_gps_view_map">Mapa</string>
+    <string name="fuel_format_distance_km">%1$.1f km</string>
+    <string name="fuel_format_distance_meters">%1$d m</string>
+    <string name="fuel_station_with_brand_format">%1$s (%2$s)</string>
+    <string name="fuel_station_no_address">Endereço não informado</string>
 </resources>

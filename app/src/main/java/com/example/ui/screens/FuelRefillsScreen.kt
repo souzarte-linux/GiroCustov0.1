@@ -28,10 +28,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.R
 import com.example.data.FuelRefill
 import com.example.ui.GiroCustoViewModel
 import com.example.ui.screens.fuel.RefillFormSection
@@ -69,18 +71,18 @@ fun FuelRefillsScreen(viewModel: GiroCustoViewModel) {
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Warning,
-                        contentDescription = "Alerta",
+                        contentDescription = stringResource(R.string.cd_fuel_alert_icon),
                         tint = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.size(48.dp)
                     )
                     Text(
-                        text = "Selecione ou Cadastre um Veículo Ativo",
+                        text = stringResource(R.string.fuel_no_active_vehicle_title),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
                     Text(
-                        text = "Você precisa de um veículo ativo para cadastrar abastecimentos.",
+                        text = stringResource(R.string.fuel_no_active_vehicle_desc),
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.padding(horizontal = 8.dp)
@@ -152,14 +154,14 @@ fun FuelRefillsScreen(viewModel: GiroCustoViewModel) {
                     viewModel.saveFuelRefill(updatedRefill)
                     Toast.makeText(
                         context,
-                        if (isEdit) "Abastecimento atualizado com sucesso!" else "Abastecimento registrado!",
+                        context.getString(if (isEdit) R.string.refill_toast_updated else R.string.refill_toast_registered),
                         Toast.LENGTH_SHORT
                     ).show()
                     editingRefillId = null
                 },
                 onDelete = {
                     viewModel.deleteFuelRefill(refillToEdit)
-                    Toast.makeText(context, "Abastecimento excluído.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.refill_toast_deleted), Toast.LENGTH_SHORT).show()
                     editingRefillId = null
                 },
                 onRenameGasStation = { oldName, newName ->

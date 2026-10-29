@@ -148,7 +148,7 @@ fun RefillFormSection(
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = if (isEdit) "Editar Abastecimento" else "Lançar Abastecimento",
+                text = stringResource(if (isEdit) R.string.refill_title_edit else R.string.refill_title_new),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -168,7 +168,7 @@ fun RefillFormSection(
                         gasStation = it 
                         dropdownExpanded = true
                     },
-                    label = { Text("Posto de Combustível") },
+                    label = { Text(stringResource(R.string.refill_form_gas_station_label)) },
                     modifier = Modifier.fillMaxWidth().testTag("refill_gas_station"),
                     singleLine = true,
                     leadingIcon = { Icon(Icons.Filled.Storefront, contentDescription = null) },
@@ -234,7 +234,7 @@ fun RefillFormSection(
                         DropdownMenuItem(
                             text = { 
                                 Text(
-                                    text = "Cadastrar Novo Posto?", 
+                                    text = stringResource(R.string.refill_station_register_new_question), 
                                     color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Bold
                                 ) 
@@ -347,7 +347,7 @@ fun RefillFormSection(
                         gasStation = trimmedNew
                     }
                     newlyAddedStations = newlyAddedStations.map { if (it == stationToEdit) trimmedNew else it }
-                    Toast.makeText(context, "Posto renomeado com sucesso!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.refill_toast_station_renamed), Toast.LENGTH_SHORT).show()
                     showEditStationDialog = false
                 }
             )
@@ -363,7 +363,7 @@ fun RefillFormSection(
                     value = selectedFuelType,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Tipo de Combustível") },
+                    label = { Text(stringResource(R.string.refill_form_fuel_type_label)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isDropdownExpanded) },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -395,7 +395,7 @@ fun RefillFormSection(
             TextField(
                 value = pricePerLiterStr,
                 onValueChange = { pricePerLiterStr = it },
-                label = { Text("Preço / Litro") },
+                label = { Text(stringResource(R.string.refill_form_price_per_liter_label)) },
                 modifier = Modifier
                     .weight(1f)
                     .testTag("refill_price_per_liter")
@@ -410,7 +410,7 @@ fun RefillFormSection(
             TextField(
                 value = litersStr,
                 onValueChange = { litersStr = it },
-                label = { Text("Quantidade (L)") },
+                label = { Text(stringResource(R.string.refill_form_liters_label)) },
                 modifier = Modifier
                     .weight(1f)
                     .testTag("refill_liters")
@@ -436,12 +436,17 @@ fun RefillFormSection(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Warning,
-                        contentDescription = "Alerta Tanque",
+                        contentDescription = stringResource(R.string.cd_fuel_tank_alert),
                         tint = Color(0xFFD97706),
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = "Atenção: A quantidade informada (${String.format(Locale.getDefault(), "%.1f", currentLiters)} L) ultrapassa a capacidade máxima do tanque (${String.format(Locale.getDefault(), "%.1f", tankCapacity)} L) cadastrada para o ${activeVehicle?.model ?: "veículo"}.",
+                        text = stringResource(
+                            R.string.err_exceeds_tank_capacity,
+                            currentLiters,
+                            tankCapacity,
+                            activeVehicle?.model ?: stringResource(R.string.fuel_default_vehicle_name)
+                        ),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color(0xFF92400E)
@@ -455,7 +460,7 @@ fun RefillFormSection(
             TextField(
                 value = discountStr,
                 onValueChange = { discountStr = it },
-                label = { Text("Desconto (R$)") },
+                label = { Text(stringResource(R.string.refill_form_discount_label)) },
                 modifier = Modifier
                     .weight(1f)
                     .testTag("refill_discount")
@@ -470,7 +475,7 @@ fun RefillFormSection(
             TextField(
                 value = totalPaidStr,
                 onValueChange = { totalPaidStr = it },
-                label = { Text("Total Pago (R$)") },
+                label = { Text(stringResource(R.string.refill_form_total_paid_label)) },
                 modifier = Modifier
                     .weight(1f)
                     .testTag("refill_total_paid")
@@ -486,7 +491,7 @@ fun RefillFormSection(
         TextField(
             value = odometerStr,
             onValueChange = { odometerStr = it },
-            label = { Text("Quilometragem (Odômetro)") },
+            label = { Text(stringResource(R.string.refill_form_odometer_label)) },
             modifier = Modifier.fillMaxWidth().testTag("refill_odometer"),
             singleLine = true,
             leadingIcon = { Icon(Icons.Filled.Speed, contentDescription = null) },
@@ -505,9 +510,9 @@ fun RefillFormSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Tanque Cheio?", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(stringResource(R.string.refill_form_full_tank_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text(
-                    text = if (isFullTank) "Usado para cálculo de consumo real" else "Soma litros mas não inicia/fecha trecho",
+                    text = stringResource(if (isFullTank) R.string.refill_form_full_tank_desc_on else R.string.refill_form_full_tank_desc_off),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -526,7 +531,7 @@ fun RefillFormSection(
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), shape = RoundedCornerShape(12.dp))
                 .padding(12.dp)
         ) {
-            Text("Forma de Pagamento", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(stringResource(R.string.refill_form_payment_method_title), fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -560,8 +565,8 @@ fun RefillFormSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Pagamento Parcelado?", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text("Marque se dividiu o valor na fatura", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.refill_form_installment_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(stringResource(R.string.refill_form_installment_desc), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Switch(
                     checked = isInstallment,
@@ -574,7 +579,7 @@ fun RefillFormSection(
                 TextField(
                     value = installmentsCountStr,
                     onValueChange = { installmentsCountStr = it },
-                    label = { Text("Quantidade de Parcelas") },
+                    label = { Text(stringResource(R.string.refill_form_installments_count_label)) },
                     modifier = Modifier.fillMaxWidth().testTag("refill_installments_count"),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
@@ -599,7 +604,7 @@ fun RefillFormSection(
                 ) {
                     Icon(Icons.Filled.Delete, contentDescription = null)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Excluir")
+                    Text(stringResource(R.string.btn_delete_confirm))
                 }
             }
 
@@ -655,7 +660,7 @@ fun RefillFormSection(
             ) {
                 Icon(Icons.Filled.Save, contentDescription = null)
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Salvar")
+                Text(stringResource(R.string.btn_save))
             }
         }
 

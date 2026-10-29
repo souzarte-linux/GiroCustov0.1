@@ -60,7 +60,7 @@ fun FuelAddStationDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Novo Posto de Combustível",
+                text = stringResource(R.string.fuel_dialog_new_station_title),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -74,14 +74,14 @@ fun FuelAddStationDialog(
                 TextField(
                     value = newStationName,
                     onValueChange = { newStationName = it },
-                    label = { Text("Nome do Posto") },
+                    label = { Text(stringResource(R.string.fuel_dialog_station_name_label)) },
                     modifier = Modifier.fillMaxWidth().testTag("new_station_name_input"),
                     singleLine = true,
                     shape = RoundedCornerShape(8.dp)
                 )
 
                 Column {
-                    Text("Bandeira", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.fuel_dialog_station_brand_label), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
                     Box(modifier = Modifier.fillMaxWidth()) {
                         Row(
@@ -124,7 +124,7 @@ fun FuelAddStationDialog(
                 TextField(
                     value = locationStr,
                     onValueChange = { locationStr = it },
-                    label = { Text("Localização / Cidade (Opcional)") },
+                    label = { Text(stringResource(R.string.fuel_dialog_station_location_label)) },
                     modifier = Modifier.fillMaxWidth().testTag("new_station_location_input"),
                     singleLine = true,
                     shape = RoundedCornerShape(8.dp)
@@ -145,7 +145,7 @@ fun FuelAddStationDialog(
                 },
                 modifier = Modifier.testTag("save_new_station_btn")
             ) {
-                Text("Salvar", color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.btn_save), color = MaterialTheme.colorScheme.primary)
             }
         },
         dismissButton = {
@@ -153,7 +153,7 @@ fun FuelAddStationDialog(
                 onClick = onDismiss,
                 modifier = Modifier.testTag("cancel_new_station_btn")
             ) {
-                Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.btn_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     )
@@ -171,7 +171,7 @@ fun FuelEditStationDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Editar Posto de Combustível",
+                text = stringResource(R.string.fuel_dialog_edit_station_title),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -183,14 +183,14 @@ fun FuelEditStationDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Renomear o posto mudará o nome em todos os abastecimentos passados.",
+                    text = stringResource(R.string.fuel_dialog_edit_station_warning),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 TextField(
                     value = editedStationName,
                     onValueChange = { editedStationName = it },
-                    label = { Text("Nome do Posto") },
+                    label = { Text(stringResource(R.string.fuel_dialog_station_name_label)) },
                     modifier = Modifier.fillMaxWidth().testTag("edit_station_name_input"),
                     singleLine = true,
                     shape = RoundedCornerShape(8.dp)
@@ -208,7 +208,7 @@ fun FuelEditStationDialog(
                 },
                 modifier = Modifier.testTag("save_edit_station_btn")
             ) {
-                Text("Salvar", color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.btn_save), color = MaterialTheme.colorScheme.primary)
             }
         },
         dismissButton = {
@@ -216,7 +216,7 @@ fun FuelEditStationDialog(
                 onClick = onDismiss,
                 modifier = Modifier.testTag("cancel_edit_station_btn")
             ) {
-                Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.btn_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     )
@@ -235,11 +235,11 @@ fun FuelTankCapacityConfirmDialog(
             Icon(Icons.Filled.Warning, contentDescription = null, tint = Color(0xFFF59E0B))
         },
         title = {
-            Text("Capacidade do Tanque Excedida", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.fuel_dialog_tank_exceeded_title), fontWeight = FontWeight.Bold)
         },
         text = {
             Text(
-                "A quantidade informada (${String.format(Locale.getDefault(), "%.1f", liters)} L) ultrapassa a capacidade cadastrada para o tanque deste veículo (${String.format(Locale.getDefault(), "%.1f", tankCapacity)} L).\n\nDeseja confirmar e registrar este abastecimento mesmo assim?"
+                stringResource(R.string.fuel_dialog_tank_exceeded_message, liters, tankCapacity)
             )
         },
         confirmButton = {
@@ -248,7 +248,7 @@ fun FuelTankCapacityConfirmDialog(
                 modifier = Modifier.testTag("confirm_exceeded_tank_btn"),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text("Confirmar e Salvar")
+                Text(stringResource(R.string.fuel_dialog_tank_exceeded_confirm))
             }
         },
         dismissButton = {
@@ -256,7 +256,7 @@ fun FuelTankCapacityConfirmDialog(
                 onClick = onDismiss,
                 modifier = Modifier.testTag("dismiss_exceeded_tank_btn")
             ) {
-                Text("Revisar")
+                Text(stringResource(R.string.fuel_dialog_tank_exceeded_dismiss))
             }
         },
         modifier = Modifier.testTag("tank_capacity_confirm_dialog")

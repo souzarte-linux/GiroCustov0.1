@@ -12,9 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.ui.ConsumptionAlertLevel
 import com.example.ui.FuelConsumptionComparisonState
 import java.util.Locale
@@ -30,7 +32,7 @@ fun FuelComparisonCard(
             containerColor = Color(0xFF064E3B).copy(alpha = 0.15f),
             badgeColor = Color(0xFF064E3B),
             badgeTextColor = Color(0xFF34D399),
-            label = "Excelente Eficiência",
+            label = stringResource(R.string.fuel_comparison_status_excellent),
             icon = Icons.Filled.CheckCircle
         )
         ConsumptionAlertLevel.AMBER -> StatusStyle(
@@ -38,7 +40,7 @@ fun FuelComparisonCard(
             containerColor = Color(0xFF78350F).copy(alpha = 0.15f),
             badgeColor = Color(0xFF78350F),
             badgeTextColor = Color(0xFFFBBF24),
-            label = "Consumo Moderado",
+            label = stringResource(R.string.fuel_comparison_status_moderate),
             icon = Icons.Filled.Warning
         )
         ConsumptionAlertLevel.RED -> StatusStyle(
@@ -46,7 +48,7 @@ fun FuelComparisonCard(
             containerColor = Color(0xFF7F1D1D).copy(alpha = 0.15f),
             badgeColor = Color(0xFF7F1D1D),
             badgeTextColor = Color(0xFFFCA5A5),
-            label = "Consumo Elevado",
+            label = stringResource(R.string.fuel_comparison_status_high),
             icon = Icons.Filled.Error
         )
         ConsumptionAlertLevel.GRAY -> StatusStyle(
@@ -54,7 +56,7 @@ fun FuelComparisonCard(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
             badgeColor = MaterialTheme.colorScheme.surfaceVariant,
             badgeTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            label = "Coletando Dados",
+            label = stringResource(R.string.fuel_comparison_status_collecting),
             icon = Icons.Filled.Info
         )
     }
@@ -90,7 +92,7 @@ fun FuelComparisonCard(
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = "Consumo: Teórico vs Real",
+                        text = stringResource(R.string.fuel_comparison_title),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -141,14 +143,14 @@ fun FuelComparisonCard(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Cadastrado (Teórico)",
+                            text = stringResource(R.string.fuel_comparison_registered_label),
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "${String.format(Locale.getDefault(), "%.1f", fuelComparison.theoreticalConsumption)} km/L",
+                            text = stringResource(R.string.fuel_format_km_l_one_decimal, fuelComparison.theoreticalConsumption),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -169,16 +171,16 @@ fun FuelComparisonCard(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Seu Consumo Real",
+                            text = stringResource(R.string.fuel_comparison_real_label),
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         val realText = if (fuelComparison.hasSufficientData && fuelComparison.realConsumption != null) {
-                            "${String.format(Locale.getDefault(), "%.1f", fuelComparison.realConsumption)} km/L"
+                            stringResource(R.string.fuel_format_km_l_one_decimal, fuelComparison.realConsumption)
                         } else {
-                            "-- km/L"
+                            stringResource(R.string.fuel_comparison_no_data_km_l)
                         }
                         Text(
                             text = realText,
@@ -196,9 +198,9 @@ fun FuelComparisonCard(
                 val diff = fuelComparison.differencePercentage
                 val diffFormatted = String.format(Locale.getDefault(), "%.1f", Math.abs(diff))
                 val diffText = if (diff >= 0) {
-                    "+$diffFormatted% mais eficiente"
+                    stringResource(R.string.fuel_comparison_diff_more_efficient, diffFormatted)
                 } else {
-                    "-$diffFormatted% vs cadastrado"
+                    stringResource(R.string.fuel_comparison_diff_vs_registered, diffFormatted)
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
