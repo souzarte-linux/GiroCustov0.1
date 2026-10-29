@@ -22,6 +22,9 @@ import java.util.*
 
 @Composable
 fun ExpenseLegendItem(label: String, color: Color, pct: Float, value: Double) {
+    val safePct = if (pct.isFinite()) pct.coerceIn(0f, 1f) else 0f
+    val safeValue = if (value.isFinite()) value.coerceAtLeast(0.0) else 0.0
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -48,7 +51,7 @@ fun ExpenseLegendItem(label: String, color: Color, pct: Float, value: Double) {
         }
         Spacer(modifier = Modifier.width(12.dp))
         Text(
-            text = "${String.format(Locale.GERMAN, "R$ %.2f", value)} (${(pct * 100).toInt()}%)",
+            text = "${String.format(Locale.GERMAN, "R$ %.2f", safeValue)} (${(safePct * 100).toInt()}%)",
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.Monospace,
@@ -83,19 +86,26 @@ fun ReportsExpenseDistributionCard(metrics: ReportMetricsState) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (metrics.sumAllExpenses > 0) {
-                // Barra Segmentada
+            val fuelWeight = if (metrics.pctFuel.isFinite() && metrics.pctFuel > 0f) metrics.pctFuel.coerceIn(0.001f, 1f) else 0f
+            val foodWeight = if (metrics.pctFood.isFinite() && metrics.pctFood > 0f) metrics.pctFood.coerceIn(0.001f, 1f) else 0f
+            val wearWeight = if (metrics.pctWear.isFinite() && metrics.pctWear > 0f) metrics.pctWear.coerceIn(0.001f, 1f) else 0f
+            val fixedWeight = if (metrics.pctFixed.isFinite() && metrics.pctFixed > 0f) metrics.pctFixed.coerceIn(0.001f, 1f) else 0f
+            val maintWeight = if (metrics.pctMaintenance.isFinite() && metrics.pctMaintenance > 0f) metrics.pctMaintenance.coerceIn(0.001f, 1f) else 0f
+            val hasValidSegment = (fuelWeight + foodWeight + wearWeight + fixedWeight + maintWeight) > 0f
+
+            if (metrics.sumAllExpenses > 0 && hasValidSegment) {
+                // Barra Segmentada Segura
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(20.dp)
                         .clip(RoundedCornerShape(6.dp))
                 ) {
-                    if (metrics.pctFuel > 0) Box(modifier = Modifier.fillMaxHeight().weight(metrics.pctFuel.coerceAtLeast(0.01f)).background(Color(0xFFFF9100)))
-                    if (metrics.pctFood > 0) Box(modifier = Modifier.fillMaxHeight().weight(metrics.pctFood.coerceAtLeast(0.01f)).background(Color(0xFF00B0FF)))
-                    if (metrics.pctWear > 0) Box(modifier = Modifier.fillMaxHeight().weight(metrics.pctWear.coerceAtLeast(0.01f)).background(Color(0xFFEF5350)))
-                    if (metrics.pctFixed > 0) Box(modifier = Modifier.fillMaxHeight().weight(metrics.pctFixed.coerceAtLeast(0.01f)).background(Color(0xFFAB47BC)))
-                    if (metrics.pctMaintenance > 0) Box(modifier = Modifier.fillMaxHeight().weight(metrics.pctMaintenance.coerceAtLeast(0.01f)).background(Color(0xFFFBBF24)))
+                    if (fuelWeight > 0f) Box(modifier = Modifier.fillMaxHeight().weight(fuelWeight).background(Color(0xFFFF9100)))
+                    if (foodWeight > 0f) Box(modifier = Modifier.fillMaxHeight().weight(foodWeight).background(Color(0xFF00B0FF)))
+                    if (wearWeight > 0f) Box(modifier = Modifier.fillMaxHeight().weight(wearWeight).background(Color(0xFFEF5350)))
+                    if (fixedWeight > 0f) Box(modifier = Modifier.fillMaxHeight().weight(fixedWeight).background(Color(0xFFAB47BC)))
+                    if (maintWeight > 0f) Box(modifier = Modifier.fillMaxHeight().weight(maintWeight).background(Color(0xFFFBBF24)))
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))

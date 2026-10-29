@@ -54,6 +54,10 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
             Spacer(modifier = Modifier.height(16.dp))
 
             // Métricas Principais de Lucro e Faturamento por Hora
+            val safeNetPerHour = if (metrics.netPerHour.isFinite()) metrics.netPerHour else 0.0
+            val safeGrossPerHour = if (metrics.grossPerHour.isFinite()) metrics.grossPerHour else 0.0
+            val safeAvgHours = if (metrics.avgHoursPerShift.isFinite()) metrics.avgHoursPerShift else 0.0
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -65,7 +69,7 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
                         color = Color(0xFF94A3B8)
                     )
                     Text(
-                        text = String.format(Locale.GERMAN, "R$ %.2f /h", metrics.netPerHour),
+                        text = String.format(Locale.GERMAN, "R$ %.2f /h", safeNetPerHour),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
@@ -80,7 +84,7 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
                         color = Color(0xFF94A3B8)
                     )
                     Text(
-                        text = String.format(Locale.GERMAN, "R$ %.2f /h", metrics.grossPerHour),
+                        text = String.format(Locale.GERMAN, "R$ %.2f /h", safeGrossPerHour),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
@@ -124,7 +128,7 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
                     Text("Média / Turno", fontSize = 11.sp, color = Color(0xFF94A3B8))
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = String.format(Locale.GERMAN, "%.1fh", metrics.avgHoursPerShift),
+                        text = String.format(Locale.GERMAN, "%.1fh", safeAvgHours),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color(0xFFE2E8F0)
@@ -152,6 +156,10 @@ fun ReportsHighlightsSection(metrics: ReportMetricsState) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 if (metrics.bestDay != null) {
+                    val bestNet = CurrencyUtils.centsToDouble(metrics.bestDay.netProfit)
+                    val safeBestNet = if (bestNet.isFinite()) bestNet else 0.0
+                    val bestDate = metrics.bestDay.dateString.ifBlank { "Turno" }
+
                     Card(
                         modifier = Modifier.weight(1f),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF022C22)), // Dark emerald container
@@ -164,14 +172,14 @@ fun ReportsHighlightsSection(metrics: ReportMetricsState) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text("Melhor Turno", fontSize = 11.sp, color = Color(0xFF34D399))
                             Text(
-                                text = String.format(Locale.GERMAN, "R$ %.2f", CurrencyUtils.centsToDouble(metrics.bestDay.netProfit)),
+                                text = String.format(Locale.GERMAN, "R$ %.2f", safeBestNet),
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = FontFamily.Monospace,
                                 color = Color.White
                             )
                             Text(
-                                text = "no dia ${metrics.bestDay.dateString}",
+                                text = "no dia $bestDate",
                                 fontSize = 10.sp,
                                 color = Color(0xFF94A3B8)
                             )
@@ -180,6 +188,10 @@ fun ReportsHighlightsSection(metrics: ReportMetricsState) {
                 }
 
                 if (metrics.worstDay != null) {
+                    val worstNet = CurrencyUtils.centsToDouble(metrics.worstDay.netProfit)
+                    val safeWorstNet = if (worstNet.isFinite()) worstNet else 0.0
+                    val worstDate = metrics.worstDay.dateString.ifBlank { "Turno" }
+
                     Card(
                         modifier = Modifier.weight(1f),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF2E1018)), // deep ruby/dark charcoal
@@ -192,14 +204,14 @@ fun ReportsHighlightsSection(metrics: ReportMetricsState) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text("Menor Turno", fontSize = 11.sp, color = Color(0xFFFDA4AF))
                             Text(
-                                text = String.format(Locale.GERMAN, "R$ %.2f", CurrencyUtils.centsToDouble(metrics.worstDay.netProfit)),
+                                text = String.format(Locale.GERMAN, "R$ %.2f", safeWorstNet),
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = FontFamily.Monospace,
                                 color = Color.White
                             )
                             Text(
-                                text = "no dia ${metrics.worstDay.dateString}",
+                                text = "no dia $worstDate",
                                 fontSize = 10.sp,
                                 color = Color(0xFF94A3B8)
                             )

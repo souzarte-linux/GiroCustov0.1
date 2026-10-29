@@ -64,19 +64,23 @@ fun ReportsScreen(
     val monthlyNGoal by viewModel.monthlyGoalNet.collectAsStateWithLifecycle()
     val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
 
-    val metrics = remember(records, maintenanceRecords, selectedPeriod, customStart, customEnd, monthlyNGoal, viewModelMetrics) {
-        if (records.isNotEmpty() && viewModelMetrics.recordsCount == 0) {
-            // Suporte para quando uma lista específica é passada diretamente (ex.: testes ou previews isolados)
-            viewModel.calculateReportMetrics(
-                records = records,
-                maintenanceRecords = maintenanceRecords,
-                selectedPeriod = selectedPeriod,
-                customStart = customStart,
-                customEnd = customEnd,
-                plannedWorkDays = vehicle?.plannedWorkDays ?: 22,
-                monthlyGoalNet = monthlyNGoal
-            )
-        } else {
+    val metrics = remember(records, maintenanceRecords, selectedPeriod, customStart, customEnd, monthlyNGoal, viewModelMetrics, vehicle?.plannedWorkDays) {
+        try {
+            if (records.isNotEmpty() && viewModelMetrics.recordsCount == 0) {
+                // Suporte para quando uma lista específica é passada diretamente (ex.: testes ou previews isolados)
+                viewModel.calculateReportMetrics(
+                    records = records,
+                    maintenanceRecords = maintenanceRecords,
+                    selectedPeriod = selectedPeriod,
+                    customStart = customStart,
+                    customEnd = customEnd,
+                    plannedWorkDays = vehicle?.plannedWorkDays ?: 22,
+                    monthlyGoalNet = monthlyNGoal
+                )
+            } else {
+                viewModelMetrics
+            }
+        } catch (_: Exception) {
             viewModelMetrics
         }
     }
@@ -296,11 +300,13 @@ fun ReportsScreen(
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = if (metrics.chronologicalRecords.size <= 1) Arrangement.Center else Arrangement.SpaceBetween
                         ) {
-                            val displayFormat = SimpleDateFormat("dd/MM", Locale.getDefault())
+                            val displayFormat = remember { SimpleDateFormat("dd/MM", Locale.getDefault()) }
                             metrics.chronologicalRecords.forEach { record ->
-                                val cal = Calendar.getInstance().apply { timeInMillis = record.dateTimestamp }
+                                val cal = remember(record.dateTimestamp) {
+                                    Calendar.getInstance().apply { timeInMillis = record.dateTimestamp }
+                                }
                                 Text(
                                     text = displayFormat.format(cal.time),
                                     fontSize = 10.sp,

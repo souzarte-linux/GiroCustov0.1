@@ -48,6 +48,11 @@ fun ReportsProjectionsCard(metrics: ReportMetricsState, monthlyNGoal: Double) {
 
             Spacer(modifier = Modifier.height(14.dp))
 
+            val safeEarnings = if (metrics.projectedMonthlyEarnings.isFinite()) metrics.projectedMonthlyEarnings else 0.0
+            val safeProfit = if (metrics.projectedMonthlyProfit.isFinite()) metrics.projectedMonthlyProfit else 0.0
+            val safePctOfGoal = if (metrics.pctOfGoal.isFinite()) metrics.pctOfGoal.coerceIn(0.0, 1.5) else 1.0
+            val safeGoal = if (monthlyNGoal.isFinite()) monthlyNGoal else 0.0
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -55,7 +60,7 @@ fun ReportsProjectionsCard(metrics: ReportMetricsState, monthlyNGoal: Double) {
                 Column {
                     Text("Projeção de Faturamento", fontSize = 11.sp, color = Color(0xFF94A3B8))
                     Text(
-                        text = String.format(Locale.GERMAN, "R$ %.2f", metrics.projectedMonthlyEarnings),
+                        text = String.format(Locale.GERMAN, "R$ %.2f", safeEarnings),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
@@ -65,7 +70,7 @@ fun ReportsProjectionsCard(metrics: ReportMetricsState, monthlyNGoal: Double) {
                 Column(horizontalAlignment = Alignment.End) {
                     Text("Projeção de Lucro Limpo", fontSize = 11.sp, color = Color(0xFF94A3B8))
                     Text(
-                        text = String.format(Locale.GERMAN, "R$ %.2f", metrics.projectedMonthlyProfit),
+                        text = String.format(Locale.GERMAN, "R$ %.2f", safeProfit),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
@@ -79,14 +84,13 @@ fun ReportsProjectionsCard(metrics: ReportMetricsState, monthlyNGoal: Double) {
             Spacer(modifier = Modifier.height(12.dp))
 
             // Progresso em relação ao Alvo Mensal
-            val pctOfGoal = metrics.pctOfGoal
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Alcançará ${(pctOfGoal * 100).toInt()}% da meta mensal de Lucro", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                Text("Alcançará ${(safePctOfGoal * 100).toInt()}% da meta mensal de Lucro", fontSize = 11.sp, color = Color(0xFF94A3B8))
                 Text(
-                    text = String.format(Locale.GERMAN, "Meta: R$ %.0f", monthlyNGoal),
+                    text = String.format(Locale.GERMAN, "Meta: R$ %.0f", safeGoal),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF10B981)
@@ -94,7 +98,7 @@ fun ReportsProjectionsCard(metrics: ReportMetricsState, monthlyNGoal: Double) {
             }
             Spacer(modifier = Modifier.height(4.dp))
             LinearProgressIndicator(
-                progress = { pctOfGoal.coerceIn(0.0, 1.0).toFloat() },
+                progress = { safePctOfGoal.coerceIn(0.0, 1.0).toFloat() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)

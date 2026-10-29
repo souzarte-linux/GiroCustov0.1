@@ -18,6 +18,8 @@ import com.example.util.CurrencyUtils
 // Custom SVG line-style graph with Bezier curve
 @Composable
 fun NetProfitCurveChart(records: List<DailyRecord>) {
+    if (records.isEmpty()) return
+
     val maxProfit = (records.maxOfOrNull { CurrencyUtils.centsToDouble(it.netProfit) } ?: 100.0).coerceAtLeast(10.0)
     val minProfit = (records.minOfOrNull { CurrencyUtils.centsToDouble(it.netProfit) } ?: 0.0).coerceAtMost(0.0)
     val profitRange = (maxProfit - minProfit).coerceAtLeast(10.0)
@@ -30,14 +32,7 @@ fun NetProfitCurveChart(records: List<DailyRecord>) {
         val width = size.width
         val height = size.height
 
-        val stepX = width / (records.size - 1).coerceAtLeast(1)
-
-        val points = records.mapIndexed { idx, record ->
-            val x = idx * stepX
-            val yPct = (CurrencyUtils.centsToDouble(record.netProfit) - minProfit) / profitRange
-            val y = height - (yPct * height).toFloat()
-            Offset(x, y)
-        }
+        if (width <= 0f || height <= 0f) return@Canvas
 
         // Desenhar grades horizontais simples (dark charcoal line for dark mode grid)
         val gridLines = 3
@@ -49,6 +44,57 @@ fun NetProfitCurveChart(records: List<DailyRecord>) {
                 end = Offset(width, yGrid),
                 strokeWidth = 1f
             )
+        }
+
+        if (records.size == 1) {
+            // Renderização elegante e estável para turno único (evita Bézier degenerado)
+            val record = records.first()
+            val yPct = ((CurrencyUtils.centsToDouble(record.netProfit) - minProfit) / profitRange).coerceIn(0.0, 1.0)
+            val y = (height - (yPct * height).toFloat()).coerceIn(0f, height)
+            val safeEndY = height.coerceAtLeast(y + 1f)
+
+            // Preenchimento gradiente abaixo da linha
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(emerald.copy(alpha = 0.25f), Color.Transparent),
+                    startY = y,
+                    endY = safeEndY
+                ),
+                topLeft = Offset(0f, y),
+                size = Size(width, (height - y).coerceAtLeast(0f))
+            )
+
+            // Linha contínua horizontal de referência do turno único
+            drawLine(
+                color = emerald,
+                start = Offset(0f, y),
+                end = Offset(width, y),
+                strokeWidth = 3.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+
+            // Ponto central em destaque
+            val centerOffset = Offset(width / 2f, y)
+            drawCircle(
+                color = Color.White,
+                radius = 6.dp.toPx(),
+                center = centerOffset
+            )
+            drawCircle(
+                color = emerald,
+                radius = 4.dp.toPx(),
+                center = centerOffset
+            )
+            return@Canvas
+        }
+
+        val stepX = width / (records.size - 1).coerceAtLeast(1)
+
+        val points = records.mapIndexed { idx, record ->
+            val x = idx * stepX
+            val yPct = ((CurrencyUtils.centsToDouble(record.netProfit) - minProfit) / profitRange).coerceIn(0.0, 1.0)
+            val y = (height - (yPct * height).toFloat()).coerceIn(0f, height)
+            Offset(x, y)
         }
 
         // Criar caminho do gráfico de lucros
@@ -86,7 +132,7 @@ fun NetProfitCurveChart(records: List<DailyRecord>) {
                 brush = Brush.verticalGradient(
                     colors = listOf(emerald.copy(alpha = 0.25f), Color.Transparent),
                     startY = 0f,
-                    endY = height
+                    endY = height.coerceAtLeast(1f)
                 )
             )
 
@@ -117,6 +163,8 @@ fun NetProfitCurveChart(records: List<DailyRecord>) {
 // Custom bar-based comparison chart (Faturamento vs Lucro)
 @Composable
 fun ProductivityComparisonChart(records: List<DailyRecord>) {
+    if (records.isEmpty()) return
+
     val maxVal = records.maxOfOrNull { 
         CurrencyUtils.centsToDouble(it.grossEarnings).coerceAtLeast(CurrencyUtils.centsToDouble(it.netProfit)) 
     } ?: 100.0
@@ -128,33 +176,37 @@ fun ProductivityComparisonChart(records: List<DailyRecord>) {
     Canvas(modifier = Modifier.fillMaxSize()) {
         val width = size.width
         val height = size.height
-        val totalBars = records.size
 
+        if (width <= 0f || height <= 0f) return@Canvas
+
+        val totalBars = records.size.coerceAtLeast(1)
         val sectionWidth = width / totalBars
-        val barWidth = (sectionWidth * 0.35f).coerceAtLeast(8f)
-        val spacing = sectionWidth * 0.08f
+        val barWidth = (sectionWidth * 0.35f).coerceIn(4f, (sectionWidth * 0.45f).coerceAtLeast(4f))
+        val spacing = (sectionWidth * 0.08f).coerceAtLeast(2f)
 
         records.forEachIndexed { idx, record ->
             val sectionX = idx * sectionWidth
 
             // Faturamento Bar
-            val grossH = (CurrencyUtils.centsToDouble(record.grossEarnings) / maxScale) * height
+            val grossDouble = CurrencyUtils.centsToDouble(record.grossEarnings).coerceAtLeast(0.0)
+            val grossH = ((grossDouble / maxScale) * height).toFloat().coerceIn(0f, height)
             val grossX = sectionX + (sectionWidth / 2f) - barWidth - spacing
             val grossY = height - grossH
             drawRect(
                 color = colorGross,
-                topLeft = Offset(grossX, grossY.toFloat()),
-                size = Size(barWidth, grossH.toFloat())
+                topLeft = Offset(grossX, grossY),
+                size = Size(barWidth, grossH)
             )
 
             // Lucro Líquido Bar
-            val netH = (CurrencyUtils.centsToDouble(record.netProfit).coerceAtLeast(0.0) / maxScale) * height
+            val netDouble = CurrencyUtils.centsToDouble(record.netProfit).coerceAtLeast(0.0)
+            val netH = ((netDouble / maxScale) * height).toFloat().coerceIn(0f, height)
             val netX = sectionX + (sectionWidth / 2f) + spacing
             val netY = height - netH
             drawRect(
                 color = colorNet,
-                topLeft = Offset(netX, netY.toFloat()),
-                size = Size(barWidth, netH.toFloat())
+                topLeft = Offset(netX, netY),
+                size = Size(barWidth, netH)
             )
         }
     }
