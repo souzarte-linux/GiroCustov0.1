@@ -584,7 +584,7 @@ fun ReportsScreen(
                             Spacer(modifier = Modifier.height(4.dp))
                             Text("Melhor Turno", fontSize = 11.sp, color = Color(0xFF34D399))
                             Text(
-                                    text = String.format(Locale.GERMAN, "R$ %.2f", metrics.bestDay.netProfit),
+                                    text = String.format(Locale.GERMAN, "R$ %.2f", CurrencyUtils.centsToDouble(metrics.bestDay.netProfit)),
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = FontFamily.Monospace,
@@ -612,7 +612,7 @@ fun ReportsScreen(
                             Spacer(modifier = Modifier.height(4.dp))
                             Text("Menor Turno", fontSize = 11.sp, color = Color(0xFFFDA4AF))
                             Text(
-                                    text = String.format(Locale.GERMAN, "R$ %.2f", metrics.worstDay.netProfit),
+                                    text = String.format(Locale.GERMAN, "R$ %.2f", CurrencyUtils.centsToDouble(metrics.worstDay.netProfit)),
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = FontFamily.Monospace,
