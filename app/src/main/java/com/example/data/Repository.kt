@@ -1,12 +1,7 @@
 package com.example.data
 
 import android.content.Context
-import android.util.Log
 import androidx.room.withTransaction
-import com.example.network.supabase.AuthSession
-import com.example.network.supabase.SessionExpiredException
-import com.example.network.supabase.SupabaseClient
-import com.example.network.supabase.SupabaseSyncManager
 import com.example.network.supabase.SyncResult
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -15,7 +10,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.withContext
 import com.example.util.CurrencyUtils
-import java.text.SimpleDateFormat
 import java.util.*
 
 class GiroCustoRepository(
@@ -31,6 +25,8 @@ class GiroCustoRepository(
     private val fuelRefillDao = db.fuelRefillDao()
     private val maintenanceRecordDao = db.maintenanceRecordDao()
     private val userGoalsDao = db.userGoalsDao()
+
+    private val syncDelegate = RepositorySyncDelegate(db, dataOwnerStorage, ioDispatcher)
 
     val vehicleFlow: Flow<Vehicle?> = vehicleDao.getActiveVehicleFlow()
     val allVehiclesFlow: Flow<List<Vehicle>> = vehicleDao.getAllVehiclesFlow()
@@ -157,49 +153,8 @@ class GiroCustoRepository(
         userGoalsDao.insertOrUpdateUserGoals(goals.copy(id = 1))
     }
 
-    suspend fun migrateLegacyGoalsIfNeeded(context: Context) = withContext(ioDispatcher) {
-        try {
-            if (userGoalsDao.getUserGoals() != null) return@withContext
-            val legacyPrefs = context.getSharedPreferences("giro_custo_goals", Context.MODE_PRIVATE)
-            val hasLegacyGoals = legacyPrefs.contains("daily_goal_gross")
-            val goals = if (hasLegacyGoals) {
-                UserGoals(
-                    id = 1,
-                    dailyGoalGross = CurrencyUtils.toCents(legacyPrefs.getFloat("daily_goal_gross", 200.0f).toDouble()),
-                    dailyGoalNet = CurrencyUtils.toCents(legacyPrefs.getFloat("daily_goal_net", 130.0f).toDouble()),
-                    dailyGoalKm = legacyPrefs.getFloat("daily_goal_km", 100.0f).toDouble(),
-                    dailyGoalDeliveries = legacyPrefs.getInt("daily_goal_deliveries", 15),
-                    weeklyGoalGross = CurrencyUtils.toCents(legacyPrefs.getFloat("weekly_goal_gross", 1200.0f).toDouble()),
-                    weeklyGoalNet = CurrencyUtils.toCents(legacyPrefs.getFloat("weekly_goal_net", 800.0f).toDouble()),
-                    weeklyGoalKm = legacyPrefs.getFloat("weekly_goal_km", 600.0f).toDouble(),
-                    weeklyGoalDeliveries = legacyPrefs.getInt("weekly_goal_deliveries", 90),
-                    monthlyGoalGross = CurrencyUtils.toCents(legacyPrefs.getFloat("monthly_goal_gross", 5000.0f).toDouble()),
-                    monthlyGoalNet = CurrencyUtils.toCents(legacyPrefs.getFloat("monthly_goal_net", 3200.0f).toDouble()),
-                    monthlyGoalKm = legacyPrefs.getFloat("monthly_goal_km", 2500.0f).toDouble(),
-                    monthlyGoalDeliveries = legacyPrefs.getInt("monthly_goal_deliveries", 400),
-                    syncStatus = SyncStatus.PENDING_UPDATE,
-                    updatedAt = System.currentTimeMillis()
-                )
-            } else {
-                UserGoals(
-                    id = 1,
-                    syncStatus = SyncStatus.SYNCED
-                )
-            }
-            userGoalsDao.insertOrUpdateUserGoals(goals)
-
-            if (legacyPrefs.contains("is_dark_theme")) {
-                val isDark = legacyPrefs.getBoolean("is_dark_theme", true)
-                context.getSharedPreferences("giro_custo_preferences", Context.MODE_PRIVATE)
-                    .edit().putBoolean("is_dark_theme", isDark).apply()
-                context.getSharedPreferences("giro_custo_app_prefs", Context.MODE_PRIVATE)
-                    .edit().putBoolean("is_dark_theme", isDark).apply()
-            }
-            legacyPrefs.edit().clear().apply()
-        } catch (e: IllegalStateException) {
-            // DB pool fechado durante o encerramento do app ou teardown de testes
-            android.util.Log.d("GiroCustoRepo", "Conexão de banco indisponível durante migração de metas: ${e.message}")
-        }
+    suspend fun migrateLegacyGoalsIfNeeded(context: Context) {
+        LegacyGoalsMigrator.migrate(db, context, ioDispatcher)
     }
 
     suspend fun getPlatformById(id: Long): Platform? = platformDao.getPlatformById(id)
@@ -595,58 +550,11 @@ class GiroCustoRepository(
         }
     }
 
-    suspend fun calculateRealAverageConsumption(vehicleId: Long): Double? {
-        val allRefills = fuelRefillDao.getAllRefillsOrderedByOdometer(vehicleId)
-        val fullTankIndices = allRefills.indices.filter { allRefills[it].isFullTank }
-        if (fullTankIndices.size < 2) return null
+    suspend fun calculateRealAverageConsumption(vehicleId: Long): Double? =
+        FuelCalculationsHelper.calculateRealAverageConsumption(fuelRefillDao, vehicleId)
 
-        val segmentConsumptions = mutableListOf<Double>()
-        for (i in 0 until fullTankIndices.size - 1) {
-            val prevFullIdx = fullTankIndices[i]
-            val currFullIdx = fullTankIndices[i + 1]
-
-            val prevFullRefill = allRefills[prevFullIdx]
-            val currFullRefill = allRefills[currFullIdx]
-
-            val distance = currFullRefill.odometer - prevFullRefill.odometer
-            if (distance <= 0) continue
-
-            var litersSum = 0.0
-            for (j in (prevFullIdx + 1)..currFullIdx) {
-                litersSum += allRefills[j].liters
-            }
-
-            if (litersSum > 0) {
-                val segmentConsumption = distance / litersSum
-                segmentConsumptions.add(segmentConsumption)
-            }
-        }
-
-        return if (segmentConsumptions.isEmpty()) null else segmentConsumptions.average()
-    }
-
-    suspend fun calculateLatestRealConsumption(vehicleId: Long): Double? {
-        val allRefills = fuelRefillDao.getAllRefillsOrderedByOdometer(vehicleId)
-        val fullTankIndices = allRefills.indices.filter { allRefills[it].isFullTank }
-        if (fullTankIndices.size < 2) return null
-
-        val prevFullIdx = fullTankIndices[fullTankIndices.size - 2]
-        val currFullIdx = fullTankIndices.last()
-
-        val prevFullRefill = allRefills[prevFullIdx]
-        val currFullRefill = allRefills[currFullIdx]
-
-        val distance = currFullRefill.odometer - prevFullRefill.odometer
-        if (distance <= 0) return null
-
-        var litersSum = 0.0
-        for (j in (prevFullIdx + 1)..currFullIdx) {
-            litersSum += allRefills[j].liters
-        }
-
-        if (litersSum <= 0) return null
-        return distance / litersSum
-    }
+    suspend fun calculateLatestRealConsumption(vehicleId: Long): Double? =
+        FuelCalculationsHelper.calculateLatestRealConsumption(fuelRefillDao, vehicleId)
 
     suspend fun getLatestFuelRefill(vehicleId: Long): FuelRefill? =
         fuelRefillDao.getLatestRefillForVehicle(vehicleId)
@@ -680,17 +588,11 @@ class GiroCustoRepository(
         fuelRefillDao.updateRefill(toDelete)
     }
 
-    suspend fun averageFuelPrice(vehicleId: Long): Double {
-        val refills = fuelRefillDao.getAllRefillsOrderedByOdometer(vehicleId)
-        if (refills.isEmpty()) return 0.0
-        return refills.map { CurrencyUtils.fuelPriceMillisToDouble(it.pricePerLiter) }.average()
-    }
+    suspend fun averageFuelPrice(vehicleId: Long): Double =
+        FuelCalculationsHelper.averageFuelPrice(fuelRefillDao, vehicleId)
 
-    suspend fun averageLitersPerRefill(vehicleId: Long): Double {
-        val refills = fuelRefillDao.getAllRefillsOrderedByOdometer(vehicleId)
-        if (refills.isEmpty()) return 0.0
-        return refills.map { it.liters }.average()
-    }
+    suspend fun averageLitersPerRefill(vehicleId: Long): Double =
+        FuelCalculationsHelper.averageLitersPerRefill(fuelRefillDao, vehicleId)
 
     fun maintenanceRecordsForVehicleFlow(vehicleId: Long): Flow<List<MaintenanceRecord>> =
         maintenanceRecordDao.getRecordsForVehicleFlow(vehicleId)
@@ -726,129 +628,7 @@ class GiroCustoRepository(
     }
 
     suspend fun seedJune2026Data() {
-        db.withTransaction {
-            recordDao.deleteJune2026Records()
-
-            var vehicle = vehicleDao.getActiveVehicle()
-            if (vehicle == null) {
-                vehicle = Vehicle(
-                    id = 1L,
-                    model = "Honda CG 160 Titan",
-                    averageConsumption = 40.0,
-                    fuelType = "Gasolina",
-                    monthlyFixedCosts = 18000L,
-                    plannedWorkDays = 22,
-                    currentOdometer = 15350.0,
-                    active = true,
-                    remoteId = UUID.randomUUID().toString(),
-                    syncStatus = SyncStatus.PENDING_INSERT,
-                    updatedAt = System.currentTimeMillis()
-                )
-                val insertedId = vehicleDao.insertVehicle(vehicle)
-                vehicle = vehicle.copy(id = insertedId)
-            }
-
-            var parts = partDao.getPartsForVehicle(vehicle.id)
-            if (parts.isEmpty()) {
-                val initialParts = listOf(
-                    VehiclePart(vehicleId = vehicle.id, name = "Óleo do Motor", price = 4500L, lifespanKm = 1500.0, runKmSinceChange = 1300.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                    VehiclePart(vehicleId = vehicle.id, name = "Kit Relação (Coroa/Pinhão/Corrente)", price = 18000L, lifespanKm = 15000.0, runKmSinceChange = 4500.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                    VehiclePart(vehicleId = vehicle.id, name = "Pneu Traseiro", price = 22000L, lifespanKm = 12000.0, runKmSinceChange = 11000.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                    VehiclePart(vehicleId = vehicle.id, name = "Pneu Dianteiro", price = 18000L, lifespanKm = 15000.0, runKmSinceChange = 3000.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                    VehiclePart(vehicleId = vehicle.id, name = "Pastilhas de Freio", price = 4000L, lifespanKm = 6000.0, runKmSinceChange = 1200.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT),
-                    VehiclePart(vehicleId = vehicle.id, name = "Lona de Freio Traseira", price = 3500L, lifespanKm = 10000.0, runKmSinceChange = 2500.0, remoteId = UUID.randomUUID().toString(), syncStatus = SyncStatus.PENDING_INSERT)
-                )
-                for (part in initialParts) {
-                    partDao.insertPart(part)
-                }
-                parts = partDao.getPartsForVehicle(vehicle.id)
-            }
-
-            val totalWearCostPerKm = parts.sumOf { it.wearCostPerKm }.takeIf { it > 0.0 } ?: 0.075
-            val fixedCostPerDay = if (vehicle.plannedWorkDays > 0) CurrencyUtils.divideByInt(vehicle.monthlyFixedCosts, vehicle.plannedWorkDays) else (18000L / 22)
-            val consumption = if (vehicle.averageConsumption > 0) vehicle.averageConsumption else 40.0
-
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            val platforms = listOf("iFood", "Uber Flash", "Rappi", "Loggi")
-
-            val workDaysList = mutableListOf<Calendar>()
-            for (dayOfMonth in 1..30) {
-                if (workDaysList.size >= 25) break
-
-                val cal = Calendar.getInstance().apply {
-                    set(Calendar.YEAR, 2026)
-                    set(Calendar.MONTH, Calendar.JUNE)
-                    set(Calendar.DAY_OF_MONTH, dayOfMonth)
-                    set(Calendar.HOUR_OF_DAY, 12)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
-
-                if (cal.get(Calendar.DAY_OF_WEEK) != Calendar.SATURDAY) {
-                    workDaysList.add(cal)
-                }
-            }
-
-            val kmPerDay = List(workDaysList.size) { index ->
-                70.0 + ((index + 1) * 7) % 45
-            }
-            val totalKm = kmPerDay.sum()
-            var startOdo = 14580.0 - totalKm
-
-            workDaysList.forEachIndexed { index, cal ->
-                val km = kmPerDay[index]
-                val endOdo = startOdo + km
-                val dateStr = dateFormat.format(cal.time)
-                val timestamp = cal.timeInMillis
-
-                val gross = CurrencyUtils.toCents(160.0 + ((index + 1) * 13) % 110)
-                val deliveries = 10 + ((index + 1) * 3) % 12
-                val food = CurrencyUtils.toCents(15.0 + ((index + 1) * 4) % 16)
-                val fuelPriceVal = CurrencyUtils.toFuelPriceMillis(5.75 + ((index + 1) * 2) % 5 * 0.05)
-
-                val fuelCost = CurrencyUtils.computeFuelTotalCents(km / consumption, fuelPriceVal, 0L)
-                val wearCost = CurrencyUtils.toCents(km * totalWearCostPerKm)
-                val net = gross - fuelCost - wearCost - fixedCostPerDay - food
-                val selectedPlatform = platforms[index % platforms.size]
-
-                val record = DailyRecord(
-                    remoteId = UUID.randomUUID().toString(),
-                    syncStatus = SyncStatus.PENDING_INSERT,
-                    updatedAt = System.currentTimeMillis(),
-                    isDeleted = false,
-                    dateString = dateStr,
-                    dateTimestamp = timestamp,
-                    platform = selectedPlatform,
-                    grossEarnings = gross,
-                    deliveriesCount = deliveries,
-                    startOdometer = startOdo,
-                    endOdometer = endOdo,
-                    fuelPrice = fuelPriceVal,
-                    foodExpense = food,
-                    fuelCost = fuelCost,
-                    wearCost = wearCost,
-                    proportionalFixedCost = fixedCostPerDay,
-                    netProfit = net,
-                    startTime = "08:00",
-                    endTime = "17:30",
-                )
-                recordDao.insertRecord(record)
-
-                for (part in parts) {
-                    val updatedPart = part.copy(
-                        runKmSinceChange = (part.runKmSinceChange + km).coerceAtMost(part.lifespanKm),
-                        syncStatus = if (part.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE,
-                        updatedAt = System.currentTimeMillis()
-                    )
-                    partDao.updatePart(updatedPart)
-                }
-
-                startOdo = endOdo
-            }
-
-            recalculateVehicleOdometer()
-        }
+        RepositoryDataSeeder.seedJune2026Data(db)
     }
 
     // =========================================================================
@@ -859,77 +639,23 @@ class GiroCustoRepository(
         db.clearAllTables()
     }
 
-    suspend fun hasPendingSyncChanges(): Boolean = withContext(ioDispatcher) {
-        vehicleDao.getPendingVehicles().isNotEmpty() ||
-        partDao.getPendingParts().isNotEmpty() ||
-        recordDao.getPendingRecords().isNotEmpty() ||
-        fuelRefillDao.getPendingRefills().isNotEmpty() ||
-        maintenanceRecordDao.getPendingRecords().isNotEmpty() ||
-        platformDao.getPendingPlatforms().isNotEmpty() ||
-        userProfileDao.getPendingUserProfile() != null ||
-        userGoalsDao.getPendingUserGoals() != null
-    }
+    suspend fun hasPendingSyncChanges(): Boolean =
+        syncDelegate.hasPendingSyncChanges()
 
-    suspend fun hasAnyLocalData(): Boolean = withContext(ioDispatcher) {
-        vehicleDao.getAllVehicles().isNotEmpty() ||
-        vehicleDao.getPendingVehicles().isNotEmpty() ||
-        partDao.getAllParts().isNotEmpty() ||
-        recordDao.getAllRecords().isNotEmpty() ||
-        platformDao.getAllPlatforms().isNotEmpty() ||
-        userProfileDao.getUserProfile() != null ||
-        userGoalsDao.getUserGoals() != null
-    }
+    suspend fun hasAnyLocalData(): Boolean =
+        syncDelegate.hasAnyLocalData()
 
-    suspend fun countPendingChanges(): Int = withContext(ioDispatcher) {
-        vehicleDao.getPendingVehicles().size +
-        partDao.getPendingParts().size +
-        recordDao.getPendingRecords().size +
-        fuelRefillDao.getPendingRefills().size +
-        maintenanceRecordDao.getPendingRecords().size +
-        platformDao.getPendingPlatforms().size +
-        (if (userProfileDao.getPendingUserProfile() != null) 1 else 0) +
-        (if (userGoalsDao.getPendingUserGoals() != null) 1 else 0)
-    }
+    suspend fun countPendingChanges(): Int =
+        syncDelegate.countPendingChanges()
 
-    suspend fun syncWithSupabase(userId: String, authToken: String): SyncResult {
-        val client = SupabaseClient.getInstance()
-        if (authToken.isNotBlank()) {
-            client.setAuthSession(
-                AuthSession(
-                    accessToken = authToken,
-                    refreshToken = "",
-                    userId = userId,
-                    userEmail = null
-                )
-            )
-        }
-        val storage = dataOwnerStorage ?: return SyncResult.Error(IllegalStateException("DataOwnerStorage não configurado no repositório"))
-        val syncManager = SupabaseSyncManager(db, client, storage, ioDispatcher)
-        return syncManager.sync(userId)
-    }
+    suspend fun syncWithSupabase(userId: String, authToken: String): SyncResult =
+        syncDelegate.syncWithSupabase(userId, authToken)
 
-    suspend fun syncWithSupabase(userId: String): SyncResult {
-        val client = SupabaseClient.getInstance()
-        val storage = dataOwnerStorage ?: return SyncResult.Error(IllegalStateException("DataOwnerStorage não configurado no repositório"))
-        val syncManager = SupabaseSyncManager(db, client, storage, ioDispatcher)
-        return syncManager.sync(userId)
-    }
+    suspend fun syncWithSupabase(userId: String): SyncResult =
+        syncDelegate.syncWithSupabase(userId)
 
-    suspend fun syncCurrentSession(): SyncResult {
-        val client = SupabaseClient.getInstance()
-        val userId = client.currentUserId ?: return SyncResult.Error(IllegalStateException("Usuário não autenticado no Supabase"))
-
-        // Garante que a sessão está fresca antes de iniciar a sincronização
-        val sessionCheck = client.ensureFreshSession()
-        if (sessionCheck.isFailure) {
-            val failure = sessionCheck.exceptionOrNull()
-            if (failure is SessionExpiredException) {
-                return SyncResult.Error(failure)
-            }
-        }
-
-        return syncWithSupabase(userId)
-    }
+    suspend fun syncCurrentSession(): SyncResult =
+        syncDelegate.syncCurrentSession()
 
     suspend fun exportAllUserDataAsJson(): String = withContext(ioDispatcher) {
         com.example.util.UserDataExportHelper.export(db)

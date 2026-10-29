@@ -462,3 +462,12 @@ fun GoalCard(
 
 fun parsePtBrDouble(input: String, fallback: Double): Double =
     com.example.ui.screens.dashboard.parsePtBrDouble(input, fallback)
+
+fun parsePtBrInt(input: String, fallback: Int): Int =
+    com.example.ui.screens.dashboard.parsePtBrInt(input, fallback)
+
+fun formatMoneyGoal(value: Double): String =
+    com.example.ui.screens.dashboard.formatMoneyGoal(value)
+
+fun formatKmGoal(value: Double): String =
+    com.example.ui.screens.dashboard.formatKmGoal(value)
