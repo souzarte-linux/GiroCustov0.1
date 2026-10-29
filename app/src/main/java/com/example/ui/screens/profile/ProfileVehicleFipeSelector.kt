@@ -9,9 +9,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.network.fipe.FipeDetailDto
 import com.example.network.fipe.FipeItemDto
 import com.example.ui.FipeUiState
@@ -40,7 +42,7 @@ internal fun ProfileVehicleFipeSelector(
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(
-            text = "Catálogo Tabela FIPE",
+            text = stringResource(R.string.profile_fipe_section_title),
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             color = ColorBrandEmerald,
@@ -56,8 +58,8 @@ internal fun ProfileVehicleFipeSelector(
                 value = selectedBrand?.nome.orEmpty().ifBlank { manualBrand },
                 onValueChange = {},
                 readOnly = true,
-                label = { Text("Marca (FIPE)") },
-                placeholder = { Text("Selecione a Marca", color = ColorTextMuted) },
+                label = { Text(stringResource(R.string.profile_fipe_brand_label)) },
+                placeholder = { Text(stringResource(R.string.profile_fipe_brand_placeholder), color = ColorTextMuted) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = brandExpanded) },
                 colors = outlinedTextFieldColors(),
                 shape = RoundedCornerShape(12.dp),
@@ -74,7 +76,7 @@ internal fun ProfileVehicleFipeSelector(
             ) {
                 if (fipeMarcas.isEmpty()) {
                     DropdownMenuItem(
-                        text = { Text("Carregando marcas...", color = ColorTextMuted) },
+                        text = { Text(stringResource(R.string.profile_fipe_loading_brands), color = ColorTextMuted) },
                         onClick = {}
                     )
                 } else {
@@ -105,8 +107,8 @@ internal fun ProfileVehicleFipeSelector(
                 onValueChange = {},
                 readOnly = true,
                 enabled = selectedBrand != null || fipeModelos.isNotEmpty(),
-                label = { Text("Modelo (FIPE)") },
-                placeholder = { Text("Selecione o Modelo", color = ColorTextMuted) },
+                label = { Text(stringResource(R.string.profile_fipe_model_label)) },
+                placeholder = { Text(stringResource(R.string.profile_fipe_model_placeholder), color = ColorTextMuted) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelExpanded) },
                 colors = outlinedTextFieldColors(),
                 shape = RoundedCornerShape(12.dp),
@@ -123,7 +125,7 @@ internal fun ProfileVehicleFipeSelector(
             ) {
                 if (fipeModelos.isEmpty()) {
                     DropdownMenuItem(
-                        text = { Text("Carregando modelos...", color = ColorTextMuted) },
+                        text = { Text(stringResource(R.string.profile_fipe_loading_models), color = ColorTextMuted) },
                         onClick = {}
                     )
                 } else {
@@ -154,8 +156,8 @@ internal fun ProfileVehicleFipeSelector(
                 onValueChange = {},
                 readOnly = true,
                 enabled = selectedModel != null || fipeAnos.isNotEmpty(),
-                label = { Text("Ano Modelo / Versão (FIPE)") },
-                placeholder = { Text("Selecione o Ano", color = ColorTextMuted) },
+                label = { Text(stringResource(R.string.profile_fipe_year_label)) },
+                placeholder = { Text(stringResource(R.string.profile_fipe_year_placeholder), color = ColorTextMuted) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = yearExpanded) },
                 colors = outlinedTextFieldColors(),
                 shape = RoundedCornerShape(12.dp),
@@ -172,7 +174,7 @@ internal fun ProfileVehicleFipeSelector(
             ) {
                 if (fipeAnos.isEmpty()) {
                     DropdownMenuItem(
-                        text = { Text("Carregando anos...", color = ColorTextMuted) },
+                        text = { Text(stringResource(R.string.profile_fipe_loading_years), color = ColorTextMuted) },
                         onClick = {}
                     )
                 } else {
@@ -204,7 +206,7 @@ internal fun ProfileVehicleFipeSelector(
                 ) {
                     Column {
                         Text(
-                            text = "Valor Tabela FIPE",
+                            text = stringResource(R.string.profile_fipe_card_value_title),
                             fontSize = 11.sp,
                             color = ColorBrandEmerald,
                             fontWeight = FontWeight.Bold
@@ -218,12 +220,12 @@ internal fun ProfileVehicleFipeSelector(
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = "FIPE: ${fipeDetail.codigoFipe}",
+                            text = stringResource(R.string.profile_fipe_card_code, fipeDetail.codigoFipe),
                             fontSize = 11.sp,
                             color = ColorTextMuted
                         )
                         Text(
-                            text = "Ref: ${fipeDetail.mesReferencia}",
+                            text = stringResource(R.string.profile_fipe_card_ref, fipeDetail.mesReferencia),
                             fontSize = 11.sp,
                             color = ColorTextMuted
                         )
@@ -238,7 +240,7 @@ internal fun ProfileVehicleFipeSelector(
             ) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), color = ColorBrandEmerald)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Consultando base oficial FIPE...", fontSize = 12.sp, color = ColorTextMuted)
+                Text(stringResource(R.string.profile_fipe_consulting_base), fontSize = 12.sp, color = ColorTextMuted)
             }
         } else if (fipeUiState is FipeUiState.Error) {
             Text(

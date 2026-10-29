@@ -48,9 +48,9 @@ internal fun PartsWearSection(
             Column(modifier = Modifier.weight(1f)) {
                 val vehicleName = activeVehicle?.model?.takeIf { it.isNotBlank() }
                 val headerTitle = if (vehicleName != null) {
-                    "MONITORAMENTO DE DESGASTE • $vehicleName"
+                    stringResource(R.string.profile_parts_title_with_vehicle, vehicleName)
                 } else {
-                    "MONITORAMENTO DE DESGASTE"
+                    stringResource(R.string.profile_parts_title)
                 }
                 Text(
                     text = headerTitle,
@@ -61,9 +61,9 @@ internal fun PartsWearSection(
                 )
                 Text(
                     text = if (vehicleName != null) {
-                        "Componentes vinculados ao veículo ativo ($vehicleName)"
+                        stringResource(R.string.profile_parts_subtitle_with_vehicle, vehicleName)
                     } else {
-                        "Componentes do veículo em uso ativo"
+                        stringResource(R.string.profile_parts_subtitle)
                     },
                     fontSize = 11.sp,
                     color = ColorTextMuted
@@ -95,9 +95,9 @@ internal fun PartsWearSection(
                         .padding(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    val targetVehicleDesc = activeVehicle?.model?.takeIf { it.isNotBlank() } ?: "este veículo"
+                    val targetVehicleDesc = activeVehicle?.model?.takeIf { it.isNotBlank() } ?: stringResource(R.string.profile_parts_empty_fallback_vehicle)
                     Text(
-                        text = "Nenhuma peça monitorada para $targetVehicleDesc.",
+                        text = stringResource(R.string.profile_parts_empty_message, targetVehicleDesc),
                         color = ColorTextMuted,
                         fontSize = 12.sp
                     )
@@ -139,7 +139,7 @@ internal fun PartsWearSection(
                                     fontSize = 14.sp
                                 )
                                 Text(
-                                    text = "Troca: ${CurrencyUtils.formatCents(part.price)} | Vida útil: ${part.lifespanKm.toInt()} km",
+                                    text = stringResource(R.string.profile_parts_item_meta, CurrencyUtils.formatCents(part.price), part.lifespanKm.toInt()),
                                     fontSize = 11.sp,
                                     color = ColorTextMuted
                                 )
@@ -186,12 +186,12 @@ internal fun PartsWearSection(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = String.format(Locale.GERMAN, "Uso: %.0f km rodados", part.runKmSinceChange),
+                                text = stringResource(R.string.profile_parts_item_usage, part.runKmSinceChange),
                                 fontSize = 11.sp,
                                 color = ColorTextMuted
                             )
                             Text(
-                                text = String.format(Locale.GERMAN, "Saúde: %.0f%%", health),
+                                text = stringResource(R.string.profile_parts_item_health, health),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = barColor
@@ -242,7 +242,7 @@ internal fun ProfileAddPartDialog(
             ) {
                 Column {
                     Text(
-                        text = "Adicionar Peça de Desgaste",
+                        text = stringResource(R.string.profile_parts_dialog_add_title),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = ColorTextPrimary
@@ -250,7 +250,7 @@ internal fun ProfileAddPartDialog(
                     val vehicleModel = activeVehicle?.model?.takeIf { it.isNotBlank() }
                     if (vehicleModel != null) {
                         Text(
-                            text = "Veículo associado: $vehicleModel",
+                            text = stringResource(R.string.profile_parts_dialog_associated_vehicle, vehicleModel),
                             fontSize = 12.sp,
                             color = ColorBrandEmerald,
                             fontWeight = FontWeight.Medium
@@ -262,7 +262,7 @@ internal fun ProfileAddPartDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Nome da Peça (ex: Pneu Traseiro)") },
+                    label = { Text(stringResource(R.string.profile_parts_dialog_name_label_hint)) },
                     colors = outlinedTextFieldColors(),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -271,7 +271,7 @@ internal fun ProfileAddPartDialog(
                 OutlinedTextField(
                     value = price,
                     onValueChange = { price = it },
-                    label = { Text("Preço de Troca (R$)") },
+                    label = { Text(stringResource(R.string.profile_parts_dialog_price_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     colors = outlinedTextFieldColors(),
                     shape = RoundedCornerShape(12.dp),
@@ -281,7 +281,7 @@ internal fun ProfileAddPartDialog(
                 OutlinedTextField(
                     value = lifespan,
                     onValueChange = { lifespan = it },
-                    label = { Text("Durabilidade Estimada (km)") },
+                    label = { Text(stringResource(R.string.profile_parts_dialog_lifespan_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     colors = outlinedTextFieldColors(),
                     shape = RoundedCornerShape(12.dp),
@@ -296,7 +296,7 @@ internal fun ProfileAddPartDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancelar", color = ColorTextMuted)
+                        Text(stringResource(R.string.btn_cancel), color = ColorTextMuted)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -313,7 +313,7 @@ internal fun ProfileAddPartDialog(
                         ),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text("Adicionar", fontWeight = FontWeight.Bold, color = ColorEmeraldDark)
+                        Text(stringResource(R.string.profile_parts_dialog_add_btn), fontWeight = FontWeight.Bold, color = ColorEmeraldDark)
                     }
                 }
             }
@@ -349,7 +349,7 @@ internal fun ProfileEditPartDialog(
             ) {
                 Column {
                     Text(
-                        text = "Editar Peça de Desgaste",
+                        text = stringResource(R.string.profile_parts_dialog_edit_title),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = ColorTextPrimary
@@ -357,7 +357,7 @@ internal fun ProfileEditPartDialog(
                     val vehicleModel = activeVehicle?.model?.takeIf { it.isNotBlank() }
                     if (vehicleModel != null) {
                         Text(
-                            text = "Veículo associado: $vehicleModel",
+                            text = stringResource(R.string.profile_parts_dialog_associated_vehicle, vehicleModel),
                             fontSize = 12.sp,
                             color = ColorBrandEmerald,
                             fontWeight = FontWeight.Medium
@@ -369,7 +369,7 @@ internal fun ProfileEditPartDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Nome da Peça") },
+                    label = { Text(stringResource(R.string.profile_parts_dialog_name_label)) },
                     colors = outlinedTextFieldColors(),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -378,7 +378,7 @@ internal fun ProfileEditPartDialog(
                 OutlinedTextField(
                     value = price,
                     onValueChange = { price = it },
-                    label = { Text("Preço de Troca (R$)") },
+                    label = { Text(stringResource(R.string.profile_parts_dialog_price_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     colors = outlinedTextFieldColors(),
                     shape = RoundedCornerShape(12.dp),
@@ -388,7 +388,7 @@ internal fun ProfileEditPartDialog(
                 OutlinedTextField(
                     value = lifespan,
                     onValueChange = { lifespan = it },
-                    label = { Text("Durabilidade Estimada (km)") },
+                    label = { Text(stringResource(R.string.profile_parts_dialog_lifespan_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     colors = outlinedTextFieldColors(),
                     shape = RoundedCornerShape(12.dp),
@@ -398,7 +398,7 @@ internal fun ProfileEditPartDialog(
                 OutlinedTextField(
                     value = runKm,
                     onValueChange = { runKm = it },
-                    label = { Text("Km Rodados Desde a Troca") },
+                    label = { Text(stringResource(R.string.profile_parts_dialog_run_km_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     colors = outlinedTextFieldColors(),
                     shape = RoundedCornerShape(12.dp),
@@ -413,7 +413,7 @@ internal fun ProfileEditPartDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancelar", color = ColorTextMuted)
+                        Text(stringResource(R.string.btn_cancel), color = ColorTextMuted)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -431,7 +431,7 @@ internal fun ProfileEditPartDialog(
                         ),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text("Salvar", fontWeight = FontWeight.Bold, color = ColorEmeraldDark)
+                        Text(stringResource(R.string.btn_save), fontWeight = FontWeight.Bold, color = ColorEmeraldDark)
                     }
                 }
             }

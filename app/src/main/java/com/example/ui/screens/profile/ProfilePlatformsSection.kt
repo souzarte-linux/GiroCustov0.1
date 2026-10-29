@@ -12,11 +12,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.data.Platform
 
 @Composable
@@ -53,7 +55,7 @@ internal fun ActivePlatformsCard(
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = "PLATAFORMAS ATIVAS",
+                        text = stringResource(R.string.profile_platforms_card_title),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = ColorBrandEmerald,
@@ -66,7 +68,7 @@ internal fun ActivePlatformsCard(
                     modifier = Modifier.testTag("profile_manage_platforms_btn")
                 ) {
                     Text(
-                        text = "Gerenciar",
+                        text = stringResource(R.string.profile_platforms_manage_btn),
                         color = ColorSky,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp
@@ -83,7 +85,7 @@ internal fun ActivePlatformsCard(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Nenhuma plataforma cadastrada.",
+                        text = stringResource(R.string.profile_platforms_empty_message),
                         color = ColorTextMuted,
                         fontSize = 13.sp
                     )
@@ -98,7 +100,7 @@ internal fun ActivePlatformsCard(
                     ) {
                         Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Cadastrar Plataformas", fontSize = 13.sp)
+                        Text(stringResource(R.string.profile_platforms_register_btn), fontSize = 13.sp)
                     }
                 }
             } else {

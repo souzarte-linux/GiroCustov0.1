@@ -39,7 +39,7 @@ internal fun MyVehiclesSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "MEUS VEÍCULOS",
+                text = stringResource(R.string.profile_vehicles_section_title),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = ColorBrandEmerald,
@@ -58,7 +58,7 @@ internal fun MyVehiclesSection(
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null, tint = ColorEmeraldDark, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("+ Novo Veículo", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(stringResource(R.string.profile_vehicles_btn_new), fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         }
 
@@ -86,13 +86,13 @@ internal fun MyVehiclesSection(
                             modifier = Modifier.size(44.dp)
                         )
                         Text(
-                            text = "Nenhum veículo cadastrado",
+                            text = stringResource(R.string.profile_vehicles_empty_title),
                             fontWeight = FontWeight.Bold,
                             color = ColorTextPrimary,
                             fontSize = 15.sp
                         )
                         Text(
-                            text = "Adicione sua moto ou carro com a Tabela FIPE para monitorar custos e desgastes.",
+                            text = stringResource(R.string.profile_vehicles_empty_desc),
                             color = ColorTextMuted,
                             fontSize = 12.sp,
                             lineHeight = 18.sp
@@ -172,7 +172,7 @@ internal fun MyVehiclesSection(
                                                     ) {
                                                         Icon(Icons.Filled.Inventory2, contentDescription = null, modifier = Modifier.size(10.dp), tint = ColorTextMuted)
                                                         Spacer(modifier = Modifier.width(3.dp))
-                                                        Text("Baú", fontSize = 10.sp, color = ColorTextMuted)
+                                                        Text(stringResource(R.string.profile_vehicles_badge_topbox), fontSize = 10.sp, color = ColorTextMuted)
                                                     }
                                                 }
                                             }
@@ -187,7 +187,7 @@ internal fun MyVehiclesSection(
                                                     ) {
                                                         Icon(Icons.Filled.Backpack, contentDescription = null, modifier = Modifier.size(10.dp), tint = ColorTextMuted)
                                                         Spacer(modifier = Modifier.width(3.dp))
-                                                        Text("Mochila", fontSize = 10.sp, color = ColorTextMuted)
+                                                        Text(stringResource(R.string.profile_vehicles_badge_bag), fontSize = 10.sp, color = ColorTextMuted)
                                                     }
                                                 }
                                             }
@@ -219,7 +219,7 @@ internal fun MyVehiclesSection(
                                         shape = RoundedCornerShape(6.dp)
                                     ) {
                                         Text(
-                                            text = "ATIVO",
+                                            text = stringResource(R.string.profile_vehicles_badge_active),
                                             color = ColorEmeraldDark,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 11.sp,
@@ -235,7 +235,7 @@ internal fun MyVehiclesSection(
                                             .height(28.dp)
                                             .testTag("profile_vehicle_activate_btn_${vehicle.id}")
                                     ) {
-                                        Text("Ativar", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = ColorBrandEmerald)
+                                        Text(stringResource(R.string.profile_vehicles_btn_activate), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = ColorBrandEmerald)
                                     }
                                 }
 
@@ -272,19 +272,31 @@ internal fun MyVehiclesSection(
                         ) {
                             Column {
                                 Text(
-                                    text = "Consumo: ${vehicle.averageConsumption} km/L • ${vehicle.fuelType}",
+                                    text = stringResource(
+                                        R.string.profile_vehicles_metric_consumption,
+                                        vehicle.averageConsumption,
+                                        vehicle.fuelType
+                                    ),
                                     color = ColorTextSecondary,
                                     fontSize = 12.sp
                                 )
                                 Text(
-                                    text = "Tanque: ${vehicle.tankCapacity} L • Hodômetro: ${vehicle.currentOdometer.toLong()} km",
+                                    text = stringResource(
+                                        R.string.profile_vehicles_metric_tank_odometer,
+                                        vehicle.tankCapacity,
+                                        vehicle.currentOdometer.toLong()
+                                    ),
                                     color = ColorTextMuted,
                                     fontSize = 11.sp
                                 )
                             }
 
                             Text(
-                                text = "${CurrencyUtils.formatCents(vehicle.monthlyFixedCosts)}/mês (${vehicle.plannedWorkDays}d)",
+                                text = stringResource(
+                                    R.string.profile_vehicles_metric_fixed_costs,
+                                    CurrencyUtils.formatCents(vehicle.monthlyFixedCosts),
+                                    vehicle.plannedWorkDays
+                                ),
                                 color = ColorTextMuted,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium

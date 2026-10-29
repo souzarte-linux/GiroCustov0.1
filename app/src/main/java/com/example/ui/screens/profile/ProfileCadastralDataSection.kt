@@ -105,7 +105,7 @@ internal fun CadastralDataCard(
                     modifier = Modifier.size(20.dp)
                 )
                 Text(
-                    text = "MEUS DADOS CADASTRAIS",
+                    text = stringResource(R.string.profile_cadastral_card_title),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = ColorBrandEmerald,
@@ -117,8 +117,8 @@ internal fun CadastralDataCard(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Nome Completo") },
-                placeholder = { Text("Ex: Carlos Silva", color = ColorTextMuted) },
+                label = { Text(stringResource(R.string.profile_cadastral_name_label)) },
+                placeholder = { Text(stringResource(R.string.profile_cadastral_name_placeholder), color = ColorTextMuted) },
                 leadingIcon = {
                     Icon(Icons.Filled.Person, contentDescription = null, tint = ColorTextMuted)
                 },
@@ -140,8 +140,8 @@ internal fun CadastralDataCard(
                 onValueChange = { input ->
                     phoneDigits = input.filter { it.isDigit() }.take(11)
                 },
-                label = { Text("Telefone de Contato") },
-                placeholder = { Text("(11) 98765-4321", color = ColorTextMuted) },
+                label = { Text(stringResource(R.string.profile_cadastral_phone_label)) },
+                placeholder = { Text(stringResource(R.string.profile_cadastral_phone_placeholder), color = ColorTextMuted) },
                 leadingIcon = {
                     Icon(Icons.Filled.Phone, contentDescription = null, tint = ColorTextMuted)
                 },
@@ -177,19 +177,19 @@ internal fun CadastralDataCard(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Chat,
-                            contentDescription = "WhatsApp",
+                            contentDescription = stringResource(R.string.profile_cadastral_whatsapp_icon_desc),
                             tint = ColorBrandEmerald,
                             modifier = Modifier.size(22.dp)
                         )
                         Column {
                             Text(
-                                text = "Este número é WhatsApp?",
+                                text = stringResource(R.string.profile_cadastral_whatsapp_title),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = ColorTextPrimary
                             )
                             Text(
-                                text = "Para avisos operacionais e relatórios",
+                                text = stringResource(R.string.profile_cadastral_whatsapp_desc),
                                 fontSize = 11.sp,
                                 color = ColorTextMuted
                             )
@@ -281,8 +281,8 @@ internal fun CadastralDataCard(
                         isManualCep = false
                     }
                 },
-                label = { Text(if (isManualCep) "CEP Residencial (Opcional)" else "CEP Residencial") },
-                placeholder = { Text("01001-000", color = ColorTextMuted) },
+                label = { Text(if (isManualCep) stringResource(R.string.profile_cadastral_cep_optional_label) else stringResource(R.string.profile_cadastral_cep_label)) },
+                placeholder = { Text(stringResource(R.string.profile_cadastral_cep_placeholder), color = ColorTextMuted) },
                 leadingIcon = {
                     Icon(Icons.Filled.PinDrop, contentDescription = null, tint = ColorTextMuted)
                 },
@@ -300,7 +300,7 @@ internal fun CadastralDataCard(
                         is ViaCepUiState.Success -> {
                             Icon(
                                 imageVector = Icons.Filled.CheckCircle,
-                                contentDescription = "CEP Localizado",
+                                contentDescription = stringResource(R.string.profile_cd_cep_found),
                                 tint = ColorBrandEmerald,
                                 modifier = Modifier
                                     .size(22.dp)
@@ -310,7 +310,7 @@ internal fun CadastralDataCard(
                         is ViaCepUiState.Error -> {
                             Icon(
                                 imageVector = Icons.Filled.Warning,
-                                contentDescription = "Erro no CEP",
+                                contentDescription = stringResource(R.string.profile_cd_cep_error),
                                 tint = ColorRose,
                                 modifier = Modifier
                                     .size(22.dp)
@@ -440,8 +440,8 @@ internal fun CadastralDataCard(
                 OutlinedTextField(
                     value = street,
                     onValueChange = { street = it },
-                    label = { Text("Logradouro / Rua") },
-                    placeholder = { Text("Av. Paulista", color = ColorTextMuted) },
+                    label = { Text(stringResource(R.string.profile_cadastral_street_label)) },
+                    placeholder = { Text(stringResource(R.string.profile_cadastral_street_placeholder), color = ColorTextMuted) },
                     singleLine = true,
                     colors = outlinedTextFieldColors(),
                     shape = RoundedCornerShape(12.dp),
@@ -454,8 +454,8 @@ internal fun CadastralDataCard(
                 OutlinedTextField(
                     value = addressNumber,
                     onValueChange = { addressNumber = it },
-                    label = { Text("Nº") },
-                    placeholder = { Text("123", color = ColorTextMuted) },
+                    label = { Text(stringResource(R.string.profile_cadastral_number_label)) },
+                    placeholder = { Text(stringResource(R.string.profile_cadastral_number_placeholder), color = ColorTextMuted) },
                     singleLine = true,
                     colors = outlinedTextFieldColors(),
                     shape = RoundedCornerShape(12.dp),
@@ -470,8 +470,8 @@ internal fun CadastralDataCard(
             OutlinedTextField(
                 value = neighborhood,
                 onValueChange = { neighborhood = it },
-                label = { Text("Bairro") },
-                placeholder = { Text("Bela Vista", color = ColorTextMuted) },
+                label = { Text(stringResource(R.string.profile_cadastral_neighborhood_label)) },
+                placeholder = { Text(stringResource(R.string.profile_cadastral_neighborhood_placeholder), color = ColorTextMuted) },
                 singleLine = true,
                 colors = outlinedTextFieldColors(),
                 shape = RoundedCornerShape(12.dp),
@@ -488,8 +488,8 @@ internal fun CadastralDataCard(
                 OutlinedTextField(
                     value = city,
                     onValueChange = { city = it },
-                    label = { Text("Cidade") },
-                    placeholder = { Text("São Paulo", color = ColorTextMuted) },
+                    label = { Text(stringResource(R.string.profile_cadastral_city_label)) },
+                    placeholder = { Text(stringResource(R.string.profile_cadastral_city_placeholder), color = ColorTextMuted) },
                     singleLine = true,
                     colors = outlinedTextFieldColors(),
                     shape = RoundedCornerShape(12.dp),
@@ -501,8 +501,8 @@ internal fun CadastralDataCard(
                 OutlinedTextField(
                     value = stateUf,
                     onValueChange = { stateUf = it.take(2).uppercase() },
-                    label = { Text("UF") },
-                    placeholder = { Text("SP", color = ColorTextMuted) },
+                    label = { Text(stringResource(R.string.profile_cadastral_uf_label)) },
+                    placeholder = { Text(stringResource(R.string.profile_cadastral_uf_placeholder), color = ColorTextMuted) },
                     singleLine = true,
                     colors = outlinedTextFieldColors(),
                     shape = RoundedCornerShape(12.dp),
@@ -533,7 +533,7 @@ internal fun CadastralDataCard(
                             neighborhood = neighborhood.trim(),
                             stateUf = stateUf.trim().uppercase()
                         )
-                        Toast.makeText(context, "Dados cadastrais salvos com sucesso!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.profile_toast_cadastral_saved), Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -548,7 +548,7 @@ internal fun CadastralDataCard(
                     Icon(Icons.Filled.Save, contentDescription = null, tint = ColorEmeraldDark)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Salvar Dados Cadastrais",
+                        text = stringResource(R.string.profile_cadastral_save_btn),
                         fontWeight = FontWeight.Bold,
                         color = ColorEmeraldDark,
                         fontSize = 14.sp

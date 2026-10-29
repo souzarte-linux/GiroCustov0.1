@@ -123,7 +123,7 @@ internal fun VehicleFormSection(
                 }
 
                 Text(
-                    text = if (isEdit) "Editar Veículo" else "Novo Veículo",
+                    text = if (isEdit) stringResource(R.string.profile_vehicle_form_title_edit) else stringResource(R.string.profile_vehicle_form_title_new),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = ColorTextPrimary
@@ -197,7 +197,7 @@ internal fun VehicleFormSection(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Moto",
+                            text = stringResource(R.string.profile_vehicle_type_moto),
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = if (isMotoSelected) ColorEmeraldDark else ColorTextMuted
@@ -241,7 +241,7 @@ internal fun VehicleFormSection(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Carro",
+                            text = stringResource(R.string.profile_vehicle_type_car),
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = if (isCarSelected) ColorEmeraldDark else ColorTextMuted
@@ -270,13 +270,13 @@ internal fun VehicleFormSection(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Digitar Manualmente",
+                            text = stringResource(R.string.profile_vehicle_manual_title),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = ColorTextPrimary
                         )
                         Text(
-                            text = "Não encontrei meu veículo no catálogo FIPE",
+                            text = stringResource(R.string.profile_vehicle_manual_subtitle),
                             fontSize = 11.sp,
                             color = ColorTextMuted
                         )
@@ -345,7 +345,7 @@ internal fun VehicleFormSection(
                 } else {
                     // MODO MANUAL (Digitação Livre)
                     Text(
-                        text = "Especificação Manual",
+                        text = stringResource(R.string.profile_vehicle_manual_spec_title),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = ColorAmber,
@@ -355,8 +355,8 @@ internal fun VehicleFormSection(
                     OutlinedTextField(
                         value = manualBrand,
                         onValueChange = { manualBrand = it },
-                        label = { Text("Marca") },
-                        placeholder = { Text("Ex: Shineray / Sundown / Dafra", color = ColorTextMuted) },
+                        label = { Text(stringResource(R.string.profile_vehicle_manual_brand_label)) },
+                        placeholder = { Text(stringResource(R.string.profile_vehicle_manual_brand_placeholder), color = ColorTextMuted) },
                         singleLine = true,
                         colors = outlinedTextFieldColors(),
                         shape = RoundedCornerShape(12.dp),
@@ -368,8 +368,8 @@ internal fun VehicleFormSection(
                     OutlinedTextField(
                         value = manualModel,
                         onValueChange = { manualModel = it },
-                        label = { Text("Modelo") },
-                        placeholder = { Text("Ex: Worker 125 Cross", color = ColorTextMuted) },
+                        label = { Text(stringResource(R.string.profile_vehicle_manual_model_label)) },
+                        placeholder = { Text(stringResource(R.string.profile_vehicle_manual_model_placeholder), color = ColorTextMuted) },
                         singleLine = true,
                         colors = outlinedTextFieldColors(),
                         shape = RoundedCornerShape(12.dp),
@@ -381,8 +381,8 @@ internal fun VehicleFormSection(
                     OutlinedTextField(
                         value = manualYear,
                         onValueChange = { manualYear = it },
-                        label = { Text("Ano de Fabricação") },
-                        placeholder = { Text("Ex: 2023", color = ColorTextMuted) },
+                        label = { Text(stringResource(R.string.profile_vehicle_manual_year_label)) },
+                        placeholder = { Text(stringResource(R.string.profile_vehicle_manual_year_placeholder), color = ColorTextMuted) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         colors = outlinedTextFieldColors(),
@@ -407,7 +407,7 @@ internal fun VehicleFormSection(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    text = "PARÂMETROS TÉCNICOS & CUSTOS",
+                    text = stringResource(R.string.profile_vehicle_tech_costs_title),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = ColorBrandEmerald,
@@ -422,7 +422,7 @@ internal fun VehicleFormSection(
                     OutlinedTextField(
                         value = consumption,
                         onValueChange = { consumption = it },
-                        label = { Text("Consumo (km/L)") },
+                        label = { Text(stringResource(R.string.profile_vehicle_consumption_label)) },
                         placeholder = { Text("40.0", color = ColorTextMuted) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
@@ -436,8 +436,8 @@ internal fun VehicleFormSection(
                     OutlinedTextField(
                         value = fuelType,
                         onValueChange = { fuelType = it },
-                        label = { Text("Combustível") },
-                        placeholder = { Text("Gasolina, Flex", color = ColorTextMuted) },
+                        label = { Text(stringResource(R.string.profile_vehicle_fuel_type_label)) },
+                        placeholder = { Text(stringResource(R.string.profile_vehicle_fuel_type_placeholder), color = ColorTextMuted) },
                         singleLine = true,
                         colors = outlinedTextFieldColors(),
                         shape = RoundedCornerShape(12.dp),
@@ -455,7 +455,7 @@ internal fun VehicleFormSection(
                     OutlinedTextField(
                         value = tankCapacity,
                         onValueChange = { tankCapacity = it },
-                        label = { Text("Tanque (L)") },
+                        label = { Text(stringResource(R.string.profile_vehicle_tank_capacity_label)) },
                         placeholder = { Text("16.0", color = ColorTextMuted) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
@@ -469,7 +469,7 @@ internal fun VehicleFormSection(
                     OutlinedTextField(
                         value = fixedCosts,
                         onValueChange = { fixedCosts = it },
-                        label = { Text("Custo Fixo (R$)") },
+                        label = { Text(stringResource(R.string.profile_vehicle_fixed_costs_label)) },
                         placeholder = { Text("180.0", color = ColorTextMuted) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
@@ -489,7 +489,7 @@ internal fun VehicleFormSection(
                     OutlinedTextField(
                         value = plannedDays,
                         onValueChange = { plannedDays = it },
-                        label = { Text("Dias/Mês") },
+                        label = { Text(stringResource(R.string.profile_vehicle_planned_days_label)) },
                         placeholder = { Text("22", color = ColorTextMuted) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
@@ -503,7 +503,7 @@ internal fun VehicleFormSection(
                     OutlinedTextField(
                         value = currentOdometer,
                         onValueChange = { currentOdometer = it },
-                        label = { Text("Hodômetro (km)") },
+                        label = { Text(stringResource(R.string.profile_vehicle_odometer_label)) },
                         placeholder = { Text("15000", color = ColorTextMuted) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
@@ -530,7 +530,7 @@ internal fun VehicleFormSection(
             ) {
                 if (selectedVehicleType.equals("MOTO", ignoreCase = true)) {
                     Text(
-                        text = "ACESSÓRIOS DE CARGA (MOTO)",
+                        text = stringResource(R.string.profile_vehicle_moto_accessories_title),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = ColorBrandEmerald,
@@ -550,8 +550,8 @@ internal fun VehicleFormSection(
                         ) {
                             Icon(Icons.Filled.Inventory2, contentDescription = null, tint = ColorBrandEmerald, modifier = Modifier.size(20.dp))
                             Column {
-                                Text("Possui Baú de Carga", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = ColorTextPrimary)
-                                Text("Instalação de baú traseiro para volumes maiores", fontSize = 11.sp, color = ColorTextMuted)
+                                Text(stringResource(R.string.profile_vehicle_has_topbox_title), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = ColorTextPrimary)
+                                Text(stringResource(R.string.profile_vehicle_has_topbox_desc), fontSize = 11.sp, color = ColorTextMuted)
                             }
                         }
                         Switch(
@@ -582,8 +582,8 @@ internal fun VehicleFormSection(
                         ) {
                             Icon(Icons.Filled.Backpack, contentDescription = null, tint = ColorBrandEmerald, modifier = Modifier.size(20.dp))
                             Column {
-                                Text("Utiliza Mochila / Bag Térmica", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = ColorTextPrimary)
-                                Text("Transporte em bag nas costas para delivery", fontSize = 11.sp, color = ColorTextMuted)
+                                Text(stringResource(R.string.profile_vehicle_has_bag_title), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = ColorTextPrimary)
+                                Text(stringResource(R.string.profile_vehicle_has_bag_desc), fontSize = 11.sp, color = ColorTextMuted)
                             }
                         }
                         Switch(
@@ -601,7 +601,7 @@ internal fun VehicleFormSection(
                 } else {
                     // Se Carro: Seletor de Carroceria
                     Text(
-                        text = "TIPO DE CARROCERIA (CARRO)",
+                        text = stringResource(R.string.profile_vehicle_carbody_title),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = ColorBrandEmerald,
@@ -684,7 +684,7 @@ internal fun VehicleFormSection(
             Icon(Icons.Filled.Save, contentDescription = null, tint = ColorEmeraldDark)
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = if (isEdit) "Salvar Alterações do Veículo" else "Cadastrar Veículo",
+                text = if (isEdit) stringResource(R.string.profile_vehicle_btn_save_changes) else stringResource(R.string.profile_vehicle_btn_register),
                 fontWeight = FontWeight.Bold,
                 color = ColorEmeraldDark,
                 fontSize = 14.sp

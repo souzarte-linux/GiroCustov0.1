@@ -101,7 +101,7 @@ fun ProfileScreen(
                         viewModel.updateVehicle(updatedVehicle)
                         Toast.makeText(
                             context,
-                            if (isEdit) "Veículo atualizado com sucesso!" else "Veículo cadastrado com sucesso!",
+                            if (isEdit) context.getString(R.string.profile_toast_vehicle_updated) else context.getString(R.string.profile_toast_vehicle_created),
                             Toast.LENGTH_SHORT
                         ).show()
                         editingVehicleId = null
@@ -299,13 +299,13 @@ private fun ProfileSectionsContent(
         ) {
             Column {
                 Text(
-                    text = "Meu Perfil & Veículos",
+                    text = stringResource(R.string.profile_title),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    text = "Gestão de infraestrutura operacional",
+                    text = stringResource(R.string.profile_subtitle),
                     fontSize = 12.sp,
                     color = ColorTextMuted
                 )
@@ -357,7 +357,7 @@ private fun ProfileSectionsContent(
             onEditVehicleClick = onEditVehicleClick,
             onActivateVehicle = { vehicleId ->
                 viewModel.setActiveVehicle(vehicleId)
-                Toast.makeText(context, "Veículo operacional ativado!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.profile_toast_vehicle_activated), Toast.LENGTH_SHORT).show()
             },
             onDeleteVehicle = onDeleteVehicle
         )
@@ -375,7 +375,7 @@ private fun ProfileSectionsContent(
             },
             onResetWear = { partId ->
                 viewModel.resetPartWear(partId)
-                Toast.makeText(context, "Desgaste da peça zerado!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.profile_toast_part_wear_reset), Toast.LENGTH_SHORT).show()
             },
             onDeletePart = onDeletePart
         )
@@ -406,7 +406,7 @@ private fun ProfileSectionsContent(
             onAdd = { name: String, price: Double, lifespan: Double ->
                 viewModel.addPart(name, price, lifespan, vehicleId = currentActiveVehicle?.id ?: 0L)
                 showAddPartDialog = false
-                Toast.makeText(context, "Nova peça adicionada!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.profile_toast_part_added), Toast.LENGTH_SHORT).show()
             }
         )
     }
@@ -430,7 +430,7 @@ private fun ProfileSectionsContent(
                 )
                 showEditPartDialog = false
                 partToEdit = null
-                Toast.makeText(context, "Peça de desgaste atualizada!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.profile_toast_part_updated), Toast.LENGTH_SHORT).show()
             }
         )
     }

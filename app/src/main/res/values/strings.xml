@@ -403,4 +403,129 @@
     <string name="fuel_format_distance_meters">%1$d m</string>
     <string name="fuel_station_with_brand_format">%1$s (%2$s)</string>
     <string name="fuel_station_no_address">Endereço não informado</string>
+
+    <!-- Profile & Veículos (T-25D [ACC-02D]) -->
+    <string name="profile_title">Meu Perfil &amp; Veículos</string>
+    <string name="profile_subtitle">Gestão de infraestrutura operacional</string>
+    <string name="profile_toast_vehicle_updated">Veículo atualizado com sucesso!</string>
+    <string name="profile_toast_vehicle_created">Veículo cadastrado com sucesso!</string>
+    <string name="profile_toast_vehicle_activated">Veículo operacional ativado!</string>
+    <string name="profile_toast_part_wear_reset">Desgaste da peça zerado!</string>
+    <string name="profile_toast_part_added">Nova peça adicionada!</string>
+    <string name="profile_toast_part_updated">Peça de desgaste atualizada!</string>
+    <string name="profile_toast_cadastral_saved">Dados cadastrais salvos com sucesso!</string>
+
+    <!-- Dados Cadastrais -->
+    <string name="profile_cadastral_card_title">MEUS DADOS CADASTRAIS</string>
+    <string name="profile_cadastral_name_label">Nome Completo</string>
+    <string name="profile_cadastral_name_placeholder">Ex: Carlos Silva</string>
+    <string name="profile_cadastral_phone_label">Telefone de Contato</string>
+    <string name="profile_cadastral_phone_placeholder">(11) 98765-4321</string>
+    <string name="profile_cadastral_whatsapp_title">Este número é WhatsApp?</string>
+    <string name="profile_cadastral_whatsapp_desc">Para avisos operacionais e relatórios</string>
+    <string name="profile_cadastral_whatsapp_icon_desc">WhatsApp</string>
+    <string name="profile_cadastral_cep_label">CEP Residencial</string>
+    <string name="profile_cadastral_cep_optional_label">CEP Residencial (Opcional)</string>
+    <string name="profile_cadastral_cep_placeholder">01001-000</string>
+    <string name="profile_cd_cep_found">CEP Localizado</string>
+    <string name="profile_cd_cep_error">Erro no CEP</string>
+    <string name="profile_cadastral_street_label">Logradouro / Rua</string>
+    <string name="profile_cadastral_street_placeholder">Av. Paulista</string>
+    <string name="profile_cadastral_number_label">Nº</string>
+    <string name="profile_cadastral_number_placeholder">123</string>
+    <string name="profile_cadastral_neighborhood_label">Bairro</string>
+    <string name="profile_cadastral_neighborhood_placeholder">Bela Vista</string>
+    <string name="profile_cadastral_city_label">Cidade</string>
+    <string name="profile_cadastral_city_placeholder">São Paulo</string>
+    <string name="profile_cadastral_uf_label">UF</string>
+    <string name="profile_cadastral_uf_placeholder">SP</string>
+    <string name="profile_cadastral_save_btn">Salvar Dados Cadastrais</string>
+
+    <!-- Plataformas Ativas no Perfil -->
+    <string name="profile_platforms_card_title">PLATAFORMAS ATIVAS</string>
+    <string name="profile_platforms_manage_btn">Gerenciar</string>
+    <string name="profile_platforms_empty_message">Nenhuma plataforma cadastrada.</string>
+    <string name="profile_platforms_register_btn">Cadastrar Plataformas</string>
+
+    <!-- Meus Veículos (Lista) -->
+    <string name="profile_vehicles_section_title">MEUS VEÍCULOS</string>
+    <string name="profile_vehicles_btn_new">+ Novo Veículo</string>
+    <string name="profile_vehicles_empty_title">Nenhum veículo cadastrado</string>
+    <string name="profile_vehicles_empty_desc">Adicione sua moto ou carro com a Tabela FIPE para monitorar custos e desgastes.</string>
+    <string name="profile_vehicles_badge_topbox">Baú</string>
+    <string name="profile_vehicles_badge_bag">Mochila</string>
+    <string name="profile_vehicles_badge_active">ATIVO</string>
+    <string name="profile_vehicles_btn_activate">Ativar</string>
+    <string name="profile_vehicles_metric_consumption">Consumo: %1$.1f km/L • %2$s</string>
+    <string name="profile_vehicles_metric_tank_odometer">Tanque: %1$.1f L • Hodômetro: %2$d km</string>
+    <string name="profile_vehicles_metric_fixed_costs">%1$s/mês (%2$dd)</string>
+
+    <!-- Monitoramento de Desgaste de Peças -->
+    <string name="profile_parts_title">MONITORAMENTO DE DESGASTE</string>
+    <string name="profile_parts_title_with_vehicle">MONITORAMENTO DE DESGASTE • %1$s</string>
+    <string name="profile_parts_subtitle">Componentes do veículo em uso ativo</string>
+    <string name="profile_parts_subtitle_with_vehicle">Componentes vinculados ao veículo ativo (%1$s)</string>
+    <string name="profile_parts_empty_fallback_vehicle">este veículo</string>
+    <string name="profile_parts_empty_message">Nenhuma peça monitorada para %1$s.</string>
+    <string name="profile_parts_item_meta">Troca: %1$s | Vida útil: %2$d km</string>
+    <string name="profile_parts_item_usage">Uso: %1$.0f km rodados</string>
+    <string name="profile_parts_item_health">Saúde: %1$.0f%%</string>
+
+    <!-- Diálogos de Peça -->
+    <string name="profile_parts_dialog_add_title">Adicionar Peça de Desgaste</string>
+    <string name="profile_parts_dialog_edit_title">Editar Peça de Desgaste</string>
+    <string name="profile_parts_dialog_associated_vehicle">Veículo associado: %1$s</string>
+    <string name="profile_parts_dialog_name_label_hint">Nome da Peça (ex: Pneu Traseiro)</string>
+    <string name="profile_parts_dialog_name_label">Nome da Peça</string>
+    <string name="profile_parts_dialog_price_label">Preço de Troca (R$)</string>
+    <string name="profile_parts_dialog_lifespan_label">Durabilidade Estimada (km)</string>
+    <string name="profile_parts_dialog_run_km_label">Km Rodados Desde a Troca</string>
+    <string name="profile_parts_dialog_add_btn">Adicionar</string>
+
+    <!-- Catálogo FIPE -->
+    <string name="profile_fipe_section_title">Catálogo Tabela FIPE</string>
+    <string name="profile_fipe_brand_label">Marca (FIPE)</string>
+    <string name="profile_fipe_brand_placeholder">Selecione a Marca</string>
+    <string name="profile_fipe_loading_brands">Carregando marcas...</string>
+    <string name="profile_fipe_model_label">Modelo (FIPE)</string>
+    <string name="profile_fipe_model_placeholder">Selecione o Modelo</string>
+    <string name="profile_fipe_loading_models">Carregando modelos...</string>
+    <string name="profile_fipe_year_label">Ano Modelo / Versão (FIPE)</string>
+    <string name="profile_fipe_year_placeholder">Selecione o Ano</string>
+    <string name="profile_fipe_loading_years">Carregando anos...</string>
+    <string name="profile_fipe_card_value_title">Valor Tabela FIPE</string>
+    <string name="profile_fipe_card_code">FIPE: %1$s</string>
+    <string name="profile_fipe_card_ref">Ref: %1$s</string>
+    <string name="profile_fipe_consulting_base">Consultando base oficial FIPE...</string>
+
+    <!-- Formulário de Veículo (Adicionar / Editar) -->
+    <string name="profile_vehicle_form_title_edit">Editar Veículo</string>
+    <string name="profile_vehicle_form_title_new">Novo Veículo</string>
+    <string name="profile_vehicle_type_moto">Moto</string>
+    <string name="profile_vehicle_type_car">Carro</string>
+    <string name="profile_vehicle_manual_title">Digitar Manualmente</string>
+    <string name="profile_vehicle_manual_subtitle">Não encontrei meu veículo no catálogo FIPE</string>
+    <string name="profile_vehicle_manual_spec_title">Especificação Manual</string>
+    <string name="profile_vehicle_manual_brand_label">Marca</string>
+    <string name="profile_vehicle_manual_brand_placeholder">Ex: Shineray / Sundown / Dafra</string>
+    <string name="profile_vehicle_manual_model_label">Modelo</string>
+    <string name="profile_vehicle_manual_model_placeholder">Ex: Worker 125 Cross</string>
+    <string name="profile_vehicle_manual_year_label">Ano de Fabricação</string>
+    <string name="profile_vehicle_manual_year_placeholder">Ex: 2023</string>
+    <string name="profile_vehicle_tech_costs_title">PARÂMETROS TÉCNICOS &amp; CUSTOS</string>
+    <string name="profile_vehicle_consumption_label">Consumo (km/L)</string>
+    <string name="profile_vehicle_fuel_type_label">Combustível</string>
+    <string name="profile_vehicle_fuel_type_placeholder">Gasolina, Flex</string>
+    <string name="profile_vehicle_tank_capacity_label">Tanque (L)</string>
+    <string name="profile_vehicle_fixed_costs_label">Custo Fixo (R$)</string>
+    <string name="profile_vehicle_planned_days_label">Dias/Mês</string>
+    <string name="profile_vehicle_odometer_label">Hodômetro (km)</string>
+    <string name="profile_vehicle_moto_accessories_title">ACESSÓRIOS DE CARGA (MOTO)</string>
+    <string name="profile_vehicle_has_topbox_title">Possui Baú de Carga</string>
+    <string name="profile_vehicle_has_topbox_desc">Instalação de baú traseiro para volumes maiores</string>
+    <string name="profile_vehicle_has_bag_title">Utiliza Mochila / Bag Térmica</string>
+    <string name="profile_vehicle_has_bag_desc">Transporte em bag nas costas para delivery</string>
+    <string name="profile_vehicle_carbody_title">TIPO DE CARROCERIA (CARRO)</string>
+    <string name="profile_vehicle_btn_save_changes">Salvar Alterações do Veículo</string>
+    <string name="profile_vehicle_btn_register">Cadastrar Veículo</string>
 </resources>
