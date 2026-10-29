@@ -1004,8 +1004,14 @@ class GiroCustoViewModel @JvmOverloads constructor(
                 _authErrorResId.value = null
                 onResult(true, null)
                 launch {
-                    supabaseClient.refreshCurrentSession()
-                    triggerSync()
+                    try {
+                        supabaseClient.refreshCurrentSession()
+                        triggerSync()
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        // coroutine cancelled
+                    } catch (e: Exception) {
+                        // Resiliente a falhas de rede ou encerramento assíncrono
+                    }
                 }
             } else {
                 _isBiometricLocked.value = false
@@ -1437,7 +1443,16 @@ class GiroCustoViewModel @JvmOverloads constructor(
         _syncErrorMessage.value = null
 
         viewModelScope.launch {
-            executeAccountSyncOrTransition(onComplete)
+            try {
+                executeAccountSyncOrTransition(onComplete)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // coroutine cancelled
+            } catch (e: Exception) {
+                _syncState.value = SyncState.ERROR
+                val err = e.localizedMessage ?: "Erro na sincronização"
+                _syncErrorMessage.value = err
+                onComplete?.invoke(false, err)
+            }
         }
     }
 
