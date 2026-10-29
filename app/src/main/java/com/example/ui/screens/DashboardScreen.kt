@@ -124,7 +124,7 @@ fun DashboardScreen(
                 GiroCustoLogo()
                 Column {
                     Text(
-                        text = "GiroCusto",
+                        text = stringResource(R.string.app_name),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground, // Dynamic color
@@ -132,7 +132,7 @@ fun DashboardScreen(
                         letterSpacing = (-0.5).sp
                     )
                     Text(
-                        text = (vehicle?.model ?: "Sem veículo cadastrado").uppercase(),
+                        text = (vehicle?.model ?: stringResource(R.string.dashboard_no_vehicle_registered)).uppercase(),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF10B981), // Emerald accent color
@@ -173,11 +173,11 @@ fun DashboardScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         val selectedLabel = when (selectedPeriod) {
-                            Period.SEMANA -> "Semana"
-                            Period.QUINZENA -> "Quinzena"
-                            Period.MENSAL -> "Mês Atual"
-                            Period.ULTIMOS_30_DIAS -> "Últimos 30 dias"
-                            Period.PERSONALIZADO -> "Personalizado"
+                            Period.SEMANA -> stringResource(R.string.period_week)
+                            Period.QUINZENA -> stringResource(R.string.period_fortnight)
+                            Period.MENSAL -> stringResource(R.string.period_month)
+                            Period.ULTIMOS_30_DIAS -> stringResource(R.string.period_last_30_days)
+                            Period.PERSONALIZADO -> stringResource(R.string.period_custom)
                         }
                         Text(
                             text = selectedLabel,
@@ -199,35 +199,35 @@ fun DashboardScreen(
                         modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Semana", fontSize = 14.sp) },
+                            text = { Text(stringResource(R.string.period_week), fontSize = 14.sp) },
                             onClick = {
                                 viewModel.setPeriod(Period.SEMANA)
                                 dropdownExpanded = false
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Quinzena", fontSize = 14.sp) },
+                            text = { Text(stringResource(R.string.period_fortnight), fontSize = 14.sp) },
                             onClick = {
                                 viewModel.setPeriod(Period.QUINZENA)
                                 dropdownExpanded = false
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Mês Atual", fontSize = 14.sp) },
+                            text = { Text(stringResource(R.string.period_month), fontSize = 14.sp) },
                             onClick = {
                                 viewModel.setPeriod(Period.MENSAL)
                                 dropdownExpanded = false
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Últimos 30 dias", fontSize = 14.sp) },
+                            text = { Text(stringResource(R.string.period_last_30_days), fontSize = 14.sp) },
                             onClick = {
                                 viewModel.setPeriod(Period.ULTIMOS_30_DIAS)
                                 dropdownExpanded = false
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Personalizado", fontSize = 14.sp) },
+                            text = { Text(stringResource(R.string.period_custom), fontSize = 14.sp) },
                             onClick = {
                                 viewModel.setPeriod(Period.PERSONALIZADO)
                                 dropdownExpanded = false
@@ -275,7 +275,11 @@ fun DashboardScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
-                        text = "Filtro: ${dateFormat.format(Date(customStart))} até ${dateFormat.format(Date(customEnd))}",
+                        text = stringResource(
+                            R.string.dashboard_custom_period_filter,
+                            dateFormat.format(Date(customStart)),
+                            dateFormat.format(Date(customEnd))
+                        ),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -346,14 +350,14 @@ fun DashboardScreen(
                 ) {
                     val displayFormat = remember { SimpleDateFormat("dd/MM", Locale.getDefault()) }
                     val labelPeriod = when (selectedPeriod) {
-                        Period.SEMANA -> "LUCRO LÍQUIDO (SEMANA)"
-                        Period.QUINZENA -> "LUCRO LÍQUIDO (QUINZENA)"
-                        Period.MENSAL -> "LUCRO LÍQUIDO (MÊS ATUAL)"
-                        Period.ULTIMOS_30_DIAS -> "LUCRO LÍQUIDO (30 DIAS)"
+                        Period.SEMANA -> stringResource(R.string.dashboard_net_profit_week)
+                        Period.QUINZENA -> stringResource(R.string.dashboard_net_profit_fortnight)
+                        Period.MENSAL -> stringResource(R.string.dashboard_net_profit_month)
+                        Period.ULTIMOS_30_DIAS -> stringResource(R.string.dashboard_net_profit_30_days)
                         Period.PERSONALIZADO -> {
                             val startStr = displayFormat.format(Date(customStart))
                             val endStr = displayFormat.format(Date(customEnd))
-                            "LUCRO LÍQUIDO ($startStr - $endStr)"
+                            stringResource(R.string.dashboard_net_profit_custom, startStr, endStr)
                         }
                     }
                     Text(
@@ -370,7 +374,7 @@ fun DashboardScreen(
                             .padding(horizontal = 10.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = "Dinheiro no Bolso",
+                            text = stringResource(R.string.dashboard_badge_money_in_pocket),
                             color = Color(0xFF34D399),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold
@@ -398,7 +402,10 @@ fun DashboardScreen(
                 }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Inclui R$ ${String.format(Locale.GERMAN, "%,.2f", totalMaintenance)} de manutenção corretiva no período",
+                    text = stringResource(
+                        R.string.dashboard_maintenance_included_notice,
+                        String.format(Locale.GERMAN, "%,.2f", totalMaintenance)
+                    ),
                     fontSize = 11.sp,
                     color = Color(0xFF34D399),
                     fontWeight = FontWeight.Medium
@@ -414,7 +421,7 @@ fun DashboardScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Faturamento Bruto", fontSize = 10.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.dashboard_gross_revenue), fontSize = 10.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Medium)
                         Text(
                             text = String.format(Locale.GERMAN, "R$ %,.2f", totalGross),
                             fontSize = 14.sp,
@@ -435,7 +442,7 @@ fun DashboardScreen(
                         modifier = Modifier.weight(1f).padding(start = 16.dp),
                         horizontalAlignment = Alignment.Start
                     ) {
-                        Text("Custo Operacional", fontSize = 10.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.dashboard_operational_cost), fontSize = 10.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Medium)
                         Text(
                             text = String.format(Locale.GERMAN, "- R$ %,.2f", totalExpenses),
                             fontSize = 14.sp,
@@ -451,7 +458,7 @@ fun DashboardScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 Text(
-                    text = "RESUMO DE DESPESAS DO PERÍODO",
+                    text = stringResource(R.string.dashboard_expenses_summary_title),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF94A3B8),
@@ -461,23 +468,23 @@ fun DashboardScreen(
                 
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Combustível", fontSize = 12.sp, color = Color(0xFFCBD5E1))
+                        Text(stringResource(R.string.dashboard_expense_fuel), fontSize = 12.sp, color = Color(0xFFCBD5E1))
                         Text(String.format(Locale.GERMAN, "R$ %,.2f", totalFuel), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Alimentação", fontSize = 12.sp, color = Color(0xFFCBD5E1))
+                        Text(stringResource(R.string.dashboard_expense_food), fontSize = 12.sp, color = Color(0xFFCBD5E1))
                         Text(String.format(Locale.GERMAN, "R$ %,.2f", totalFood), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Desgaste de Peças (Oculto)", fontSize = 12.sp, color = Color(0xFFCBD5E1))
+                        Text(stringResource(R.string.dashboard_expense_wear), fontSize = 12.sp, color = Color(0xFFCBD5E1))
                         Text(String.format(Locale.GERMAN, "R$ %,.2f", totalWear), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Custos Fixos Proporcionais", fontSize = 12.sp, color = Color(0xFFCBD5E1))
+                        Text(stringResource(R.string.dashboard_expense_fixed), fontSize = 12.sp, color = Color(0xFFCBD5E1))
                         Text(String.format(Locale.GERMAN, "R$ %,.2f", totalFixed), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Manutenção Corretiva (Gasto Real)", fontSize = 12.sp, color = Color(0xFFFBBF24), fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.dashboard_expense_maintenance), fontSize = 12.sp, color = Color(0xFFFBBF24), fontWeight = FontWeight.SemiBold)
                         Text(String.format(Locale.GERMAN, "R$ %,.2f", totalMaintenance), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFBBF24))
                     }
                 }
@@ -500,7 +507,7 @@ fun DashboardScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.LocalGasStation, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Custo Real / Km", fontSize = 11.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.dashboard_kpi_cost_per_km), fontSize = 11.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold)
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -534,7 +541,7 @@ fun DashboardScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Lucro Líq / Km", fontSize = 11.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.dashboard_kpi_net_profit_per_km), fontSize = 11.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold)
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -569,7 +576,7 @@ fun DashboardScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "ATENÇÃO MANUTENÇÃO",
+                    text = stringResource(R.string.dashboard_maintenance_alert_title),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFFF43F5E), // rose-500 for high visibility
@@ -599,7 +606,12 @@ fun DashboardScreen(
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = String.format(Locale.GERMAN, "Desgaste crítico de %.1f%% (%d/%d km)", part.wearPercentage, part.runKmSinceChange.toInt(), part.lifespanKm.toInt()),
+                                    text = stringResource(
+                                        R.string.dashboard_part_wear_critical,
+                                        part.wearPercentage,
+                                        part.runKmSinceChange.toInt(),
+                                        part.lifespanKm.toInt()
+                                    ),
                                     color = Color(0xFFFDA4AF), // rose-300 soft pink
                                     fontSize = 11.sp
                                 )
@@ -612,7 +624,7 @@ fun DashboardScreen(
                                 modifier = Modifier.height(32.dp),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text("Troquei", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text(stringResource(R.string.dashboard_part_button_replaced), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
                     }
@@ -627,7 +639,7 @@ fun DashboardScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "METAS DE DESEMPENHO",
+                text = stringResource(R.string.dashboard_goals_section_title),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF10B981), // Emerald accent
@@ -683,9 +695,9 @@ fun DashboardScreen(
         var showGoalsDialog by remember { mutableStateOf(false) }
 
         // Renderizar os 3 Cards de Meta
-        GoalCard(title = "Meta Diária (Hoje)", grossAct = dailyGrossAct, grossGoal = dailyGGoal, netAct = dailyNetAct, netGoal = dailyNGoal, kmAct = dailyKmAct, kmGoal = dailyKGoal, delAct = dailyDelAct, delGoal = dailyDGoal)
-        GoalCard(title = "Meta Semanal (7 dias)", grossAct = weeklyGrossAct, grossGoal = weeklyGGoal, netAct = weeklyNetAct, netGoal = weeklyNGoal, kmAct = weeklyKmAct, kmGoal = weeklyKGoal, delAct = weeklyDelAct, delGoal = weeklyDGoal)
-        GoalCard(title = "Meta Mensal (Mês Atual)", grossAct = monthlyGrossAct, grossGoal = monthlyGGoal, netAct = monthlyNetAct, netGoal = monthlyNGoal, kmAct = monthlyKmAct, kmGoal = monthlyKGoal, delAct = monthlyDelAct, delGoal = monthlyDGoal)
+        GoalCard(title = stringResource(R.string.dashboard_goal_daily_title), grossAct = dailyGrossAct, grossGoal = dailyGGoal, netAct = dailyNetAct, netGoal = dailyNGoal, kmAct = dailyKmAct, kmGoal = dailyKGoal, delAct = dailyDelAct, delGoal = dailyDGoal)
+        GoalCard(title = stringResource(R.string.dashboard_goal_weekly_title), grossAct = weeklyGrossAct, grossGoal = weeklyGGoal, netAct = weeklyNetAct, netGoal = weeklyNGoal, kmAct = weeklyKmAct, kmGoal = weeklyKGoal, delAct = weeklyDelAct, delGoal = weeklyDGoal)
+        GoalCard(title = stringResource(R.string.dashboard_goal_monthly_title), grossAct = monthlyGrossAct, grossGoal = monthlyGGoal, netAct = monthlyNetAct, netGoal = monthlyNGoal, kmAct = monthlyKmAct, kmGoal = monthlyKGoal, delAct = monthlyDelAct, delGoal = monthlyDGoal)
 
         // Botão para Ajustar Metas (Polished Green Outlined Style)
         OutlinedButton(
@@ -745,10 +757,10 @@ fun GoalCard(
             Spacer(modifier = Modifier.height(10.dp))
 
             // Linhas de Progresso das sub-metas
-            GoalRow(label = "Faturamento", value = grossAct, target = grossGoal, format = "R$ %,.2f")
-            GoalRow(label = "Lucro Líquido", value = netAct, target = netGoal, format = "R$ %,.2f")
-            GoalRow(label = "Kms Rodados", value = kmAct, target = kmGoal, format = "%,.1f km")
-            GoalRowInt(label = "Entregas", value = delAct, target = delGoal)
+            GoalRow(label = stringResource(R.string.dashboard_goal_label_gross), value = grossAct, target = grossGoal, format = "R$ %,.2f")
+            GoalRow(label = stringResource(R.string.dashboard_goal_label_net), value = netAct, target = netGoal, format = "R$ %,.2f")
+            GoalRow(label = stringResource(R.string.dashboard_goal_label_km), value = kmAct, target = kmGoal, format = "%,.1f km")
+            GoalRowInt(label = stringResource(R.string.goals_field_deliveries), value = delAct, target = delGoal)
         }
     }
 }
@@ -793,7 +805,7 @@ fun GoalRowInt(label: String, value: Int, target: Int) {
         ) {
             Text(label, fontSize = 12.sp, color = Color(0xFF94A3B8))
             Text(
-                text = "$value / $target entregas (${(pct * 100).toInt()}%)",
+                text = stringResource(R.string.dashboard_goal_deliveries_progress, value, target, (pct * 100).toInt()),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,

@@ -108,7 +108,7 @@ fun LaunchScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Lançar Turno do Dia",
+                text = stringResource(R.string.launch_screen_title),
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground, // Dynamic color
@@ -121,14 +121,14 @@ fun LaunchScreen(
             ) {
                 Icon(
                     imageVector = if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
-                    contentDescription = "Alternar Tema",
+                    contentDescription = stringResource(R.string.cd_theme_toggle),
                     tint = if (isDark) Color(0xFFF59E0B) else Color(0xFF64748B),
                     modifier = Modifier.size(20.dp)
                 )
             }
         }
         Text(
-            text = "Insira as informações de hodômetro e faturamento do seu fechamento de turno.",
+            text = stringResource(R.string.launch_screen_subtitle),
             fontSize = 13.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant // Dynamic color
         )
@@ -182,13 +182,13 @@ fun LaunchScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.DateRange,
-                            contentDescription = "Selecionar Data",
+                            contentDescription = stringResource(R.string.cd_select_date),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                         Column {
                             Text(
-                                text = "Data do Lançamento",
+                                text = stringResource(R.string.launch_date_label),
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -202,7 +202,7 @@ fun LaunchScreen(
                     }
                     Icon(
                         imageVector = Icons.Filled.Edit,
-                        contentDescription = "Editar Data",
+                        contentDescription = stringResource(R.string.cd_edit_date),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                     )
@@ -222,8 +222,8 @@ fun LaunchScreen(
                                 viewModel.platform.value = it 
                                 dropdownExpanded = true
                             },
-                            label = { Text(if (platformVal.isBlank()) "Selecione a Plataforma" else "Plataforma", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                            placeholder = { Text("Selecione a Plataforma") },
+                            label = { Text(if (platformVal.isBlank()) stringResource(R.string.launch_select_platform) else stringResource(R.string.launch_platform_label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            placeholder = { Text(stringResource(R.string.launch_select_platform)) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(64.dp)
@@ -231,7 +231,7 @@ fun LaunchScreen(
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Filled.Storefront,
-                                    contentDescription = "Plataforma",
+                                    contentDescription = stringResource(R.string.cd_platform),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -240,7 +240,7 @@ fun LaunchScreen(
                                 IconButton(onClick = { dropdownExpanded = !dropdownExpanded }) {
                                     Icon(
                                         imageVector = if (dropdownExpanded) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
-                                        contentDescription = "Expandir opções"
+                                        contentDescription = stringResource(R.string.cd_expand_platform_options)
                                     )
                                 }
                             },
@@ -294,7 +294,7 @@ fun LaunchScreen(
                                 DropdownMenuItem(
                                     text = { 
                                         Text(
-                                            text = "Cadastrar Nova Plataforma?", 
+                                            text = stringResource(R.string.launch_register_new_platform_question), 
                                             color = MaterialTheme.colorScheme.primary,
                                             fontWeight = FontWeight.Bold
                                         ) 
@@ -322,7 +322,7 @@ fun LaunchScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Add,
-                            contentDescription = "Cadastrar Nova Plataforma",
+                            contentDescription = stringResource(R.string.cd_register_new_platform),
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -334,7 +334,7 @@ fun LaunchScreen(
                     TextField(
                         value = startOdo,
                         onValueChange = { viewModel.startOdometer.value = it },
-                        label = { Text("Hodômetro Inicial", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        label = { Text(stringResource(R.string.launch_start_odometer), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .weight(1f)
                             .height(64.dp)
@@ -358,7 +358,7 @@ fun LaunchScreen(
                     TextField(
                         value = endOdo,
                         onValueChange = { viewModel.endOdometer.value = it },
-                        label = { Text("Hodômetro Final", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        label = { Text(stringResource(R.string.launch_end_odometer), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .weight(1f)
                             .height(64.dp)
@@ -458,7 +458,7 @@ fun LaunchScreen(
                     TextField(
                         value = gross,
                         onValueChange = { viewModel.grossEarnings.value = it },
-                        label = { Text("Ganhos Brutos (R$)", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        label = { Text(stringResource(R.string.launch_gross_earnings), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .weight(1f)
                             .height(64.dp)
@@ -482,7 +482,7 @@ fun LaunchScreen(
                     TextField(
                         value = deliveries,
                         onValueChange = { viewModel.deliveriesCount.value = it },
-                        label = { Text("Nº Entregas", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        label = { Text(stringResource(R.string.launch_deliveries_count), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .weight(1f)
                             .height(64.dp)
@@ -509,7 +509,7 @@ fun LaunchScreen(
                     TextField(
                         value = fuelPr,
                         onValueChange = { viewModel.fuelPrice.value = it },
-                        label = { Text("Preço do Litro (R$)", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        label = { Text(stringResource(R.string.launch_fuel_price), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .weight(1f)
                             .height(64.dp),
@@ -532,7 +532,7 @@ fun LaunchScreen(
                     TextField(
                         value = foodExp,
                         onValueChange = { viewModel.foodExpense.value = it },
-                        label = { Text("Alimentação / Outros", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        label = { Text(stringResource(R.string.launch_food_expense), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .weight(1f)
                             .height(64.dp),
@@ -558,7 +558,7 @@ fun LaunchScreen(
 
                 // Seção: Horários do Turno e Pausas
                 Text(
-                    text = "Horários do Turno e Pausa",
+                    text = stringResource(R.string.launch_shift_hours_section),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -569,7 +569,7 @@ fun LaunchScreen(
                     TextField(
                         value = startTimeVal,
                         onValueChange = { viewModel.startTime.value = it },
-                        label = { Text("Hora Início", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        label = { Text(stringResource(R.string.launch_start_time), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         placeholder = { Text("08:00") },
                         modifier = Modifier
                             .weight(1f)
@@ -588,7 +588,7 @@ fun LaunchScreen(
                                     initialH, initialM, true
                                 ).show()
                             }) {
-                                Icon(Icons.Filled.Schedule, contentDescription = "Selecionar Hora Início", tint = MaterialTheme.colorScheme.primary)
+                                Icon(Icons.Filled.Schedule, contentDescription = stringResource(R.string.cd_launch_select_start_time), tint = MaterialTheme.colorScheme.primary)
                             }
                         },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
@@ -612,7 +612,7 @@ fun LaunchScreen(
                     TextField(
                         value = endTimeVal,
                         onValueChange = { viewModel.endTime.value = it },
-                        label = { Text("Hora Final", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        label = { Text(stringResource(R.string.launch_end_time), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         placeholder = { Text("18:00") },
                         modifier = Modifier
                             .weight(1f)
@@ -631,7 +631,7 @@ fun LaunchScreen(
                                     initialH, initialM, true
                                 ).show()
                             }) {
-                                Icon(Icons.Filled.Schedule, contentDescription = "Selecionar Hora Final", tint = MaterialTheme.colorScheme.primary)
+                                Icon(Icons.Filled.Schedule, contentDescription = stringResource(R.string.cd_launch_select_end_time), tint = MaterialTheme.colorScheme.primary)
                             }
                         },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
@@ -656,7 +656,7 @@ fun LaunchScreen(
                 TextField(
                     value = pauseDurationVal,
                     onValueChange = { viewModel.pauseDuration.value = it },
-                    label = { Text("Total Tempo Pause", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    label = { Text(stringResource(R.string.launch_pause_duration), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     placeholder = { Text("01:00") },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -675,7 +675,7 @@ fun LaunchScreen(
                                 initialH, initialM, true
                             ).show()
                         }) {
-                            Icon(Icons.Filled.Timer, contentDescription = "Selecionar Tempo de Pausa", tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.Filled.Timer, contentDescription = stringResource(R.string.cd_launch_select_pause_time), tint = MaterialTheme.colorScheme.primary)
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Done),
@@ -720,7 +720,15 @@ fun LaunchScreen(
                         val netMin = (grossMin - pauseMin).coerceAtLeast(0L)
                         val netH = netMin / 60
                         val netM = netMin % 60
-                        "Jornada Líquida: ${netH}h ${if (netM > 0) "${netM}m" else "00m"} (Total ${grossMin / 60}h ${grossMin % 60}m • Pausa ${pauseMin / 60}h ${pauseMin % 60}m)"
+                        context.getString(
+                            R.string.launch_shift_summary,
+                            netH,
+                            if (netM > 0) "${netM}m" else "00m",
+                            grossMin / 60,
+                            grossMin % 60,
+                            pauseMin / 60,
+                            pauseMin % 60
+                        )
                     } else {
                         null
                     }
@@ -785,7 +793,7 @@ fun LaunchScreen(
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            text = "Estimativa de Combustível",
+                            text = stringResource(R.string.launch_fuel_estimation_title),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -814,9 +822,9 @@ fun LaunchScreen(
                             )
                             Text(
                                 text = if (fuelEstimationInfo.isUsingRealConsumption) {
-                                    "Consumo Real (${String.format(Locale.getDefault(), "%.1f", fuelEstimationInfo.effectiveConsumption)} km/L)"
+                                    stringResource(R.string.launch_fuel_real_consumption, fuelEstimationInfo.effectiveConsumption)
                                 } else {
-                                    "Consumo Cadastrado (${String.format(Locale.getDefault(), "%.1f", fuelEstimationInfo.effectiveConsumption)} km/L)"
+                                    stringResource(R.string.launch_fuel_registered_consumption, fuelEstimationInfo.effectiveConsumption)
                                 },
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
@@ -827,7 +835,11 @@ fun LaunchScreen(
                 }
 
                 Text(
-                    text = "Custo de combustível estimado para ${String.format(Locale.GERMAN, "%.1f", fuelEstimationInfo.distanceKm)} km rodados com base no consumo do ${fuelEstimationInfo.vehicleModel.ifBlank { "veículo ativo" }}.",
+                    text = stringResource(
+                        R.string.launch_fuel_estimation_message,
+                        fuelEstimationInfo.distanceKm,
+                        fuelEstimationInfo.vehicleModel.ifBlank { stringResource(R.string.launch_active_vehicle) }
+                    ),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.testTag("fuel_cost_estimation_message")
@@ -839,7 +851,7 @@ fun LaunchScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (fuelEstimationInfo.isUsingRealConsumption) "Base: Histórico real de abastecimentos" else "Base: Média teórica cadastrada",
+                        text = if (fuelEstimationInfo.isUsingRealConsumption) stringResource(R.string.launch_fuel_basis_real) else stringResource(R.string.launch_fuel_basis_registered),
                         fontSize = 11.sp,
                         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
@@ -875,7 +887,7 @@ fun LaunchScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "ESTIMADOR EM TEMPO REAL",
+                        text = stringResource(R.string.launch_realtime_estimator_title),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF10B981), // Emerald
@@ -900,7 +912,7 @@ fun LaunchScreen(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // Lucro Líquido Estimado com destaque grande
-                Text("Lucro Líquido Projetado:", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                Text(stringResource(R.string.launch_projected_net_profit), fontSize = 11.sp, color = Color(0xFF94A3B8))
                 Text(
                     text = String.format(Locale.GERMAN, "R$ %.2f", estimate.netProfit),
                     fontSize = 30.sp,
@@ -914,29 +926,29 @@ fun LaunchScreen(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // Detalhamento de Despesas Projetadas
-                Text("Detalhamento de Custos Operacionais:", fontSize = 11.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.launch_operational_cost_details), fontSize = 11.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Combustível
                 EstimationRow(
-                    label = "Combustível (Gasolina/Álcool)",
+                    label = stringResource(R.string.launch_cost_fuel),
                     value = estimate.fuelCost,
                     tooltip = if (fuelEstimationInfo.isUsingRealConsumption) {
-                        "Calculado com base no seu consumo real (${String.format(Locale.getDefault(), "%.1f", fuelEstimationInfo.effectiveConsumption)} km/L)"
+                        stringResource(R.string.launch_cost_fuel_tooltip_real, fuelEstimationInfo.effectiveConsumption)
                     } else {
-                        "Calculado com base no consumo cadastrado (${String.format(Locale.getDefault(), "%.1f", fuelEstimationInfo.effectiveConsumption)} km/L)"
+                        stringResource(R.string.launch_cost_fuel_tooltip_registered, fuelEstimationInfo.effectiveConsumption)
                     }
                 )
                 // Desgaste oculto
                 EstimationRow(
-                    label = "Desgaste Oculto (Manutenção/Peças)", 
+                    label = stringResource(R.string.launch_cost_wear), 
                     value = estimate.wearCost, 
-                    tooltip = "Calculado de forma dinâmica dividindo o preço das peças pela sua vida útil"
+                    tooltip = stringResource(R.string.launch_cost_wear_tooltip)
                 )
                 // Custos fixos
-                EstimationRow(label = "Custos Fixos Mensais Proporcionais", value = estimate.fixedCost)
+                EstimationRow(label = stringResource(R.string.launch_cost_fixed), value = estimate.fixedCost)
                 // Alimentação
-                EstimationRow(label = "Alimentação / Despesas do dia", value = estimate.foodCost)
+                EstimationRow(label = stringResource(R.string.launch_cost_food), value = estimate.foodCost)
 
                 Spacer(modifier = Modifier.height(10.dp))
                 HorizontalDivider(color = Color(0xFF2D2D34))
@@ -947,7 +959,7 @@ fun LaunchScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Total de Gastos Diários:", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.launch_total_daily_expenses), fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
                     Text(
                         text = String.format(Locale.GERMAN, "R$ %.2f", estimate.totalExpenses),
                         fontSize = 14.sp,
@@ -966,7 +978,7 @@ fun LaunchScreen(
                 viewModel.saveDailyRecord(
                     onSuccess = {
                         isSaving = false
-                        snackbarMessage = "Turno de trabalho salvo com sucesso!"
+                        snackbarMessage = context.getString(R.string.launch_save_success)
                     },
                     onError = { err ->
                         isSaving = false
@@ -985,10 +997,10 @@ fun LaunchScreen(
             shape = RoundedCornerShape(12.dp),
             enabled = !isSaving
         ) {
-            Icon(Icons.Filled.Save, "Salvar", tint = Color(0xFF064E3B))
+            Icon(Icons.Filled.Save, stringResource(R.string.cd_save), tint = Color(0xFF064E3B))
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Salvar Turno do Dia",
+                text = stringResource(R.string.launch_button_save),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF064E3B)
@@ -1009,7 +1021,7 @@ fun LaunchScreen(
                 onDismissRequest = { showAddPlatformDialog = false },
                 title = {
                     Text(
-                        text = "Cadastrar Nova Plataforma",
+                        text = stringResource(R.string.launch_dialog_new_platform_title),
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
@@ -1022,7 +1034,7 @@ fun LaunchScreen(
                         TextField(
                             value = newPlatformName,
                             onValueChange = { newPlatformName = it },
-                            label = { Text("Nome da Plataforma", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            label = { Text(stringResource(R.string.launch_dialog_platform_name), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(64.dp)
@@ -1040,7 +1052,7 @@ fun LaunchScreen(
 
                         // SEGMENT SELECTOR
                         Column {
-                            Text("Segmento", fontSize = 12.sp, color = Color(0xFF94A3B8))
+                            Text(stringResource(R.string.launch_dialog_segment), fontSize = 12.sp, color = Color(0xFF94A3B8))
                             Box(modifier = Modifier.fillMaxWidth()) {
                                 Row(
                                     modifier = Modifier
@@ -1053,10 +1065,10 @@ fun LaunchScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     val segmentLabel = when (selectedSegment) {
-                                        "delivery" -> "Delivery (Entrega)"
-                                        "transporte" -> "Transporte (Passageiros)"
-                                        "misto" -> "Misto"
-                                        else -> "Outro"
+                                        "delivery" -> stringResource(R.string.launch_segment_delivery)
+                                        "transporte" -> stringResource(R.string.launch_segment_transport)
+                                        "misto" -> stringResource(R.string.launch_segment_mixed)
+                                        else -> stringResource(R.string.launch_segment_other)
                                     }
                                     Text(segmentLabel, color = Color.White, fontSize = 14.sp)
                                     Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = Color.White)
@@ -1066,10 +1078,10 @@ fun LaunchScreen(
                                     onDismissRequest = { segmentExpanded = false }
                                 ) {
                                     listOf(
-                                        "delivery" to "Delivery (Entrega)",
-                                        "transporte" to "Transporte (Passageiros)",
-                                        "misto" to "Misto",
-                                        "outro" to "Outro"
+                                        "delivery" to stringResource(R.string.launch_segment_delivery),
+                                        "transporte" to stringResource(R.string.launch_segment_transport),
+                                        "misto" to stringResource(R.string.launch_segment_mixed),
+                                        "outro" to stringResource(R.string.launch_segment_other)
                                     ).forEach { (id, label) ->
                                         DropdownMenuItem(
                                             text = { Text(label) },
@@ -1086,7 +1098,7 @@ fun LaunchScreen(
 
                         // PAYMENT MODEL SELECTOR
                         Column {
-                            Text("Modelo de Pagamento", fontSize = 12.sp, color = Color(0xFF94A3B8))
+                            Text(stringResource(R.string.launch_dialog_payment_model), fontSize = 12.sp, color = Color(0xFF94A3B8))
                             Box(modifier = Modifier.fillMaxWidth()) {
                                 Row(
                                     modifier = Modifier
@@ -1099,9 +1111,9 @@ fun LaunchScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     val modelLabel = when (selectedPaymentModel) {
-                                        "producao" -> "Produção (Por Corrida)"
-                                        "fixo" -> "Fixo (Diária/Garantido)"
-                                        else -> "Misto"
+                                        "producao" -> stringResource(R.string.launch_payment_production)
+                                        "fixo" -> stringResource(R.string.launch_payment_fixed)
+                                        else -> stringResource(R.string.launch_payment_mixed)
                                     }
                                     Text(modelLabel, color = Color.White, fontSize = 14.sp)
                                     Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = Color.White)
@@ -1111,9 +1123,9 @@ fun LaunchScreen(
                                     onDismissRequest = { paymentExpanded = false }
                                 ) {
                                     listOf(
-                                        "producao" to "Produção (Por Corrida)",
-                                        "fixo" to "Fixo (Diária/Garantido)",
-                                        "misto" to "Misto"
+                                        "producao" to stringResource(R.string.launch_payment_production),
+                                        "fixo" to stringResource(R.string.launch_payment_fixed),
+                                        "misto" to stringResource(R.string.launch_payment_mixed)
                                     ).forEach { (id, label) ->
                                         DropdownMenuItem(
                                             text = { Text(label) },
@@ -1130,7 +1142,7 @@ fun LaunchScreen(
 
                         // CYCLE SELECTOR
                         Column {
-                            Text("Ciclo de Pagamento", fontSize = 12.sp, color = Color(0xFF94A3B8))
+                            Text(stringResource(R.string.launch_dialog_payment_cycle), fontSize = 12.sp, color = Color(0xFF94A3B8))
                             Box(modifier = Modifier.fillMaxWidth()) {
                                 Row(
                                     modifier = Modifier
@@ -1143,11 +1155,11 @@ fun LaunchScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     val cycleLabel = when (selectedCycle) {
-                                        "diario" -> "Diário"
-                                        "semanal" -> "Semanal"
-                                        "quinzenal" -> "Quinzenal"
-                                        "mensal" -> "Mensal"
-                                        else -> "Variável / Misto"
+                                        "diario" -> stringResource(R.string.launch_cycle_daily)
+                                        "semanal" -> stringResource(R.string.launch_cycle_weekly)
+                                        "quinzenal" -> stringResource(R.string.launch_cycle_fortnightly)
+                                        "mensal" -> stringResource(R.string.launch_cycle_monthly)
+                                        else -> stringResource(R.string.launch_cycle_variable)
                                     }
                                     Text(cycleLabel, color = Color.White, fontSize = 14.sp)
                                     Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = Color.White)
@@ -1157,11 +1169,11 @@ fun LaunchScreen(
                                     onDismissRequest = { cycleExpanded = false }
                                 ) {
                                     listOf(
-                                        "diario" to "Diário",
-                                        "semanal" to "Semanal",
-                                        "quinzenal" to "Quinzenal",
-                                        "mensal" to "Mensal",
-                                        "misto" to "Variável / Misto"
+                                        "diario" to stringResource(R.string.launch_cycle_daily),
+                                        "semanal" to stringResource(R.string.launch_cycle_weekly),
+                                        "quinzenal" to stringResource(R.string.launch_cycle_fortnightly),
+                                        "mensal" to stringResource(R.string.launch_cycle_monthly),
+                                        "misto" to stringResource(R.string.launch_cycle_variable)
                                     ).forEach { (id, label) ->
                                         DropdownMenuItem(
                                             text = { Text(label) },
@@ -1195,7 +1207,7 @@ fun LaunchScreen(
                         },
                         modifier = Modifier.testTag("save_new_platform_btn")
                     ) {
-                        Text("Salvar", color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.btn_save), color = MaterialTheme.colorScheme.primary)
                     }
                 },
                 dismissButton = {
@@ -1203,7 +1215,7 @@ fun LaunchScreen(
                         onClick = { showAddPlatformDialog = false },
                         modifier = Modifier.testTag("cancel_new_platform_btn")
                     ) {
-                        Text("Cancelar", color = Color(0xFF94A3B8))
+                        Text(stringResource(R.string.btn_cancel), color = Color(0xFF94A3B8))
                     }
                 },
                 containerColor = Color(0xFF1E1E22)
