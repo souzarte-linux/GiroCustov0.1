@@ -17,7 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.ReportMetrics
+import com.example.ui.ReportMetricsState
 import java.util.*
 
 @Composable
@@ -60,7 +60,7 @@ fun ExpenseLegendItem(label: String, color: Color, pct: Float, value: Double) {
 }
 
 @Composable
-fun ReportsExpenseDistributionCard(metrics: ReportMetrics) {
+fun ReportsExpenseDistributionCard(metrics: ReportMetricsState) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),

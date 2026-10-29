@@ -16,11 +16,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.ReportMetrics
+import com.example.ui.ReportMetricsState
 import java.util.*
 
 @Composable
-fun ReportsProjectionsCard(metrics: ReportMetrics, monthlyNGoal: Double) {
+fun ReportsProjectionsCard(metrics: ReportMetricsState, monthlyNGoal: Double) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),

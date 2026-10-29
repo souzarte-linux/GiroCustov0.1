@@ -16,12 +16,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.ReportMetrics
+import com.example.ui.ReportMetricsState
 import com.example.util.CurrencyUtils
 import java.util.*
 
 @Composable
-fun ReportsWorkHoursCard(metrics: ReportMetrics) {
+fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
@@ -136,7 +136,7 @@ fun ReportsWorkHoursCard(metrics: ReportMetrics) {
 }
 
 @Composable
-fun ReportsHighlightsSection(metrics: ReportMetrics) {
+fun ReportsHighlightsSection(metrics: ReportMetricsState) {
     if (metrics.bestDay != null || metrics.worstDay != null) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
