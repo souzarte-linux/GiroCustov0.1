@@ -6,20 +6,15 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.*
 import com.example.network.*
+import com.example.network.fipe.*
 import com.example.network.supabase.*
 import com.example.network.viacep.*
-import com.example.network.fipe.*
+import com.example.ui.delegates.*
 import com.example.ui.navigation.RootNavState
 import com.example.util.BiometricHelper
 import com.example.util.CurrencyUtils
-import com.example.util.GoogleAuthHelper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import com.example.ui.util.filterByPeriod
-import java.text.SimpleDateFormat
-import java.util.*
 
 enum class Period {
     SEMANA,
@@ -65,192 +60,6 @@ data class FuelCostEstimationInfo(
     val displayText: String = ""
 )
 
-// --- Modelos de Estado de Cálculos e Formulários (T-16 [ARQ-03]) ---
-
-sealed interface LaunchDistanceState {
-    object None : LaunchDistanceState
-    data class Valid(val distanceKm: Double, val formattedKm: String) : LaunchDistanceState
-    object NegativeError : LaunchDistanceState
-}
-
-data class RefillCalculationResult(
-    val updatedPricePerLiter: String? = null,
-    val updatedLiters: String? = null,
-    val updatedTotalPaid: String? = null
-)
-
-/**
- * Objeto com cálculos matemáticos e regras de negócio puras (sem dependência do framework Android).
- * Permite execução ultrarrápida em testes unitários puros JVM (T-17).
- */
-object GiroCustoDomainCalculations {
-
-    // 1. Hodômetro e Distância Diária (LaunchScreen)
-    fun calculateDailyDistance(startOdo: String, endOdo: String): LaunchDistanceState {
-        val startVal = startOdo.replace(",", ".").toDoubleOrNull()
-        val endVal = endOdo.replace(",", ".").toDoubleOrNull()
-        if (startVal == null || endVal == null) {
-            return LaunchDistanceState.None
-        }
-        val diffKm = endVal - startVal
-        return if (diffKm >= 0.0) {
-            val formatted = String.format(Locale.GERMAN, "%.1f", diffKm)
-            LaunchDistanceState.Valid(diffKm, formatted)
-        } else {
-            LaunchDistanceState.NegativeError
-        }
-    }
-
-    // 2. Validação e Cálculo de Abastecimento (FuelRefillsScreen)
-    fun isValidFuelInput(pricePerLiterStr: String, litersStr: String, odometerStr: String): Boolean {
-        val price = pricePerLiterStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val lts = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val odo = odometerStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        return price > 0.0 && lts > 0.0 && odo > 0.0
-    }
-
-    fun checkExceedsTankCapacity(litersStr: String, tankCapacity: Double): Boolean {
-        val currentLiters = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        return tankCapacity > 0.0 && currentLiters > tankCapacity
-    }
-
-    fun computeRefillTotal(pricePerLiterStr: String, litersStr: String, discountStr: String, totalPaidStr: String): Double {
-        val totalExplicit = totalPaidStr.replace(",", ".").toDoubleOrNull()
-        if (totalExplicit != null) return totalExplicit.coerceAtLeast(0.0)
-        val price = pricePerLiterStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val lts = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val disc = discountStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        return (price * lts - disc).coerceAtLeast(0.0)
-    }
-
-    fun calculateRefillMultiDirectional(
-        pricePerLiterStr: String,
-        litersStr: String,
-        discountStr: String,
-        totalPaidStr: String,
-        focusedField: String?
-    ): RefillCalculationResult {
-        val price = pricePerLiterStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val lts = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val disc = discountStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val total = totalPaidStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-
-        val priceEmpty = pricePerLiterStr.isBlank() || price <= 0.0
-        val ltsEmpty = litersStr.isBlank() || lts <= 0.0
-        val totalEmpty = totalPaidStr.isBlank() || total <= 0.0
-
-        val filledCount = listOf(!priceEmpty, !ltsEmpty, !totalEmpty).count { it }
-
-        var newPrice: String? = null
-        var newLts: String? = null
-        var newTotal: String? = null
-
-        if (filledCount == 2) {
-            if (priceEmpty && !ltsEmpty && !totalEmpty && focusedField != "price") {
-                val autoPrice = ((total + disc) / lts).coerceAtLeast(0.0)
-                if (autoPrice.isFinite() && autoPrice > 0.0) {
-                    val autoPriceStr = String.format(Locale.US, "%.2f", autoPrice)
-                    val currentPrice = pricePerLiterStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-                    if (Math.abs(currentPrice - autoPrice) > 0.009) {
-                        newPrice = autoPriceStr
-                    }
-                }
-            } else if (ltsEmpty && !priceEmpty && !totalEmpty && focusedField != "liters") {
-                val autoLts = ((total + disc) / price).coerceAtLeast(0.0)
-                if (autoLts.isFinite() && autoLts > 0.0) {
-                    val autoLtsStr = String.format(Locale.US, "%.2f", autoLts)
-                    val currentLts = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-                    if (Math.abs(currentLts - autoLts) > 0.009) {
-                        newLts = autoLtsStr
-                    }
-                }
-            } else if (totalEmpty && !priceEmpty && !ltsEmpty && focusedField != "total") {
-                val autoTotal = (price * lts - disc).coerceAtLeast(0.0)
-                val autoTotalStr = String.format(Locale.US, "%.2f", autoTotal)
-                val currentTotal = totalPaidStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-                if (Math.abs(currentTotal - autoTotal) > 0.009) {
-                    newTotal = autoTotalStr
-                }
-            }
-        } else if (filledCount == 3) {
-            when (focusedField) {
-                "price", "liters", "discount" -> {
-                    val autoTotal = (price * lts - disc).coerceAtLeast(0.0)
-                    val autoTotalStr = String.format(Locale.US, "%.2f", autoTotal)
-                    val currentTotal = totalPaidStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-                    if (Math.abs(currentTotal - autoTotal) > 0.009) {
-                        newTotal = autoTotalStr
-                    }
-                }
-                "total" -> {
-                    val autoLts = ((total + disc) / price).coerceAtLeast(0.0)
-                    if (autoLts.isFinite() && autoLts > 0.0) {
-                        val autoLtsStr = String.format(Locale.US, "%.2f", autoLts)
-                        val currentLts = litersStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-                        if (Math.abs(currentLts - autoLts) > 0.009) {
-                            newLts = autoLtsStr
-                        }
-                    }
-                }
-            }
-        }
-
-        return RefillCalculationResult(
-            updatedPricePerLiter = newPrice,
-            updatedLiters = newLts,
-            updatedTotalPaid = newTotal
-        )
-    }
-}
-
-data class ReportsFilterState(
-    val period: Period = Period.SEMANA,
-    val customStart: Long = 0L,
-    val customEnd: Long = 0L
-)
-
-data class ReportMetricsState(
-    val filteredRecords: List<DailyRecord> = emptyList(),
-    val filteredMaintenanceRecords: List<MaintenanceRecord> = emptyList(),
-    val chronologicalRecords: List<DailyRecord> = emptyList(),
-    val totalEarnings: Double = 0.0,
-    val totalFuelCost: Double = 0.0,
-    val totalWearCost: Double = 0.0,
-    val totalFixedCost: Double = 0.0,
-    val totalFoodCost: Double = 0.0,
-    val totalExpenses: Double = 0.0,
-    val totalMaintenanceCost: Double = 0.0,
-    val realExpenses: Double = 0.0,
-    val netProfit: Double = 0.0,
-    val realNetProfit: Double = 0.0,
-    val totalDeliveries: Int = 0,
-    val totalKm: Double = 0.0,
-    val bestDay: DailyRecord? = null,
-    val worstDay: DailyRecord? = null,
-    val avgEarningsPerDay: Double = 0.0,
-    val avgProfitPerDay: Double = 0.0,
-    val avgKmPerDay: Double = 0.0,
-    val totalWorkMinutes: Long = 0L,
-    val totalWorkHours: Double = 0.0,
-    val totalPauseMinutes: Long = 0L,
-    val grossPerHour: Double = 0.0,
-    val netPerHour: Double = 0.0,
-    val avgHoursPerShift: Double = 0.0,
-    val formattedTotalWork: String = "0h 00m",
-    val formattedTotalPause: String = "0h 00m",
-    val projectedMonthlyProfit: Double = 0.0,
-    val projectedMonthlyEarnings: Double = 0.0,
-    val sumAllExpenses: Double = 0.0,
-    val pctFuel: Float = 0f,
-    val pctFood: Float = 0f,
-    val pctWear: Float = 0f,
-    val pctFixed: Float = 0f,
-    val pctMaintenance: Float = 0f,
-    val monthlyWorkingDays: Int = 22,
-    val pctOfGoal: Double = 1.0,
-    val recordsCount: Int = 0
-)
-
 sealed class AccountConflictState {
     abstract val pendingCount: Int
 
@@ -266,90 +75,149 @@ sealed class AccountConflictState {
     ) : AccountConflictState()
 }
 
+data class EstimationDetail(
+    val distance: Double = 0.0,
+    val fuelCost: Double = 0.0,
+    val wearCost: Double = 0.0,
+    val fixedCost: Double = 0.0,
+    val foodCost: Double = 0.0,
+    val totalExpenses: Double = 0.0,
+    val netProfit: Double = 0.0
+)
+
 class GiroCustoViewModel @JvmOverloads constructor(
     application: Application,
     val dataOwnerStorage: DataOwnerStorage = SharedPreferencesDataOwnerStorage(application),
     val repository: GiroCustoRepository = GiroCustoRepository(GiroCustoDatabase.getDatabase(application), dataOwnerStorage)
 ) : AndroidViewModel(application) {
     private val db = GiroCustoDatabase.getDatabase(application)
-
-    // Supabase Cloud Auth & Sync
     private val supabaseClient = SupabaseClient.getInstance(application)
+
+    // Supabase Cloud Auth & Session
     val currentUser: StateFlow<AuthSession?> = supabaseClient.sessionState
 
-    private val syncMutex = Mutex()
+    // 1. Coordenador FIPE e ViaCEP
+    private val fipeViaCepCoordinator: FipeAndViaCepCoordinator = FipeAndViaCepCoordinator(viewModelScope)
+    val viaCepState: StateFlow<ViaCepUiState> = fipeViaCepCoordinator.viaCepState
+    val fipeUiState: StateFlow<FipeUiState> = fipeViaCepCoordinator.fipeUiState
+    val fipeMarcas: StateFlow<List<FipeItemDto>> = fipeViaCepCoordinator.fipeMarcas
+    val fipeModelos: StateFlow<List<FipeItemDto>> = fipeViaCepCoordinator.fipeModelos
+    val fipeAnos: StateFlow<List<FipeItemDto>> = fipeViaCepCoordinator.fipeAnos
+    val fipeDetail: StateFlow<FipeDetailDto?> = fipeViaCepCoordinator.fipeDetail
 
-    private val _syncState = MutableStateFlow(SyncState.IDLE)
-    val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
+    // 2. Coordenador de Busca de Postos
+    private val gasStationCoordinator: GasStationSearchCoordinator = GasStationSearchCoordinator(viewModelScope)
+    val nearbyGasStations: StateFlow<List<GasStationResult>> = gasStationCoordinator.nearbyGasStations
+    val isSearchingStations: StateFlow<Boolean> = gasStationCoordinator.isSearchingStations
+    val stationSearchError: StateFlow<String?> = gasStationCoordinator.stationSearchError
+    val lastSearchLocation: StateFlow<Pair<Double, Double>?> = gasStationCoordinator.lastSearchLocation
 
-    private val _isAccountSwitching = MutableStateFlow(false)
-    val isAccountSwitching: StateFlow<Boolean> = _isAccountSwitching.asStateFlow()
+    fun clearStationSearch() = gasStationCoordinator.clearStationSearch()
+    fun searchNearbyGasStations(context: Context) = gasStationCoordinator.searchNearbyGasStations(context)
 
-    private val _accountConflictState = MutableStateFlow<AccountConflictState?>(null)
-    val accountConflictState: StateFlow<AccountConflictState?> = _accountConflictState.asStateFlow()
-
-    private val _showDiscardDoubleConfirmationDialog = MutableStateFlow(false)
-    val showDiscardDoubleConfirmationDialog: StateFlow<Boolean> = _showDiscardDoubleConfirmationDialog.asStateFlow()
-
-    private val _showClaimDataConfirmationDialog = MutableStateFlow(false)
-    val showClaimDataConfirmationDialog: StateFlow<Boolean> = _showClaimDataConfirmationDialog.asStateFlow()
-
-    private val syncPrefs = application.getSharedPreferences("giro_custo_sync_prefs", Context.MODE_PRIVATE)
-
-    private val _lastSyncTime = MutableStateFlow<Long?>(
-        syncPrefs.getLong("last_sync_timestamp", 0L).takeIf { it > 0L }
-    )
-    val lastSyncTime: StateFlow<Long?> = _lastSyncTime.asStateFlow()
-
-    private val _syncErrorMessage = MutableStateFlow<String?>(null)
-    val syncErrorMessage: StateFlow<String?> = _syncErrorMessage.asStateFlow()
-
-    // GPS Gas Station Search States
-    private val _nearbyGasStations = MutableStateFlow<List<GasStationResult>>(emptyList())
-    val nearbyGasStations: StateFlow<List<GasStationResult>> = _nearbyGasStations.asStateFlow()
-
-    private val _isSearchingStations = MutableStateFlow(false)
-    val isSearchingStations: StateFlow<Boolean> = _isSearchingStations.asStateFlow()
-
-    private val _stationSearchError = MutableStateFlow<String?>(null)
-    val stationSearchError: StateFlow<String?> = _stationSearchError.asStateFlow()
-
-    private val _lastSearchLocation = MutableStateFlow<Pair<Double, Double>?>(null)
-    val lastSearchLocation: StateFlow<Pair<Double, Double>?> = _lastSearchLocation.asStateFlow()
-
-    fun clearStationSearch() {
-        _nearbyGasStations.value = emptyList()
-        _stationSearchError.value = null
-        _lastSearchLocation.value = null
-    }
-
-    fun searchNearbyGasStations(context: Context) {
-        viewModelScope.launch {
-            _isSearchingStations.value = true
-            _stationSearchError.value = null
-            _nearbyGasStations.value = emptyList()
-            _lastSearchLocation.value = null
-
-            val location = LocationHelper.getCurrentLocation(context)
-            if (location != null) {
-                _lastSearchLocation.value = Pair(location.latitude, location.longitude)
-                when (val result = GasStationRepository.findNearbyGasStations(location.latitude, location.longitude)) {
-                    is GasStationSearchResult.Success -> {
-                        _nearbyGasStations.value = result.stations
-                        if (result.stations.isEmpty()) {
-                            _stationSearchError.value = "Nenhum posto de combustível encontrado nas proximidades."
-                        }
-                    }
-                    is GasStationSearchResult.Error -> {
-                        _stationSearchError.value = result.message
-                    }
-                }
-            } else {
-                _stationSearchError.value = "Não foi possível obter a localização. Verifique se o GPS está ativo e a permissão concedida."
-            }
-            _isSearchingStations.value = false
+    // 3. Coordenador de Sincronização e Conflitos
+    private val syncCoordinator: SyncAndConflictCoordinator = SyncAndConflictCoordinator(
+        scope = viewModelScope,
+        application = application,
+        repository = repository,
+        dataOwnerStorage = dataOwnerStorage,
+        supabaseClient = supabaseClient,
+        onResetSpecificPreferences = {
+            clearViaCepState()
+            clearFipe()
         }
-    }
+    )
+    val syncState: StateFlow<SyncState> = syncCoordinator.syncState
+    val isAccountSwitching: StateFlow<Boolean> = syncCoordinator.isAccountSwitching
+    val accountConflictState: StateFlow<AccountConflictState?> = syncCoordinator.accountConflictState
+    val showDiscardDoubleConfirmationDialog: StateFlow<Boolean> = syncCoordinator.showDiscardDoubleConfirmationDialog
+    val showClaimDataConfirmationDialog: StateFlow<Boolean> = syncCoordinator.showClaimDataConfirmationDialog
+    val lastSyncTime: StateFlow<Long?> = syncCoordinator.lastSyncTime
+    val syncErrorMessage: StateFlow<String?> = syncCoordinator.syncErrorMessage
+
+    fun openDiscardConfirmation() = syncCoordinator.openDiscardConfirmation()
+    fun dismissDiscardConfirmation() = syncCoordinator.dismissDiscardConfirmation()
+    fun openClaimDataConfirmation() = syncCoordinator.openClaimDataConfirmation()
+    fun dismissClaimDataConfirmation() = syncCoordinator.dismissClaimDataConfirmation()
+    fun resolveConflictReturnToPreviousAccount() = syncCoordinator.resolveConflictReturnToPreviousAccount()
+    fun confirmDiscardData(onComplete: () -> Unit = {}) = syncCoordinator.confirmDiscardData(onComplete)
+    fun confirmClaimData(onComplete: () -> Unit = {}) = syncCoordinator.confirmClaimData(onComplete)
+    fun triggerSync(onComplete: ((Boolean, String?) -> Unit)? = null) = syncCoordinator.triggerSync(onComplete)
+    fun syncNow(onComplete: ((Boolean, String?) -> Unit)? = null) = syncCoordinator.syncNow(onComplete)
+    fun clearSyncError() = syncCoordinator.clearSyncError()
+    fun formatLastSyncTime(timestamp: Long?): String = syncCoordinator.formatLastSyncTime(timestamp)
+
+    // 4. Coordenador de Autenticação e Biometria
+    private val authCoordinator: AuthAndAccountCoordinator = AuthAndAccountCoordinator(
+        scope = viewModelScope,
+        application = application,
+        repository = repository,
+        dataOwnerStorage = dataOwnerStorage,
+        supabaseClient = supabaseClient,
+        syncCoordinator = syncCoordinator,
+        onClearCaches = {
+            clearViaCepState()
+            clearFipe()
+        }
+    )
+    val isBiometricLocked: StateFlow<Boolean> = authCoordinator.isBiometricLocked
+    val authUiState: StateFlow<AuthUiState> = authCoordinator.authUiState
+    val authErrorResId: StateFlow<Int?> = authCoordinator.authErrorResId
+    val isBiometricAvailable: StateFlow<Boolean> = authCoordinator.isBiometricAvailable
+
+    fun refreshBiometricAvailability() = authCoordinator.refreshBiometricAvailability()
+    fun signInWithEmail(email: String, pass: String, onResult: (Boolean, String?) -> Unit = { _, _ -> }) =
+        authCoordinator.signInWithEmail(email, pass, onResult)
+    fun signUpWithEmail(email: String, pass: String, onResult: (Boolean, String?) -> Unit = { _, _ -> }) =
+        authCoordinator.signUpWithEmail(email, pass, onResult)
+    fun signInWithGoogle(context: Context, onResult: (Boolean, String?) -> Unit = { _, _ -> }) =
+        authCoordinator.signInWithGoogle(context, onResult)
+    fun unlockWithBiometrics(onResult: (Boolean, String?) -> Unit = { _, _ -> }) =
+        authCoordinator.unlockWithBiometrics(onResult)
+    fun handleBiometricKeyInvalidated() = authCoordinator.handleBiometricKeyInvalidated()
+    fun dismissBiometricLockForFallback() = authCoordinator.dismissBiometricLockForFallback()
+    fun resetAuthError() = authCoordinator.resetAuthError()
+    fun signInWithBiometrics(onResult: (Boolean, String?) -> Unit = { _, _ -> }) =
+        authCoordinator.signInWithBiometrics(onResult)
+    fun lockAppForBiometrics() = authCoordinator.lockAppForBiometrics()
+    fun logout() = authCoordinator.logout()
+    fun exportUserData(onResult: (String) -> Unit) = authCoordinator.exportUserData(onResult)
+    fun deleteAccountAndData(onResult: (Boolean, String?) -> Unit) = authCoordinator.deleteAccountAndData(onResult)
+
+    fun loginSupabase(email: String, pass: String, onResult: (Boolean, String?) -> Unit) = signInWithEmail(email, pass, onResult)
+    fun registerSupabase(email: String, pass: String, onResult: (Boolean, String?) -> Unit) = signUpWithEmail(email, pass, onResult)
+    fun logoutSupabase() = logout()
+
+    // 5. Coordenador de Metas e Tema
+    private val goalsCoordinator: GoalsAndThemeCoordinator = GoalsAndThemeCoordinator(
+        scope = viewModelScope,
+        application = application,
+        repository = repository,
+        supabaseClient = supabaseClient,
+        triggerSync = { triggerSync() }
+    )
+    val dailyGoalGross: MutableStateFlow<Double> get() = goalsCoordinator.dailyGoalGross
+    val dailyGoalNet: MutableStateFlow<Double> get() = goalsCoordinator.dailyGoalNet
+    val dailyGoalKm: MutableStateFlow<Double> get() = goalsCoordinator.dailyGoalKm
+    val dailyGoalDeliveries: MutableStateFlow<Int> get() = goalsCoordinator.dailyGoalDeliveries
+
+    val weeklyGoalGross: MutableStateFlow<Double> get() = goalsCoordinator.weeklyGoalGross
+    val weeklyGoalNet: MutableStateFlow<Double> get() = goalsCoordinator.weeklyGoalNet
+    val weeklyGoalKm: MutableStateFlow<Double> get() = goalsCoordinator.weeklyGoalKm
+    val weeklyGoalDeliveries: MutableStateFlow<Int> get() = goalsCoordinator.weeklyGoalDeliveries
+
+    val monthlyGoalGross: MutableStateFlow<Double> get() = goalsCoordinator.monthlyGoalGross
+    val monthlyGoalNet: MutableStateFlow<Double> get() = goalsCoordinator.monthlyGoalNet
+    val monthlyGoalKm: MutableStateFlow<Double> get() = goalsCoordinator.monthlyGoalKm
+    val monthlyGoalDeliveries: MutableStateFlow<Int> get() = goalsCoordinator.monthlyGoalDeliveries
+
+    val isDarkTheme: MutableStateFlow<Boolean> get() = goalsCoordinator.isDarkTheme
+    fun toggleTheme() = goalsCoordinator.toggleTheme()
+    fun updateGoals(
+        dailyG: Double, dailyN: Double, dailyK: Double, dailyD: Int,
+        weeklyG: Double, weeklyN: Double, weeklyK: Double, weeklyD: Int,
+        monthlyG: Double, monthlyN: Double, monthlyK: Double, monthlyD: Int
+    ) = goalsCoordinator.updateGoals(dailyG, dailyN, dailyK, dailyD, weeklyG, weeklyN, weeklyK, weeklyD, monthlyG, monthlyN, monthlyK, monthlyD)
 
     // Flows do Banco de Dados
     val vehicle: StateFlow<Vehicle?> = repository.vehicleFlow
@@ -361,14 +229,7 @@ class GiroCustoViewModel @JvmOverloads constructor(
     val userProfile: StateFlow<UserProfile?> = repository.userProfileFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    // Indicador interno de inicialização do Room Flow para evitar flickering
     private val isProfileInitialized = MutableStateFlow(false)
-
-    // Estado de Bloqueio por Biometria
-    private val _isBiometricLocked = MutableStateFlow(
-        supabaseClient.hasSavedSession() && BiometricHelper.canUnlockWithBiometrics(application)
-    )
-    val isBiometricLocked: StateFlow<Boolean> = _isBiometricLocked.asStateFlow()
 
     val rootNavState: StateFlow<RootNavState> = combine(
         currentUser,
@@ -388,39 +249,6 @@ class GiroCustoViewModel @JvmOverloads constructor(
         started = SharingStarted.Eagerly,
         initialValue = RootNavState.Initializing
     )
-
-    // Estados de UI para Login, Cadastro, Biometria e ViaCEP
-    private val _authUiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
-    val authUiState: StateFlow<AuthUiState> = _authUiState.asStateFlow()
-
-    private val _authErrorResId = MutableStateFlow<Int?>(null)
-    val authErrorResId: StateFlow<Int?> = _authErrorResId.asStateFlow()
-
-    private val _viaCepState = MutableStateFlow<ViaCepUiState>(ViaCepUiState.Idle)
-    val viaCepState: StateFlow<ViaCepUiState> = _viaCepState.asStateFlow()
-
-    // Estados de UI e Seletores para Tabela FIPE (Parallelum)
-    private val _fipeUiState = MutableStateFlow<FipeUiState>(FipeUiState.Idle)
-    val fipeUiState: StateFlow<FipeUiState> = _fipeUiState.asStateFlow()
-
-    private val _fipeMarcas = MutableStateFlow<List<FipeItemDto>>(emptyList())
-    val fipeMarcas: StateFlow<List<FipeItemDto>> = _fipeMarcas.asStateFlow()
-
-    private val _fipeModelos = MutableStateFlow<List<FipeItemDto>>(emptyList())
-    val fipeModelos: StateFlow<List<FipeItemDto>> = _fipeModelos.asStateFlow()
-
-    private val _fipeAnos = MutableStateFlow<List<FipeItemDto>>(emptyList())
-    val fipeAnos: StateFlow<List<FipeItemDto>> = _fipeAnos.asStateFlow()
-
-    private val _fipeDetail = MutableStateFlow<FipeDetailDto?>(null)
-    val fipeDetail: StateFlow<FipeDetailDto?> = _fipeDetail.asStateFlow()
-
-    private val _isBiometricAvailable = MutableStateFlow(BiometricHelper.isBiometricHardwareAvailable(application))
-    val isBiometricAvailable: StateFlow<Boolean> = _isBiometricAvailable.asStateFlow()
-
-    fun refreshBiometricAvailability() {
-        _isBiometricAvailable.value = BiometricHelper.isBiometricHardwareAvailable(getApplication())
-    }
 
     val allPlatforms: StateFlow<List<Platform>> = repository.allPlatformsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -515,137 +343,136 @@ class GiroCustoViewModel @JvmOverloads constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     fun saveFuelRefill(refill: FuelRefill) {
-        viewModelScope.launch {
-            repository.saveFuelRefill(refill)
-        }
+        viewModelScope.launch { repository.saveFuelRefill(refill) }
     }
 
     fun deleteFuelRefill(refill: FuelRefill) {
-        viewModelScope.launch {
-            repository.deleteFuelRefill(refill)
-        }
+        viewModelScope.launch { repository.deleteFuelRefill(refill) }
     }
 
     fun renameGasStation(oldName: String, newName: String) {
-        viewModelScope.launch {
-            repository.renameGasStation(oldName, newName)
-        }
+        viewModelScope.launch { repository.renameGasStation(oldName, newName) }
     }
 
     fun saveMaintenanceRecord(record: MaintenanceRecord) {
-        viewModelScope.launch {
-            repository.saveMaintenanceRecord(record)
-        }
+        viewModelScope.launch { repository.saveMaintenanceRecord(record) }
     }
 
     fun deleteMaintenanceRecord(record: MaintenanceRecord) {
-        viewModelScope.launch {
-            repository.deleteMaintenanceRecord(record)
-        }
+        viewModelScope.launch { repository.deleteMaintenanceRecord(record) }
     }
 
-    // Estado de Período Selecionado no Dashboard
+    // 6. Coordenador de Lançamento Diário
+    private val launchCoordinator: DailyLaunchCoordinator = DailyLaunchCoordinator(
+        scope = viewModelScope,
+        repository = repository,
+        vehicleFlow = vehicle,
+        partsFlow = parts,
+        realAverageConsumptionFlow = realAverageConsumption
+    )
+    val startOdometer: MutableStateFlow<String> get() = launchCoordinator.startOdometer
+    val endOdometer: MutableStateFlow<String> get() = launchCoordinator.endOdometer
+    val grossEarnings: MutableStateFlow<String> get() = launchCoordinator.grossEarnings
+    val deliveriesCount: MutableStateFlow<String> get() = launchCoordinator.deliveriesCount
+    val fuelPrice: MutableStateFlow<String> get() = launchCoordinator.fuelPrice
+    val foodExpense: MutableStateFlow<String> get() = launchCoordinator.foodExpense
+    val startTime: MutableStateFlow<String> get() = launchCoordinator.startTime
+    val endTime: MutableStateFlow<String> get() = launchCoordinator.endTime
+    val pauseDuration: MutableStateFlow<String> get() = launchCoordinator.pauseDuration
+    val launchDateTimestamp: MutableStateFlow<Long> get() = launchCoordinator.launchDateTimestamp
+    val platform: MutableStateFlow<String> get() = launchCoordinator.platform
+
+    fun setLaunchDate(timestamp: Long) = launchCoordinator.setLaunchDate(timestamp)
+    val launchCalculatedDistance: StateFlow<LaunchDistanceState> get() = launchCoordinator.launchCalculatedDistance
+    val realTimeEstimation: Flow<EstimationDetail> get() = launchCoordinator.realTimeEstimation
+    val fuelCostEstimationInfo: StateFlow<FuelCostEstimationInfo> get() = launchCoordinator.fuelCostEstimationInfo
+    suspend fun prefillLaunchFields() = launchCoordinator.prefillLaunchFields()
+    fun saveDailyRecord(onSuccess: () -> Unit, onError: (String) -> Unit) = launchCoordinator.saveDailyRecord(onSuccess, onError)
+    fun deleteDailyRecord(record: DailyRecord) = launchCoordinator.deleteDailyRecord(record)
+
+    fun updateDailyRecord(
+        recordId: Long,
+        dateString: String,
+        dateTimestamp: Long,
+        platform: String,
+        grossEarnings: Long,
+        deliveriesCount: Int,
+        startOdometer: Double,
+        endOdometer: Double,
+        fuelPrice: Long,
+        foodExpense: Long,
+        startTime: String = "",
+        endTime: String = "",
+        pauseDuration: String = "",
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) = launchCoordinator.updateDailyRecord(
+        recordId, dateString, dateTimestamp, platform, grossEarnings, deliveriesCount,
+        startOdometer, endOdometer, fuelPrice, foodExpense, startTime, endTime, pauseDuration, onSuccess, onError
+    )
+
+    fun updateDailyRecord(
+        recordId: Long,
+        dateString: String,
+        dateTimestamp: Long,
+        platform: String,
+        grossEarnings: Double,
+        deliveriesCount: Int,
+        startOdometer: Double,
+        endOdometer: Double,
+        fuelPrice: Double,
+        foodExpense: Double,
+        startTime: String = "",
+        endTime: String = "",
+        pauseDuration: String = "",
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) = updateDailyRecord(
+        recordId = recordId,
+        dateString = dateString,
+        dateTimestamp = dateTimestamp,
+        platform = platform,
+        grossEarnings = CurrencyUtils.toCents(grossEarnings),
+        deliveriesCount = deliveriesCount,
+        startOdometer = startOdometer,
+        endOdometer = endOdometer,
+        fuelPrice = CurrencyUtils.toFuelPriceMillis(fuelPrice),
+        foodExpense = CurrencyUtils.toCents(foodExpense),
+        startTime = startTime,
+        endTime = endTime,
+        pauseDuration = pauseDuration,
+        onSuccess = onSuccess,
+        onError = onError
+    )
+
+    // Períodos e Relatórios
     private val _selectedPeriod = MutableStateFlow(Period.SEMANA)
     val selectedPeriod: StateFlow<Period> = _selectedPeriod.asStateFlow()
 
-    // Estados para Período Personalizado
     val customStartDate = MutableStateFlow(System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000)
     val customEndDate = MutableStateFlow(System.currentTimeMillis())
 
+    fun setPeriod(period: Period) { _selectedPeriod.value = period }
     fun setCustomPeriod(start: Long, end: Long) {
         customStartDate.value = start
         customEndDate.value = end
     }
 
-    // Estado de Período Selecionado nos Relatórios (Reports)
     private val _reportsSelectedPeriod = MutableStateFlow(Period.SEMANA)
     val reportsSelectedPeriod: StateFlow<Period> = _reportsSelectedPeriod.asStateFlow()
 
-    // Estados para Período Personalizado nos Relatórios (Reports)
     val reportsCustomStartDate = MutableStateFlow(System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000)
     val reportsCustomEndDate = MutableStateFlow(System.currentTimeMillis())
 
-    fun setReportsPeriod(period: Period) {
-        _reportsSelectedPeriod.value = period
-    }
-
+    fun setReportsPeriod(period: Period) { _reportsSelectedPeriod.value = period }
     fun setReportsCustomPeriod(start: Long, end: Long) {
         reportsCustomStartDate.value = start
         reportsCustomEndDate.value = end
     }
 
-    // Estado do Formulário de Lançamento (Lançar Novo Dia)
-    var startOdometer = MutableStateFlow("")
-    var endOdometer = MutableStateFlow("")
-    var grossEarnings = MutableStateFlow("")
-    var deliveriesCount = MutableStateFlow("")
-    var fuelPrice = MutableStateFlow("")
-    var foodExpense = MutableStateFlow("")
-    var startTime = MutableStateFlow("")
-    var endTime = MutableStateFlow("")
-    var pauseDuration = MutableStateFlow("")
-    val launchDateTimestamp = MutableStateFlow(System.currentTimeMillis())
-    val platform = MutableStateFlow("")
-
-    fun setLaunchDate(timestamp: Long) {
-        launchDateTimestamp.value = timestamp
-    }
-
-    // Preferência dedicada para configurações do app (desacoplada de metas e contas)
-    private val appPrefs = getApplication<Application>().getSharedPreferences("giro_custo_preferences", Context.MODE_PRIVATE)
-
-    // Metas Editáveis (Valores de Destino - alimentadas reativamente pelo Room)
-    val dailyGoalGross = MutableStateFlow(200.0)
-    val dailyGoalNet = MutableStateFlow(130.0)
-    val dailyGoalKm = MutableStateFlow(100.0)
-    val dailyGoalDeliveries = MutableStateFlow(15)
-
-    val weeklyGoalGross = MutableStateFlow(1200.0)
-    val weeklyGoalNet = MutableStateFlow(800.0)
-    val weeklyGoalKm = MutableStateFlow(600.0)
-    val weeklyGoalDeliveries = MutableStateFlow(90)
-
-    val monthlyGoalGross = MutableStateFlow(5000.0)
-    val monthlyGoalNet = MutableStateFlow(3200.0)
-    val monthlyGoalKm = MutableStateFlow(2500.0)
-    val monthlyGoalDeliveries = MutableStateFlow(400)
-
-    private fun getInitialThemePreference(): Boolean {
-        if (appPrefs.contains("is_dark_theme")) {
-            return appPrefs.getBoolean("is_dark_theme", true)
-        }
-        val legacyPrefs = getApplication<Application>().getSharedPreferences("giro_custo_goals", Context.MODE_PRIVATE)
-        if (legacyPrefs.contains("is_dark_theme")) {
-            val legacyVal = legacyPrefs.getBoolean("is_dark_theme", true)
-            appPrefs.edit().putBoolean("is_dark_theme", legacyVal).apply()
-            return legacyVal
-        }
-        return true
-    }
-
-    // Tema Claro / Dark
-    val isDarkTheme = MutableStateFlow(getInitialThemePreference())
-
-    fun toggleTheme() {
-        val newVal = !isDarkTheme.value
-        isDarkTheme.value = newVal
-        appPrefs.edit().putBoolean("is_dark_theme", newVal).apply()
-    }
-
-    // --- T-16 [ARQ-03] e T-17 [TST-01]: Cálculos Matemáticos e Regras de Negócio Puros ---
-
-    // 1. Hodômetro e Distância Diária (LaunchScreen)
     fun calculateDailyDistance(startOdo: String, endOdo: String): LaunchDistanceState =
         GiroCustoDomainCalculations.calculateDailyDistance(startOdo, endOdo)
 
-    val launchCalculatedDistance: StateFlow<LaunchDistanceState> = combine(
-        startOdometer,
-        endOdometer
-    ) { start, end ->
-        calculateDailyDistance(start, end)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LaunchDistanceState.None)
-
-    // 2. Cálculo Multidirecional e Validação de Abastecimento (FuelRefillsScreen)
     fun calculateRefillMultiDirectional(
         pricePerLiterStr: String,
         litersStr: String,
@@ -666,7 +493,6 @@ class GiroCustoViewModel @JvmOverloads constructor(
     fun isValidFuelInput(pricePerLiterStr: String, litersStr: String, odometerStr: String): Boolean =
         GiroCustoDomainCalculations.isValidFuelInput(pricePerLiterStr, litersStr, odometerStr)
 
-    // 3. Métricas e Projeções Financeiras de Relatórios (ReportsScreen)
     fun calculateReportMetrics(
         records: List<DailyRecord>,
         maintenanceRecords: List<MaintenanceRecord>,
@@ -675,104 +501,15 @@ class GiroCustoViewModel @JvmOverloads constructor(
         customEnd: Long,
         plannedWorkDays: Int,
         monthlyGoalNet: Double
-    ): ReportMetricsState {
-        val filtered = filterByPeriod(records, selectedPeriod, customStart, customEnd) { it.dateTimestamp }
-        val filteredMaint = filterByPeriod(maintenanceRecords, selectedPeriod, customStart, customEnd) { it.dateTimestamp }
-        val chronological = filtered.take(7).sortedBy { it.dateTimestamp }
-
-        val totalEarnings = CurrencyUtils.centsToDouble(filtered.sumOf { it.grossEarnings })
-        val totalFuel = CurrencyUtils.centsToDouble(filtered.sumOf { it.fuelCost })
-        val totalWear = CurrencyUtils.centsToDouble(filtered.sumOf { it.wearCost })
-        val totalFixed = CurrencyUtils.centsToDouble(filtered.sumOf { it.proportionalFixedCost })
-        val totalFood = CurrencyUtils.centsToDouble(filtered.sumOf { it.foodExpense })
-        val totalExpenses = totalFuel + totalWear + totalFixed + totalFood
-
-        val totalMaint = CurrencyUtils.centsToDouble(filteredMaint.sumOf { it.value })
-        val realExpenses = totalExpenses + totalMaint
-        val netProfit = totalEarnings - totalExpenses
-        val realNetProfit = netProfit - totalMaint
-
-        val totalDeliveries = filtered.sumOf { it.deliveriesCount }
-        val totalKm = filtered.sumOf { it.kmRodados }
-
-        val bestDay = filtered.maxByOrNull { it.netProfit }
-        val worstDay = filtered.minByOrNull { it.netProfit }
-
-        val count = filtered.size
-        val avgEarningsPerDay = if (count > 0) totalEarnings / count else 0.0
-        val avgProfitPerDay = if (count > 0) realNetProfit / count else 0.0
-        val avgKmPerDay = if (count > 0) totalKm / count else 0.0
-
-        val totalWorkMinutes = filtered.sumOf { it.totalWorkMinutes }
-        val totalWorkHours = totalWorkMinutes / 60.0
-        val totalPauseMinutes = filtered.sumOf { it.pauseMinutes }
-        val grossPerHour = if (totalWorkHours > 0) totalEarnings / totalWorkHours else 0.0
-        val netPerHour = if (totalWorkHours > 0) realNetProfit / totalWorkHours else 0.0
-        val avgHoursPerShift = if (count > 0) totalWorkHours / count else 0.0
-
-        val workHoursPart = totalWorkMinutes / 60
-        val workMinPart = totalWorkMinutes % 60
-        val formattedTotalWork = "${workHoursPart}h ${String.format(Locale.GERMAN, "%02d", workMinPart)}m"
-
-        val pauseHoursPart = totalPauseMinutes / 60
-        val pauseMinPart = totalPauseMinutes % 60
-        val formattedTotalPause = "${pauseHoursPart}h ${String.format(Locale.GERMAN, "%02d", pauseMinPart)}m"
-
-        val workingDays = if (plannedWorkDays > 0) plannedWorkDays else 22
-        val projectedMonthlyProfit = avgProfitPerDay * workingDays
-        val projectedMonthlyEarnings = avgEarningsPerDay * workingDays
-
-        val sumAllExpenses = totalFuel + totalWear + totalFixed + totalFood + totalMaint
-        val pctFuel = if (sumAllExpenses > 0) (totalFuel / sumAllExpenses).toFloat() else 0f
-        val pctFood = if (sumAllExpenses > 0) (totalFood / sumAllExpenses).toFloat() else 0f
-        val pctWear = if (sumAllExpenses > 0) (totalWear / sumAllExpenses).toFloat() else 0f
-        val pctFixed = if (sumAllExpenses > 0) (totalFixed / sumAllExpenses).toFloat() else 0f
-        val pctMaintenance = if (sumAllExpenses > 0) (totalMaint / sumAllExpenses).toFloat() else 0f
-
-        val pctOfGoal = if (monthlyGoalNet > 0) (projectedMonthlyProfit / monthlyGoalNet).coerceIn(0.0, 1.5) else 1.0
-
-        return ReportMetricsState(
-            filteredRecords = filtered,
-            filteredMaintenanceRecords = filteredMaint,
-            chronologicalRecords = chronological,
-            totalEarnings = totalEarnings,
-            totalFuelCost = totalFuel,
-            totalWearCost = totalWear,
-            totalFixedCost = totalFixed,
-            totalFoodCost = totalFood,
-            totalExpenses = totalExpenses,
-            totalMaintenanceCost = totalMaint,
-            realExpenses = realExpenses,
-            netProfit = netProfit,
-            realNetProfit = realNetProfit,
-            totalDeliveries = totalDeliveries,
-            totalKm = totalKm,
-            bestDay = bestDay,
-            worstDay = worstDay,
-            avgEarningsPerDay = avgEarningsPerDay,
-            avgProfitPerDay = avgProfitPerDay,
-            avgKmPerDay = avgKmPerDay,
-            totalWorkMinutes = totalWorkMinutes,
-            totalWorkHours = totalWorkHours,
-            totalPauseMinutes = totalPauseMinutes,
-            grossPerHour = grossPerHour,
-            netPerHour = netPerHour,
-            avgHoursPerShift = avgHoursPerShift,
-            formattedTotalWork = formattedTotalWork,
-            formattedTotalPause = formattedTotalPause,
-            projectedMonthlyProfit = projectedMonthlyProfit,
-            projectedMonthlyEarnings = projectedMonthlyEarnings,
-            sumAllExpenses = sumAllExpenses,
-            pctFuel = pctFuel,
-            pctFood = pctFood,
-            pctWear = pctWear,
-            pctFixed = pctFixed,
-            pctMaintenance = pctMaintenance,
-            monthlyWorkingDays = workingDays,
-            pctOfGoal = pctOfGoal,
-            recordsCount = filtered.size
-        )
-    }
+    ): ReportMetricsState = GiroCustoDomainCalculations.calculateReportMetrics(
+        records = records,
+        maintenanceRecords = maintenanceRecords,
+        selectedPeriod = selectedPeriod,
+        customStart = customStart,
+        customEnd = customEnd,
+        plannedWorkDays = plannedWorkDays,
+        monthlyGoalNet = monthlyGoalNet
+    )
 
     private val reportsFilterStateFlow: Flow<ReportsFilterState> = combine(
         reportsSelectedPeriod,
@@ -801,55 +538,7 @@ class GiroCustoViewModel @JvmOverloads constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ReportMetricsState())
 
     init {
-        if (supabaseClient.hasSavedSession() && BiometricHelper.canUnlockWithBiometrics(getApplication())) {
-            _isBiometricLocked.value = true
-        }
-
-        // Migração transparente de preferências legadas de metas para Room se necessário
-        viewModelScope.launch {
-            try {
-                repository.migrateLegacyGoalsIfNeeded(getApplication())
-            } catch (e: IllegalStateException) {
-                // Previne falha de fechamento de conexão em encerramento de testes/lifecycle
-            }
-        }
-
-        // Integração com userGoalsFlow do Room para alimentar os StateFlows
-        viewModelScope.launch {
-            repository.userGoalsFlow.collect { goals ->
-                if (goals != null) {
-                    dailyGoalGross.value = CurrencyUtils.centsToDouble(goals.dailyGoalGross)
-                    dailyGoalNet.value = CurrencyUtils.centsToDouble(goals.dailyGoalNet)
-                    dailyGoalKm.value = goals.dailyGoalKm
-                    dailyGoalDeliveries.value = goals.dailyGoalDeliveries
-
-                    weeklyGoalGross.value = CurrencyUtils.centsToDouble(goals.weeklyGoalGross)
-                    weeklyGoalNet.value = CurrencyUtils.centsToDouble(goals.weeklyGoalNet)
-                    weeklyGoalKm.value = goals.weeklyGoalKm
-                    weeklyGoalDeliveries.value = goals.weeklyGoalDeliveries
-
-                    monthlyGoalGross.value = CurrencyUtils.centsToDouble(goals.monthlyGoalGross)
-                    monthlyGoalNet.value = CurrencyUtils.centsToDouble(goals.monthlyGoalNet)
-                    monthlyGoalKm.value = goals.monthlyGoalKm
-                    monthlyGoalDeliveries.value = goals.monthlyGoalDeliveries
-                } else {
-                    dailyGoalGross.value = 200.0
-                    dailyGoalNet.value = 130.0
-                    dailyGoalKm.value = 100.0
-                    dailyGoalDeliveries.value = 15
-
-                    weeklyGoalGross.value = 1200.0
-                    weeklyGoalNet.value = 800.0
-                    weeklyGoalKm.value = 600.0
-                    weeklyGoalDeliveries.value = 90
-
-                    monthlyGoalGross.value = 5000.0
-                    monthlyGoalNet.value = 3200.0
-                    monthlyGoalKm.value = 2500.0
-                    monthlyGoalDeliveries.value = 400
-                }
-            }
-        }
+        syncCoordinator.onLogoutFallback = { logout() }
 
         viewModelScope.launch {
             repository.userProfileFlow.collect {
@@ -858,446 +547,22 @@ class GiroCustoViewModel @JvmOverloads constructor(
         }
 
         viewModelScope.launch {
-            // Inicializar/Semear Banco de Dados se necessário
             repository.checkAndSeedData()
-            
-            // Auto-preencher odômetro inicial e combustível
             prefillLaunchFields()
-
-            // Se houver sessão salva ao iniciar o ViewModel e não estiver bloqueado por biometria, sincroniza
-            if (supabaseClient.isAuthenticated && !_isBiometricLocked.value) {
+            if (supabaseClient.isAuthenticated && !isBiometricLocked.value) {
                 triggerSync()
             }
         }
     }
 
-    // =========================================================================
-    // MÉTODOS DE AUTENTICAÇÃO, BIOMETRIA E ONBOARDING
-    // =========================================================================
-
-    fun signInWithEmail(email: String, pass: String, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
-        if (email.isBlank() || pass.isBlank()) {
-            onResult(false, "Informe e-mail e senha.")
-            return
-        }
-        viewModelScope.launch {
-            _authUiState.value = AuthUiState.Loading
-            _authErrorResId.value = null
-            _syncState.value = SyncState.SYNCING
-            _syncErrorMessage.value = null
-            val result = supabaseClient.signIn(email.trim(), pass)
-            if (result.isSuccess) {
-                _isBiometricLocked.value = false
-                _authUiState.value = AuthUiState.Success()
-                _authErrorResId.value = null
-                _syncState.value = SyncState.IDLE
-                BiometricHelper.setBiometricEnabled(getApplication(), true, email.trim())
-                triggerSync()
-                onResult(true, null)
-            } else {
-                _syncState.value = SyncState.ERROR
-                val exception = result.exceptionOrNull()
-                val resId = (exception as? SupabaseAuthException)?.messageResId
-                    ?: AuthErrorMapper.mapThrowable(exception, AuthFlow.SIGN_IN)
-                _authErrorResId.value = resId
-                val err = exception?.message ?: "Falha ao autenticar"
-                _syncErrorMessage.value = err
-                _authUiState.value = AuthUiState.Error(err)
-                onResult(false, err)
-            }
-        }
-    }
-
-    fun signUpWithEmail(email: String, pass: String, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
-        if (email.isBlank() || pass.length < 6) {
-            onResult(false, "A senha deve conter no mínimo 6 caracteres.")
-            return
-        }
-        viewModelScope.launch {
-            _authUiState.value = AuthUiState.Loading
-            _authErrorResId.value = null
-            _syncState.value = SyncState.SYNCING
-            _syncErrorMessage.value = null
-            val result = supabaseClient.signUp(email.trim(), pass)
-            if (result.isSuccess) {
-                _isBiometricLocked.value = false
-                val session = result.getOrNull()
-                if (session != null && session.accessToken.isNotBlank()) {
-                    _authUiState.value = AuthUiState.Success("Conta criada com sucesso!")
-                    _authErrorResId.value = null
-                    _syncState.value = SyncState.IDLE
-                    BiometricHelper.setBiometricEnabled(getApplication(), true, email.trim())
-                    triggerSync()
-                    onResult(true, null)
-                } else {
-                    _authUiState.value = AuthUiState.Success("Conta criada com sucesso! Verifique seu e-mail para confirmar o cadastro.")
-                    _authErrorResId.value = null
-                    _syncState.value = SyncState.IDLE
-                    onResult(true, null)
-                }
-            } else {
-                _syncState.value = SyncState.ERROR
-                val exception = result.exceptionOrNull()
-                val resId = (exception as? SupabaseAuthException)?.messageResId
-                    ?: AuthErrorMapper.mapThrowable(exception, AuthFlow.SIGN_UP)
-                _authErrorResId.value = resId
-                val err = exception?.message ?: "Falha ao registrar conta"
-                _syncErrorMessage.value = err
-                _authUiState.value = AuthUiState.Error(err)
-                onResult(false, err)
-            }
-        }
-    }
-
-    fun signInWithGoogle(context: Context, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
-        viewModelScope.launch {
-            _authUiState.value = AuthUiState.Loading
-            _authErrorResId.value = null
-            _syncState.value = SyncState.SYNCING
-            _syncErrorMessage.value = null
-
-            val authResult = GoogleAuthHelper.getGoogleIdToken(context)
-            if (authResult.isFailure) {
-                _syncState.value = SyncState.ERROR
-                val err = authResult.exceptionOrNull()?.message ?: "Falha ao autenticar com o Google"
-                _syncErrorMessage.value = err
-                _authErrorResId.value = null
-                _authUiState.value = AuthUiState.Error(err)
-                onResult(false, err)
-                return@launch
-            }
-
-            val authData = authResult.getOrNull()!!
-            val result = supabaseClient.signInWithGoogleIdToken(authData.idToken, authData.rawNonce)
-            if (result.isSuccess) {
-                _isBiometricLocked.value = false
-                _authUiState.value = AuthUiState.Success()
-                _authErrorResId.value = null
-                _syncState.value = SyncState.IDLE
-                val session = result.getOrNull()
-                val email = session?.userEmail?.takeIf { it.isNotBlank() } ?: "google_user"
-                BiometricHelper.setBiometricEnabled(getApplication(), true, email)
-                triggerSync()
-                onResult(true, null)
-            } else {
-                _syncState.value = SyncState.ERROR
-                val exception = result.exceptionOrNull()
-                val resId = (exception as? SupabaseAuthException)?.messageResId
-                    ?: AuthErrorMapper.mapThrowable(exception, AuthFlow.GOOGLE_SIGN_IN)
-                _authErrorResId.value = resId
-                val err = exception?.message ?: "Falha ao autenticar com o Google"
-                _syncErrorMessage.value = err
-                _authUiState.value = AuthUiState.Error(err)
-                onResult(false, err)
-            }
-        }
-    }
-
-    fun unlockWithBiometrics(onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
-        viewModelScope.launch {
-            _authUiState.value = AuthUiState.Loading
-            _authErrorResId.value = null
-            val restored = supabaseClient.restoreSavedSession()
-            if (restored) {
-                _isBiometricLocked.value = false
-                _authUiState.value = AuthUiState.Success("Autenticado via biometria com sucesso!")
-                _authErrorResId.value = null
-                onResult(true, null)
-                launch {
-                    try {
-                        supabaseClient.refreshCurrentSession()
-                        triggerSync()
-                    } catch (e: kotlinx.coroutines.CancellationException) {
-                        // coroutine cancelled
-                    } catch (e: Exception) {
-                        // Resiliente a falhas de rede ou encerramento assíncrono
-                    }
-                }
-            } else {
-                _isBiometricLocked.value = false
-                val err = getApplication<Application>().getString(com.example.R.string.auth_session_revalidation_notice)
-                _authErrorResId.value = com.example.R.string.auth_session_revalidation_notice
-                _authUiState.value = AuthUiState.Error(err)
-                onResult(false, err)
-            }
-        }
-    }
-
-    fun handleBiometricKeyInvalidated() {
-        _isBiometricLocked.value = false
-        supabaseClient.clearSavedSession()
-        BiometricHelper.clearBiometrics(getApplication())
-        val msg = getApplication<Application>().getString(com.example.R.string.auth_session_revalidation_notice)
-        _authErrorResId.value = com.example.R.string.auth_session_revalidation_notice
-        _authUiState.value = AuthUiState.Error(msg)
-    }
-
-    fun dismissBiometricLockForFallback() {
-        _isBiometricLocked.value = false
-        supabaseClient.clearSavedSession()
-        _authErrorResId.value = null
-        _authUiState.value = AuthUiState.Idle
-    }
-
-    fun resetAuthError() {
-        _authErrorResId.value = null
-        if (_authUiState.value is AuthUiState.Error || _authUiState.value is AuthUiState.Success) {
-            _authUiState.value = AuthUiState.Idle
-        }
-    }
-
-    fun signInWithBiometrics(onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
-        unlockWithBiometrics(onResult)
-    }
-
-    fun lockAppForBiometrics() {
-        if (supabaseClient.hasSavedSession() && BiometricHelper.canUnlockWithBiometrics(getApplication())) {
-            _isBiometricLocked.value = true
-        }
-    }
-
-    fun logout() {
-        viewModelScope.launch {
-            _isBiometricLocked.value = false
-            supabaseClient.signOut()
-            BiometricHelper.clearBiometrics(getApplication())
-            _authErrorResId.value = null
-            _authUiState.value = AuthUiState.Idle
-            _syncState.value = SyncState.IDLE
-            _syncErrorMessage.value = null
-            clearViaCepState()
-            clearFipe()
-        }
-    }
-
-    // Compatibilidade com chamadas anteriores
-    fun loginSupabase(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
-        signInWithEmail(email, password, onResult)
-    }
-
-    fun registerSupabase(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
-        signUpWithEmail(email, password, onResult)
-    }
-
-    fun logoutSupabase() {
-        logout()
-    }
-
-    // =========================================================================
-    // MÉTODOS DE PORTABILIDADE E EXCLUSÃO DE CONTA (LGPD)
-    // =========================================================================
-
-    fun exportUserData(onResult: (String) -> Unit) {
-        viewModelScope.launch {
-            val json = repository.exportAllUserDataAsJson()
-            onResult(json)
-        }
-    }
-
-    fun deleteAccountAndData(onResult: (Boolean, String?) -> Unit) {
-        viewModelScope.launch {
-            try {
-                // 1. Se autenticado remotamente, chama a RPC remota delete_user_account()
-                val currentUserId = supabaseClient.currentUserId
-                if (currentUserId != null) {
-                    val rpcResult = supabaseClient.deleteUserAccount()
-                    if (rpcResult.isFailure) {
-                        val error = rpcResult.exceptionOrNull()?.message ?: "Falha ao excluir conta no servidor"
-                        // FAIL-SAFE: Aborta e preserva absolutamente todos os dados locais
-                        onResult(false, error)
-                        return@launch
-                    }
-                }
-
-                // 2. SUCESSO na exclusão remota (ou conta puramente local): Expurgo atômico dos dados locais
-                repository.clearAllLocalData()
-                dataOwnerStorage.clearDataOwner()
-                if (currentUserId != null) {
-                    supabaseClient.signOut()
-                } else {
-                    supabaseClient.clearSavedSession()
-                }
-                BiometricHelper.clearBiometrics(getApplication())
-                resetAccountSpecificPreferences()
-
-                _isBiometricLocked.value = false
-                _authErrorResId.value = null
-                _authUiState.value = AuthUiState.Idle
-                _syncState.value = SyncState.IDLE
-                _syncErrorMessage.value = null
-                _accountConflictState.value = null
-
-                onResult(true, null)
-            } catch (e: Exception) {
-                // FAIL-SAFE: Qualquer erro inesperado cancela o expurgo local
-                onResult(false, e.message ?: "Erro inesperado ao excluir conta")
-            }
-        }
-    }
-
-    // =========================================================================
-    // MÉTODOS VIACEP E ONBOARDING
-    // =========================================================================
-
-    fun searchCep(rawCep: String) {
-        val cleanCep = rawCep.replace("\\D".toRegex(), "")
-        if (cleanCep.length != 8) {
-            _viaCepState.value = ViaCepUiState.Error("O CEP deve conter exatamente 8 dígitos numéricos.")
-            return
-        }
-
-        viewModelScope.launch {
-            _viaCepState.value = ViaCepUiState.Loading
-            try {
-                val response = ViaCepNetworkClient.api.getAddressByCep(cleanCep)
-                if (response.isSuccessful && response.body() != null) {
-                    val body = response.body()!!
-                    if (body.isErro) {
-                        _viaCepState.value = ViaCepUiState.Error("CEP não encontrado na base dos Correios.")
-                    } else {
-                        _viaCepState.value = ViaCepUiState.Success(body)
-                    }
-                } else {
-                    _viaCepState.value = ViaCepUiState.Error("Serviço de CEP temporariamente indisponível (${response.code()}).")
-                }
-            } catch (e: java.net.SocketTimeoutException) {
-                _viaCepState.value = ViaCepUiState.Error("Tempo limite excedido ao consultar o CEP.")
-            } catch (e: java.io.IOException) {
-                _viaCepState.value = ViaCepUiState.Error("Sem conexão de internet para buscar o CEP.")
-            } catch (e: Exception) {
-                _viaCepState.value = ViaCepUiState.Error("Erro inesperado: ${e.localizedMessage ?: "Falha na consulta"}")
-            }
-        }
-    }
-
-    fun clearViaCepState() {
-        _viaCepState.value = ViaCepUiState.Idle
-    }
-
-    // =========================================================================
-    // MÉTODOS TABELA FIPE (Parallelum API)
-    // =========================================================================
-
-    fun loadFipeMarcas(vehicleType: String) {
-        val fipeType = FipeVehicleType.fromString(vehicleType).apiPath
-        viewModelScope.launch {
-            _fipeUiState.value = FipeUiState.Loading
-            _fipeMarcas.value = emptyList()
-            _fipeModelos.value = emptyList()
-            _fipeAnos.value = emptyList()
-            _fipeDetail.value = null
-            try {
-                val response = FipeNetworkClient.api.getMarcas(fipeType)
-                if (response.isSuccessful && response.body() != null) {
-                    _fipeMarcas.value = response.body()!!
-                    _fipeUiState.value = FipeUiState.Success
-                } else {
-                    _fipeUiState.value = FipeUiState.Error("Não foi possível carregar as marcas da Tabela FIPE (${response.code()}).")
-                }
-            } catch (e: java.net.SocketTimeoutException) {
-                _fipeUiState.value = FipeUiState.Error("Tempo limite excedido ao consultar a Tabela FIPE. Verifique sua conexão.")
-            } catch (e: java.io.IOException) {
-                _fipeUiState.value = FipeUiState.Error("Sem conexão com a internet para consultar a Tabela FIPE.")
-            } catch (e: Exception) {
-                _fipeUiState.value = FipeUiState.Error("Erro inesperado ao consultar a Tabela FIPE: ${e.localizedMessage ?: "Falha na comunicação."}")
-            }
-        }
-    }
-
-    fun loadFipeModelos(vehicleType: String, brandCode: String) {
-        if (brandCode.isBlank()) {
-            _fipeModelos.value = emptyList()
-            _fipeAnos.value = emptyList()
-            _fipeDetail.value = null
-            return
-        }
-        val fipeType = FipeVehicleType.fromString(vehicleType).apiPath
-        viewModelScope.launch {
-            _fipeUiState.value = FipeUiState.Loading
-            _fipeModelos.value = emptyList()
-            _fipeAnos.value = emptyList()
-            _fipeDetail.value = null
-            try {
-                val response = FipeNetworkClient.api.getModelos(fipeType, brandCode)
-                if (response.isSuccessful && response.body() != null) {
-                    _fipeModelos.value = response.body()!!.modelos
-                    _fipeUiState.value = FipeUiState.Success
-                } else {
-                    _fipeUiState.value = FipeUiState.Error("Não foi possível carregar os modelos da Tabela FIPE (${response.code()}).")
-                }
-            } catch (e: java.net.SocketTimeoutException) {
-                _fipeUiState.value = FipeUiState.Error("Tempo limite excedido ao consultar os modelos. Tente novamente.")
-            } catch (e: java.io.IOException) {
-                _fipeUiState.value = FipeUiState.Error("Sem conexão com a internet para consultar os modelos.")
-            } catch (e: Exception) {
-                _fipeUiState.value = FipeUiState.Error("Erro inesperado ao consultar modelos: ${e.localizedMessage ?: "Falha na comunicação."}")
-            }
-        }
-    }
-
-    fun loadFipeAnos(vehicleType: String, brandCode: String, modelCode: String) {
-        if (brandCode.isBlank() || modelCode.isBlank()) {
-            _fipeAnos.value = emptyList()
-            _fipeDetail.value = null
-            return
-        }
-        val fipeType = FipeVehicleType.fromString(vehicleType).apiPath
-        viewModelScope.launch {
-            _fipeUiState.value = FipeUiState.Loading
-            _fipeAnos.value = emptyList()
-            _fipeDetail.value = null
-            try {
-                val response = FipeNetworkClient.api.getAnos(fipeType, brandCode, modelCode)
-                if (response.isSuccessful && response.body() != null) {
-                    _fipeAnos.value = response.body()!!
-                    _fipeUiState.value = FipeUiState.Success
-                } else {
-                    _fipeUiState.value = FipeUiState.Error("Não foi possível carregar os anos do veículo (${response.code()}).")
-                }
-            } catch (e: java.net.SocketTimeoutException) {
-                _fipeUiState.value = FipeUiState.Error("Tempo limite excedido ao consultar anos do veículo.")
-            } catch (e: java.io.IOException) {
-                _fipeUiState.value = FipeUiState.Error("Sem conexão com a internet para consultar anos do veículo.")
-            } catch (e: Exception) {
-                _fipeUiState.value = FipeUiState.Error("Erro inesperado ao consultar anos: ${e.localizedMessage ?: "Falha na comunicação."}")
-            }
-        }
-    }
-
-    fun loadFipeDetail(vehicleType: String, brandCode: String, modelCode: String, yearCode: String) {
-        if (brandCode.isBlank() || modelCode.isBlank() || yearCode.isBlank()) {
-            _fipeDetail.value = null
-            return
-        }
-        val fipeType = FipeVehicleType.fromString(vehicleType).apiPath
-        viewModelScope.launch {
-            _fipeUiState.value = FipeUiState.Loading
-            _fipeDetail.value = null
-            try {
-                val response = FipeNetworkClient.api.getDetail(fipeType, brandCode, modelCode, yearCode)
-                if (response.isSuccessful && response.body() != null) {
-                    _fipeDetail.value = response.body()
-                    _fipeUiState.value = FipeUiState.Success
-                } else {
-                    _fipeUiState.value = FipeUiState.Error("Não foi possível carregar a avaliação da Tabela FIPE (${response.code()}).")
-                }
-            } catch (e: java.net.SocketTimeoutException) {
-                _fipeUiState.value = FipeUiState.Error("Tempo limite excedido ao consultar detalhes da Tabela FIPE.")
-            } catch (e: java.io.IOException) {
-                _fipeUiState.value = FipeUiState.Error("Sem conexão com a internet para consultar detalhes da Tabela FIPE.")
-            } catch (e: Exception) {
-                _fipeUiState.value = FipeUiState.Error("Erro inesperado ao consultar detalhes: ${e.localizedMessage ?: "Falha na comunicação."}")
-            }
-        }
-    }
-
-    fun clearFipe() {
-        _fipeUiState.value = FipeUiState.Idle
-        _fipeMarcas.value = emptyList()
-        _fipeModelos.value = emptyList()
-        _fipeAnos.value = emptyList()
-        _fipeDetail.value = null
-    }
+    // FIPE e ViaCEP
+    fun searchCep(rawCep: String) = fipeViaCepCoordinator.searchCep(rawCep)
+    fun clearViaCepState() = fipeViaCepCoordinator.clearViaCepState()
+    fun loadFipeMarcas(vehicleType: String) = fipeViaCepCoordinator.loadFipeMarcas(vehicleType)
+    fun loadFipeModelos(vehicleType: String, brandCode: String) = fipeViaCepCoordinator.loadFipeModelos(vehicleType, brandCode)
+    fun loadFipeAnos(vehicleType: String, brandCode: String, modelCode: String) = fipeViaCepCoordinator.loadFipeAnos(vehicleType, brandCode, modelCode)
+    fun loadFipeDetail(vehicleType: String, brandCode: String, modelCode: String, yearCode: String) = fipeViaCepCoordinator.loadFipeDetail(vehicleType, brandCode, modelCode, yearCode)
+    fun clearFipe() = fipeViaCepCoordinator.clearFipe()
 
     fun completeOnboarding(
         name: String,
@@ -1361,342 +626,9 @@ class GiroCustoViewModel @JvmOverloads constructor(
         }
     }
 
-    fun openDiscardConfirmation() {
-        _showDiscardDoubleConfirmationDialog.value = true
-    }
-
-    fun dismissDiscardConfirmation() {
-        _showDiscardDoubleConfirmationDialog.value = false
-    }
-
-    fun openClaimDataConfirmation() {
-        _showClaimDataConfirmationDialog.value = true
-    }
-
-    fun dismissClaimDataConfirmation() {
-        _showClaimDataConfirmationDialog.value = false
-    }
-
-    fun resolveConflictReturnToPreviousAccount() {
-        _accountConflictState.value = null
-        _showDiscardDoubleConfirmationDialog.value = false
-        _showClaimDataConfirmationDialog.value = false
-        logout()
-    }
-
-    fun confirmDiscardData(onComplete: () -> Unit = {}) {
-        _showDiscardDoubleConfirmationDialog.value = false
-        val currentUserId = supabaseClient.currentUserId ?: return
-        viewModelScope.launch {
-            syncMutex.withLock {
-                _isAccountSwitching.value = true
-                _syncState.value = SyncState.SYNCING
-                try {
-                    repository.clearAllLocalData()
-                    resetAccountSpecificPreferences()
-                    dataOwnerStorage.setDataOwnerId(currentUserId)
-                    _accountConflictState.value = null
-                    performSyncInternal(currentUserId, null)
-                    onComplete()
-                } finally {
-                    _isAccountSwitching.value = false
-                }
-            }
-        }
-    }
-
-    fun confirmClaimData(onComplete: () -> Unit = {}) {
-        _showClaimDataConfirmationDialog.value = false
-        val currentUserId = supabaseClient.currentUserId ?: return
-        viewModelScope.launch {
-            syncMutex.withLock {
-                _isAccountSwitching.value = true
-                _syncState.value = SyncState.SYNCING
-                try {
-                    dataOwnerStorage.setDataOwnerId(currentUserId)
-                    _accountConflictState.value = null
-                    performSyncInternal(currentUserId, null)
-                    onComplete()
-                } finally {
-                    _isAccountSwitching.value = false
-                }
-            }
-        }
-    }
-
-    private fun resetAccountSpecificPreferences() {
-        syncPrefs.edit().remove("last_sync_timestamp").apply()
-        _lastSyncTime.value = null
-
-        clearViaCepState()
-        clearFipe()
-    }
-
-    fun triggerSync(onComplete: ((Boolean, String?) -> Unit)? = null) {
-        if (!supabaseClient.isAuthenticated) {
-            _syncState.value = SyncState.IDLE
-            onComplete?.invoke(false, "Usuário não autenticado")
-            return
-        }
-
-        _syncState.value = SyncState.SYNCING
-        _syncErrorMessage.value = null
-
-        viewModelScope.launch {
-            try {
-                executeAccountSyncOrTransition(onComplete)
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                // coroutine cancelled
-            } catch (e: Exception) {
-                _syncState.value = SyncState.ERROR
-                val err = e.localizedMessage ?: "Erro na sincronização"
-                _syncErrorMessage.value = err
-                onComplete?.invoke(false, err)
-            }
-        }
-    }
-
-    fun syncNow(onComplete: ((Boolean, String?) -> Unit)? = null) = triggerSync(onComplete)
-
-    private suspend fun executeAccountSyncOrTransition(onComplete: ((Boolean, String?) -> Unit)? = null) {
-        syncMutex.withLock {
-            if (!supabaseClient.isAuthenticated) {
-                _syncState.value = SyncState.IDLE
-                onComplete?.invoke(false, "Usuário não autenticado")
-                return
-            }
-
-            val currentUserId = supabaseClient.currentUserId
-            if (currentUserId.isNullOrBlank()) {
-                _syncState.value = SyncState.ERROR
-                val err = "ID do usuário não encontrado na sessão ativa"
-                _syncErrorMessage.value = err
-                onComplete?.invoke(false, err)
-                return
-            }
-
-            val ownerId = dataOwnerStorage.getDataOwnerId()
-
-            // Caso 1: Dono coincide (fluxo normal do mesmo usuário)
-            if (ownerId == currentUserId) {
-                performSyncInternal(currentUserId, onComplete)
-                return
-            }
-
-            // Caso 2: Dono desconhecido (ownerId == null)
-            if (ownerId == null) {
-                val hasData = repository.hasAnyLocalData()
-                if (!hasData) {
-                    dataOwnerStorage.setDataOwnerId(currentUserId)
-                    performSyncInternal(currentUserId, onComplete)
-                    return
-                }
-
-                val hasPending = repository.hasPendingSyncChanges()
-                if (!hasPending) {
-                    switchAccountCleanly(currentUserId, onComplete)
-                    return
-                } else {
-                    val count = repository.countPendingChanges()
-                    _accountConflictState.value = AccountConflictState.UnknownOwnerWithPending(
-                        currentUserId = currentUserId,
-                        pendingCount = count
-                    )
-                    _syncState.value = SyncState.IDLE
-                    onComplete?.invoke(false, "Conflito de dados locais detectado")
-                    return
-                }
-            }
-
-            // Caso 3: Troca de conta entre donos diferentes (ownerId != currentUserId)
-            val hasPending = repository.hasPendingSyncChanges()
-            if (!hasPending) {
-                switchAccountCleanly(currentUserId, onComplete)
-                return
-            } else {
-                val count = repository.countPendingChanges()
-                _accountConflictState.value = AccountConflictState.KnownOwnerMismatchWithPending(
-                    previousOwnerId = ownerId,
-                    currentUserId = currentUserId,
-                    pendingCount = count
-                )
-                _syncState.value = SyncState.IDLE
-                onComplete?.invoke(false, "Lançamentos pendentes pertencem a outra conta")
-                return
-            }
-        }
-    }
-
-    private suspend fun switchAccountCleanly(newUserId: String, onComplete: ((Boolean, String?) -> Unit)?) {
-        _isAccountSwitching.value = true
-        _syncState.value = SyncState.SYNCING
-        try {
-            repository.clearAllLocalData()
-            resetAccountSpecificPreferences()
-            dataOwnerStorage.setDataOwnerId(newUserId)
-            performSyncInternal(newUserId, onComplete)
-        } finally {
-            _isAccountSwitching.value = false
-        }
-    }
-
-    private suspend fun performSyncInternal(userId: String, onComplete: ((Boolean, String?) -> Unit)?) {
-        _syncState.value = SyncState.SYNCING
-        _syncErrorMessage.value = null
-
-        val result = repository.syncCurrentSession()
-        when (result) {
-            is SyncResult.Success -> {
-                val now = System.currentTimeMillis()
-                _lastSyncTime.value = now
-                syncPrefs.edit().putLong("last_sync_timestamp", now).apply()
-                _syncState.value = SyncState.SUCCESS
-                onComplete?.invoke(true, null)
-            }
-            is SyncResult.Error -> {
-                val err = result.error
-                val isOffline = err is java.net.UnknownHostException ||
-                        err is java.net.ConnectException ||
-                        err is java.net.SocketTimeoutException
-                _syncState.value = if (isOffline) SyncState.OFFLINE else SyncState.ERROR
-                val isExpired = err is SessionExpiredException ||
-                        (err is retrofit2.HttpException && err.code() == 401) ||
-                        ("401" in (err.message ?: "")) ||
-                        ("jwt expired" in (err.message ?: "").lowercase())
-                val msg = when {
-                    err is DataOwnerMismatchException -> {
-                        "Sincronização pausada por segurança: os registros salvos neste aparelho pertencem a outra conta. Entre com a conta proprietária para sincronizá-los ou descarte os dados locais."
-                    }
-                    isExpired -> {
-                        "Sua sessão expirou. Entre novamente com sua conta para continuar sincronizando."
-                    }
-                    else -> {
-                        err.localizedMessage ?: err.message ?: "Erro na sincronização"
-                    }
-                }
-                _syncErrorMessage.value = msg
-                onComplete?.invoke(false, msg)
-            }
-        }
-    }
-
-    fun clearSyncError() {
-        _syncErrorMessage.value = null
-        if (_syncState.value == SyncState.ERROR) {
-            _syncState.value = SyncState.IDLE
-        }
-    }
-
-    fun formatLastSyncTime(timestamp: Long?): String {
-        if (timestamp == null || timestamp == 0L) return "Nunca sincronizado"
-        val now = Calendar.getInstance()
-        val syncCal = Calendar.getInstance().apply { timeInMillis = timestamp }
-
-        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-
-        val isToday = now.get(Calendar.YEAR) == syncCal.get(Calendar.YEAR) &&
-                now.get(Calendar.DAY_OF_YEAR) == syncCal.get(Calendar.DAY_OF_YEAR)
-
-        val isYesterday = now.get(Calendar.YEAR) == syncCal.get(Calendar.YEAR) &&
-                now.get(Calendar.DAY_OF_YEAR) - syncCal.get(Calendar.DAY_OF_YEAR) == 1
-
-        return when {
-            isToday -> "Hoje às ${timeFormat.format(Date(timestamp))}"
-            isYesterday -> "Ontem às ${timeFormat.format(Date(timestamp))}"
-            else -> dateFormat.format(Date(timestamp))
-        }
-    }
-
-    fun setPeriod(period: Period) {
-        _selectedPeriod.value = period
-    }
-
-    // Auto-preencher com base no histórico anterior
-    suspend fun prefillLaunchFields() {
-        val lastRecord = repository.allRecordsFlow.first().firstOrNull()
-        val currentVehicle = repository.getVehicle()
-        val latestRefill = if (currentVehicle != null) {
-            repository.getLatestFuelRefill(currentVehicle.id)
-        } else {
-            null
-        }
-
-        // Odômetro inicial e combustível: preenche se houver histórico ou veículo cadastrado
-        if (lastRecord != null || currentVehicle != null) {
-            val defaultStartOdo = lastRecord?.endOdometer ?: currentVehicle?.currentOdometer ?: 0.0
-            startOdometer.value = String.format(Locale.US, "%.1f", defaultStartOdo)
-            val defaultFuelPrice: Double = latestRefill?.pricePerLiter?.takeIf { it > 0L }?.let { CurrencyUtils.fuelPriceMillisToDouble(it) }
-                ?: lastRecord?.fuelPrice?.takeIf { it > 0L }?.let { CurrencyUtils.fuelPriceMillisToDouble(it) }
-                ?: 5.80
-            fuelPrice.value = String.format(Locale.US, "%.2f", defaultFuelPrice)
-        } else {
-            startOdometer.value = ""
-            fuelPrice.value = "5.80"
-        }
-
-        // Zerar outros
-        endOdometer.value = ""
-        grossEarnings.value = ""
-        deliveriesCount.value = ""
-        foodExpense.value = ""
-        startTime.value = ""
-        endTime.value = ""
-        pauseDuration.value = ""
-        launchDateTimestamp.value = System.currentTimeMillis()
-        platform.value = ""
-    }
-
-    // Salvar Metas no Room com sincronização opcional Supabase
-    fun updateGoals(
-        dailyG: Double, dailyN: Double, dailyK: Double, dailyD: Int,
-        weeklyG: Double, weeklyN: Double, weeklyK: Double, weeklyD: Int,
-        monthlyG: Double, monthlyN: Double, monthlyK: Double, monthlyD: Int
-    ) {
-        // Atualizar os StateFlows correspondentes para resposta imediata (0ms de latência)
-        dailyGoalGross.value = dailyG
-        dailyGoalNet.value = dailyN
-        dailyGoalKm.value = dailyK
-        dailyGoalDeliveries.value = dailyD
-
-        weeklyGoalGross.value = weeklyG
-        weeklyGoalNet.value = weeklyN
-        weeklyGoalKm.value = weeklyK
-        weeklyGoalDeliveries.value = weeklyD
-
-        monthlyGoalGross.value = monthlyG
-        monthlyGoalNet.value = monthlyN
-        monthlyGoalKm.value = monthlyK
-        monthlyGoalDeliveries.value = monthlyD
-
-        viewModelScope.launch {
-            val userGoals = UserGoals(
-                id = 1,
-                dailyGoalGross = CurrencyUtils.toCents(dailyG),
-                dailyGoalNet = CurrencyUtils.toCents(dailyN),
-                dailyGoalKm = dailyK,
-                dailyGoalDeliveries = dailyD,
-                weeklyGoalGross = CurrencyUtils.toCents(weeklyG),
-                weeklyGoalNet = CurrencyUtils.toCents(weeklyN),
-                weeklyGoalKm = weeklyK,
-                weeklyGoalDeliveries = weeklyD,
-                monthlyGoalGross = CurrencyUtils.toCents(monthlyG),
-                monthlyGoalNet = CurrencyUtils.toCents(monthlyN),
-                monthlyGoalKm = monthlyK,
-                monthlyGoalDeliveries = monthlyD
-            )
-            repository.updateUserGoals(userGoals)
-            if (supabaseClient.isAuthenticated) {
-                triggerSync()
-            }
-        }
-    }
-
-    // Ações do Veículo
+    // Veículo
     fun updateVehicle(vehicle: Vehicle) {
-        viewModelScope.launch {
-            repository.saveVehicle(vehicle)
-        }
+        viewModelScope.launch { repository.saveVehicle(vehicle) }
     }
 
     fun addVehicle(
@@ -1734,24 +666,18 @@ class GiroCustoViewModel @JvmOverloads constructor(
     }
 
     fun setActiveVehicle(vehicleId: Long) {
-        viewModelScope.launch {
-            repository.setActiveVehicle(vehicleId)
-        }
+        viewModelScope.launch { repository.setActiveVehicle(vehicleId) }
     }
 
     fun deleteVehicle(vehicle: Vehicle) {
-        viewModelScope.launch {
-            repository.deleteVehicle(vehicle)
-        }
+        viewModelScope.launch { repository.deleteVehicle(vehicle) }
     }
 
     fun restoreVehicle(vehicle: Vehicle) {
-        viewModelScope.launch {
-            repository.restoreVehicle(vehicle)
-        }
+        viewModelScope.launch { repository.restoreVehicle(vehicle) }
     }
 
-    // Ações do Perfil de Usuário
+    // Perfil
     fun updateUserProfile(
         name: String,
         phone: String,
@@ -1798,20 +724,16 @@ class GiroCustoViewModel @JvmOverloads constructor(
         }
     }
 
-    // Ações de Plataforma
+    // Plataforma
     fun savePlatform(platform: Platform) {
-        viewModelScope.launch {
-            repository.savePlatform(platform)
-        }
+        viewModelScope.launch { repository.savePlatform(platform) }
     }
 
     fun deletePlatform(platform: Platform) {
-        viewModelScope.launch {
-            repository.deletePlatform(platform)
-        }
+        viewModelScope.launch { repository.deletePlatform(platform) }
     }
 
-    // Ações de Peças de Desgaste
+    // Peças de Desgaste
     fun addPart(name: String, price: Double, lifespan: Double, vehicleId: Long? = null) {
         viewModelScope.launch {
             val vId = vehicleId ?: vehicle.value?.id ?: 0L
@@ -1829,279 +751,18 @@ class GiroCustoViewModel @JvmOverloads constructor(
     }
 
     fun deletePart(part: VehiclePart) {
-        viewModelScope.launch {
-            repository.deletePart(part)
-        }
+        viewModelScope.launch { repository.deletePart(part) }
     }
 
     fun restorePart(part: VehiclePart) {
-        viewModelScope.launch {
-            repository.restorePart(part)
-        }
+        viewModelScope.launch { repository.restorePart(part) }
     }
 
     fun resetPartWear(partId: Long) {
-        viewModelScope.launch {
-            repository.resetPartWear(partId)
-        }
+        viewModelScope.launch { repository.resetPartWear(partId) }
     }
 
-    // Ações de Lançamento Diário
-    fun saveDailyRecord(onSuccess: () -> Unit, onError: (String) -> Unit) {
-        viewModelScope.launch {
-            val cleanStartOdo = startOdometer.value.trim().replace(',', '.')
-            val startOdoVal = cleanStartOdo.toDoubleOrNull()
-            val cleanEndOdo = endOdometer.value.trim().replace(',', '.')
-            val endOdoVal = cleanEndOdo.toDoubleOrNull()
-
-            val cleanGross = grossEarnings.value.trim()
-            val grossCents = if (cleanGross.isBlank()) null else CurrencyUtils.parseToCents(cleanGross, -1L).takeIf { it >= 0L }
-
-            val deliveriesVal = deliveriesCount.value.trim().toIntOrNull()
-
-            val cleanFuelPrice = fuelPrice.value.trim()
-            val fuelPriceMillis = if (cleanFuelPrice.isBlank()) null else CurrencyUtils.parseToFuelPriceMillis(cleanFuelPrice, -1L).takeIf { it > 0L }
-
-            val foodExpenseCents = CurrencyUtils.parseToCents(foodExpense.value, 0L)
-
-            if (startOdoVal == null || endOdoVal == null || grossCents == null || deliveriesVal == null || fuelPriceMillis == null) {
-                onError("Por favor, preencha todos os campos obrigatórios corretamente.")
-                return@launch
-            }
-
-            if (endOdoVal < startOdoVal) {
-                onError("O hodômetro final não pode ser menor que o inicial.")
-                return@launch
-            }
-
-            try {
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                val dateToUse = Date(launchDateTimestamp.value)
-                val dateStr = dateFormat.format(dateToUse)
-                val timestampToUse = launchDateTimestamp.value
-                val platformVal = platform.value.trim().ifBlank { "iFood" }
-
-                repository.insertDailyRecord(
-                    dateString = dateStr,
-                    dateTimestamp = timestampToUse,
-                    platform = platformVal,
-                    grossEarnings = grossCents,
-                    deliveriesCount = deliveriesVal,
-                    startOdometer = startOdoVal,
-                    endOdometer = endOdoVal,
-                    fuelPrice = fuelPriceMillis,
-                    foodExpense = foodExpenseCents,
-                    startTime = startTime.value.trim(),
-                    endTime = endTime.value.trim(),
-                    pauseDuration = pauseDuration.value.trim()
-                )
-
-                // Limpar campos para o próximo dia
-                prefillLaunchFields()
-                onSuccess()
-            } catch (e: Exception) {
-                onError("Erro ao salvar lançamento: ${e.localizedMessage}")
-            }
-        }
-    }
-
-    fun deleteDailyRecord(record: DailyRecord) {
-        viewModelScope.launch {
-            repository.deleteRecord(record)
-        }
-    }
-
-    fun updateDailyRecord(
-        recordId: Long,
-        dateString: String,
-        dateTimestamp: Long,
-        platform: String,
-        grossEarnings: Long,
-        deliveriesCount: Int,
-        startOdometer: Double,
-        endOdometer: Double,
-        fuelPrice: Long,
-        foodExpense: Long,
-        startTime: String = "",
-        endTime: String = "",
-        pauseDuration: String = "",
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        viewModelScope.launch {
-            if (endOdometer < startOdometer) {
-                onError("O hodômetro final não pode ser menor que o inicial.")
-                return@launch
-            }
-            try {
-                repository.updateDailyRecord(
-                    recordId = recordId,
-                    dateString = dateString,
-                    dateTimestamp = dateTimestamp,
-                    platform = platform,
-                    grossEarnings = grossEarnings,
-                    deliveriesCount = deliveriesCount,
-                    startOdometer = startOdometer,
-                    endOdometer = endOdometer,
-                    fuelPrice = fuelPrice,
-                    foodExpense = foodExpense,
-                    startTime = startTime.trim(),
-                    endTime = endTime.trim(),
-                    pauseDuration = pauseDuration.trim()
-                )
-                onSuccess()
-            } catch (e: Exception) {
-                onError("Erro ao atualizar lançamento: ${e.localizedMessage}")
-            }
-        }
-    }
-
-    fun updateDailyRecord(
-        recordId: Long,
-        dateString: String,
-        dateTimestamp: Long,
-        platform: String,
-        grossEarnings: Double,
-        deliveriesCount: Int,
-        startOdometer: Double,
-        endOdometer: Double,
-        fuelPrice: Double,
-        foodExpense: Double,
-        startTime: String = "",
-        endTime: String = "",
-        pauseDuration: String = "",
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) = updateDailyRecord(
-        recordId = recordId,
-        dateString = dateString,
-        dateTimestamp = dateTimestamp,
-        platform = platform,
-        grossEarnings = CurrencyUtils.toCents(grossEarnings),
-        deliveriesCount = deliveriesCount,
-        startOdometer = startOdometer,
-        endOdometer = endOdometer,
-        fuelPrice = CurrencyUtils.toFuelPriceMillis(fuelPrice),
-        foodExpense = CurrencyUtils.toCents(foodExpense),
-        startTime = startTime,
-        endTime = endTime,
-        pauseDuration = pauseDuration,
-        onSuccess = onSuccess,
-        onError = onError
-    )
-
-    // Estimativas em Tempo Real para o Lançamento Diário
-    data class FormState(
-        val startOdo: String = "",
-        val endOdo: String = "",
-        val gross: String = "",
-        val food: String = "",
-        val fuelPrice: String = ""
-    )
-
-    private val formStateFlow: Flow<FormState> = combine(
-        startOdometer,
-        endOdometer,
-        grossEarnings,
-        foodExpense,
-        fuelPrice
-    ) { start, end, gross, food, fuel ->
-        FormState(start, end, gross, food, fuel)
-    }
-
-    val realTimeEstimation: Flow<EstimationDetail> = combine(
-        formStateFlow,
-        parts,
-        vehicle,
-        realAverageConsumption
-    ) { form, partsList, v, realAvg ->
-        val startVal = form.startOdo.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val endVal = form.endOdo.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val grossVal = form.gross.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val foodVal = form.food.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val fPrice = form.fuelPrice.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val activeVehicle = v ?: Vehicle()
-
-        val distance = (endVal - startVal).coerceAtLeast(0.0)
-
-        // Combustível com prioridade: realAverageConsumption (se disponível e > 0), senão vehicle.averageConsumption
-        val effectiveConsumption = if (realAvg != null && realAvg > 0.0) {
-            realAvg
-        } else {
-            activeVehicle.averageConsumption
-        }
-
-        val fuelCost = if (effectiveConsumption > 0) {
-            (distance / effectiveConsumption) * fPrice
-        } else {
-            0.0
-        }
-
-        // Desgaste oculto
-        val wearCostPerKm = partsList.sumOf { it.wearCostPerKm }
-        val wearCost = distance * wearCostPerKm
-
-        // Custos fixos proporcionais
-        val proportionalFixed = if (activeVehicle.plannedWorkDays > 0) {
-            CurrencyUtils.centsToDouble(activeVehicle.monthlyFixedCosts) / activeVehicle.plannedWorkDays
-        } else {
-            0.0
-        }
-
-        val totalExpenses = fuelCost + wearCost + proportionalFixed + foodVal
-        val netProfit = grossVal - totalExpenses
-
-        EstimationDetail(
-            distance = distance,
-            fuelCost = fuelCost,
-            wearCost = wearCost,
-            fixedCost = proportionalFixed,
-            foodCost = foodVal,
-            totalExpenses = totalExpenses,
-            netProfit = netProfit
-        )
-    }
-
-    val fuelCostEstimationInfo: StateFlow<FuelCostEstimationInfo> = combine(
-        vehicle,
-        realAverageConsumption,
-        startOdometer,
-        endOdometer,
-        fuelPrice
-    ) { currentVehicle, realAvg, startStr, endStr, priceStr ->
-        val v = currentVehicle ?: Vehicle()
-        val startVal = startStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val endVal = endStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val fPrice = priceStr.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val distance = (endVal - startVal).coerceAtLeast(0.0)
-
-        val isUsingReal = realAvg != null && realAvg > 0.0
-        val effectiveConsumption = if (isUsingReal) realAvg!! else v.averageConsumption
-        val estimatedFuelCost = if (effectiveConsumption > 0.0) {
-            (distance / effectiveConsumption) * fPrice
-        } else {
-            0.0
-        }
-
-        val vehicleName = v.model.ifBlank { "Veículo Ativo" }
-        val displayDist = String.format(Locale.GERMAN, "%.1f", distance)
-        val displayText = "Custo de combustível estimado para $displayDist km rodados com base no consumo do $vehicleName"
-
-        FuelCostEstimationInfo(
-            vehicleModel = vehicleName,
-            distanceKm = distance,
-            effectiveConsumption = effectiveConsumption,
-            isUsingRealConsumption = isUsingReal,
-            estimatedFuelCost = estimatedFuelCost,
-            fuelPriceUsed = fPrice,
-            displayText = displayText
-        )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = FuelCostEstimationInfo()
-    )
-
+    // Demonstração / Reset
     fun seedJune2026Data(onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
         viewModelScope.launch {
             try {
@@ -2122,13 +783,3 @@ class GiroCustoViewModel @JvmOverloads constructor(
         }
     }
 }
-
-data class EstimationDetail(
-    val distance: Double = 0.0,
-    val fuelCost: Double = 0.0,
-    val wearCost: Double = 0.0,
-    val fixedCost: Double = 0.0,
-    val foodCost: Double = 0.0,
-    val totalExpenses: Double = 0.0,
-    val netProfit: Double = 0.0
-)
