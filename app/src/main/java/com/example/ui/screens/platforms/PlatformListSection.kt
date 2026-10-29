@@ -42,7 +42,7 @@ fun PlatformListSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Plataformas Ativas",
+                    text = androidx.compose.ui.res.stringResource(com.example.R.string.platforms_title),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -59,7 +59,7 @@ fun PlatformListSection(
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = "Adicionar", tint = Color(0xFF064E3B))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Nova", fontWeight = FontWeight.Bold)
+                    Text(androidx.compose.ui.res.stringResource(com.example.R.string.platforms_btn_add), fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -81,13 +81,13 @@ fun PlatformListSection(
                             modifier = Modifier.size(64.dp)
                         )
                         Text(
-                            text = "Nenhuma plataforma cadastrada",
+                            text = androidx.compose.ui.res.stringResource(com.example.R.string.platforms_empty_title),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color(0xFF64748B)
                         )
                         Text(
-                            text = "Cadastre as plataformas de delivery ou logística que você trabalha.",
+                            text = androidx.compose.ui.res.stringResource(com.example.R.string.platforms_empty_subtitle),
                             fontSize = 12.sp,
                             color = Color(0xFF94A3B8),
                             modifier = Modifier.padding(horizontal = 32.dp),

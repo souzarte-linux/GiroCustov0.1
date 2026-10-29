@@ -261,4 +261,17 @@
     <string name="cd_launch_select_start_time">Selecionar Hora Início</string>
     <string name="cd_launch_select_end_time">Selecionar Hora Final</string>
     <string name="cd_launch_select_pause_time">Selecionar Tempo de Pausa</string>
+
+    <!-- Plataformas (T-25) -->
+    <string name="platforms_title">Plataformas Ativas</string>
+    <string name="platforms_btn_add">Nova</string>
+    <string name="platforms_empty_title">Nenhuma plataforma cadastrada</string>
+    <string name="platforms_empty_subtitle">Cadastre as plataformas de delivery ou logística que você trabalha.</string>
+    <string name="platforms_form_title_edit">Editar Plataforma</string>
+    <string name="platforms_form_title_new">Nova Plataforma</string>
+    <string name="platforms_toast_save_success">Plataforma atualizada com sucesso!</string>
+    <string name="platforms_toast_add_success">Plataforma vinculada com sucesso!</string>
+    <string name="platforms_toast_delete_success">Plataforma removida.</string>
+    <string name="platforms_btn_save_edit">SALVAR ALTERAÇÕES</string>
+    <string name="platforms_btn_save_new">VINCULAR PLATAFORMA</string>
 </resources>

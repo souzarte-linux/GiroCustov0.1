@@ -88,7 +88,7 @@ fun PlatformFormSection(
                     Icon(Icons.Filled.ArrowBack, contentDescription = "Voltar", tint = Color.White)
                 }
                 Text(
-                    text = if (isEdit) "Editar Plataforma" else "Nova Plataforma",
+                    text = if (isEdit) androidx.compose.ui.res.stringResource(com.example.R.string.platforms_form_title_edit) else androidx.compose.ui.res.stringResource(com.example.R.string.platforms_form_title_new),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -280,7 +280,7 @@ fun PlatformFormSection(
             Icon(Icons.Filled.Save, contentDescription = null, tint = Color(0xFF064E3B))
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = if (isEdit) "SALVAR ALTERAÇÕES" else "VINCULAR PLATAFORMA",
+                text = if (isEdit) androidx.compose.ui.res.stringResource(com.example.R.string.platforms_btn_save_edit) else androidx.compose.ui.res.stringResource(com.example.R.string.platforms_btn_save_new),
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
             )

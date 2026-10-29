@@ -59,14 +59,14 @@ fun PlatformsScreen(viewModel: GiroCustoViewModel) {
                     viewModel.savePlatform(updatedPlatform)
                     Toast.makeText(
                         context,
-                        if (isEdit) "Plataforma atualizada com sucesso!" else "Plataforma vinculada com sucesso!",
+                        if (isEdit) context.getString(com.example.R.string.platforms_toast_save_success) else context.getString(com.example.R.string.platforms_toast_add_success),
                         Toast.LENGTH_SHORT
                     ).show()
                     editingPlatformId = null
                 },
                 onDelete = {
                     viewModel.deletePlatform(platformToEdit)
-                    Toast.makeText(context, "Plataforma removida.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(com.example.R.string.platforms_toast_delete_success), Toast.LENGTH_SHORT).show()
                     editingPlatformId = null
                 }
             )
