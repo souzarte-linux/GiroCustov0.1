@@ -7,6 +7,7 @@ import com.example.util.CurrencyUtils
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import retrofit2.HttpException
 import java.util.UUID
 
 sealed class SyncResult {
@@ -18,9 +19,10 @@ class SupabaseSyncManager(
     private val db: GiroCustoDatabase,
     private val restApi: SupabaseRestApi,
     private val dataOwnerStorage: DataOwnerStorage,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val client: SupabaseClient? = null
 ) {
-    constructor(db: GiroCustoDatabase, client: SupabaseClient, dataOwnerStorage: DataOwnerStorage, ioDispatcher: CoroutineDispatcher = Dispatchers.IO) : this(db, client.restApi, dataOwnerStorage, ioDispatcher)
+    constructor(db: GiroCustoDatabase, client: SupabaseClient, dataOwnerStorage: DataOwnerStorage, ioDispatcher: CoroutineDispatcher = Dispatchers.IO) : this(db, client.restApi, dataOwnerStorage, ioDispatcher, client)
     private val vehicleDao = db.vehicleDao()
     private val partDao = db.vehiclePartDao()
     private val recordDao = db.dailyRecordDao()
@@ -44,11 +46,11 @@ class SupabaseSyncManager(
         try {
             Log.d("SupabaseSyncManager", "Iniciando sincronização completa para userId: $userId")
 
-            // 1. PUSH: Envia dados locais pendentes para o Supabase
-            pushLocalChanges(userId)
+            // 1. PUSH: Envia dados locais pendentes para o Supabase com suporte a renovação de sessão sob 401
+            executeWithRetryOn401 { pushLocalChanges(userId) }
 
             // 2. PULL: Busca dados remotos do Supabase e aplica localmente (LWW)
-            pullRemoteChanges(userId)
+            executeWithRetryOn401 { pullRemoteChanges(userId) }
 
             if (dataOwnerStorage.getDataOwnerId() == null) {
                 dataOwnerStorage.setDataOwnerId(userId)
@@ -58,8 +60,39 @@ class SupabaseSyncManager(
             SyncResult.Success("Sincronização concluída com sucesso")
         } catch (e: Exception) {
             Log.e("SupabaseSyncManager", "Erro durante a sincronização: ${e.message}", e)
-            SyncResult.Error(e)
+            val mappedError = if (isHttp401(e)) {
+                SessionExpiredException("Sua sessão expirou. Entre novamente com sua conta para continuar sincronizando.", e)
+            } else {
+                e
+            }
+            SyncResult.Error(mappedError)
         }
+    }
+
+    private suspend fun <T> executeWithRetryOn401(block: suspend () -> T): T {
+        return try {
+            block()
+        } catch (e: Throwable) {
+            val syncClient = client ?: SupabaseClient.getInstance()
+            if (isHttp401(e)) {
+                Log.w("SupabaseSyncManager", "Recebido HTTP 401 durante sincronização. Tentando renovar sessão...")
+                val refreshResult = syncClient.refreshCurrentSession()
+                if (refreshResult.isSuccess) {
+                    Log.d("SupabaseSyncManager", "Sessão renovada com sucesso após HTTP 401! Retentando operação...")
+                    return block()
+                } else {
+                    Log.e("SupabaseSyncManager", "Falha ao renovar sessão após HTTP 401: ${refreshResult.exceptionOrNull()?.message}")
+                    throw SessionExpiredException("Sua sessão expirou. Entre novamente com sua conta para continuar sincronizando.", e)
+                }
+            }
+            throw e
+        }
+    }
+
+    private fun isHttp401(throwable: Throwable): Boolean {
+        if (throwable is HttpException && throwable.code() == 401) return true
+        val msg = throwable.message?.lowercase() ?: ""
+        return "401" in msg || "jwt expired" in msg || "unauthorized" in msg
     }
 
     // =========================================================================

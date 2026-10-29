@@ -1544,10 +1544,20 @@ class GiroCustoViewModel @JvmOverloads constructor(
                         err is java.net.ConnectException ||
                         err is java.net.SocketTimeoutException
                 _syncState.value = if (isOffline) SyncState.OFFLINE else SyncState.ERROR
-                val msg = if (err is DataOwnerMismatchException) {
-                    "Sincronização pausada por segurança: os registros salvos neste aparelho pertencem a outra conta. Entre com a conta proprietária para sincronizá-los ou descarte os dados locais."
-                } else {
-                    err.localizedMessage ?: err.message ?: "Erro na sincronização"
+                val isExpired = err is SessionExpiredException ||
+                        (err is retrofit2.HttpException && err.code() == 401) ||
+                        ("401" in (err.message ?: "")) ||
+                        ("jwt expired" in (err.message ?: "").lowercase())
+                val msg = when {
+                    err is DataOwnerMismatchException -> {
+                        "Sincronização pausada por segurança: os registros salvos neste aparelho pertencem a outra conta. Entre com a conta proprietária para sincronizá-los ou descarte os dados locais."
+                    }
+                    isExpired -> {
+                        "Sua sessão expirou. Entre novamente com sua conta para continuar sincronizando."
+                    }
+                    else -> {
+                        err.localizedMessage ?: err.message ?: "Erro na sincronização"
+                    }
                 }
                 _syncErrorMessage.value = msg
                 onComplete?.invoke(false, msg)

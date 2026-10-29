@@ -62,6 +62,11 @@ data class AuthSession(
     val userEmail: String?
 )
 
+class SessionExpiredException(
+    message: String = "Sua sessão expirou. Entre novamente com sua conta para continuar sincronizando.",
+    cause: Throwable? = null
+) : Exception(message, cause)
+
 // ==========================================
 // POSTGREST DTOs (7 TABELAS)
 // ==========================================

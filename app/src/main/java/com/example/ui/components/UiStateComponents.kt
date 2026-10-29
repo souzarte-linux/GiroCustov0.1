@@ -253,8 +253,15 @@ fun ErrorNotificationCard(
                 }
             }
 
+            val isExpiredNotice = "401" in errorMessage ||
+                    "jwt expired" in errorMessage.lowercase() ||
+                    "sessão expirou" in errorMessage.lowercase()
             Text(
-                text = errorMessage.ifBlank { stringResource(R.string.error_sync_generic_desc) },
+                text = if (isExpiredNotice) {
+                    stringResource(R.string.auth_session_revalidation_notice)
+                } else {
+                    errorMessage.ifBlank { stringResource(R.string.error_sync_generic_desc) }
+                },
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 16.sp

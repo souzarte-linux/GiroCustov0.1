@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.json.JSONObject
 
 class SupabaseClient(
     context: Context? = null,
@@ -77,9 +78,54 @@ class SupabaseClient(
     val isAuthenticated: Boolean
         get() = !_sessionState.value?.accessToken.isNullOrBlank()
 
+    fun isTokenExpired(token: String? = activeToken, clockSkewSeconds: Long = 60L): Boolean {
+        if (token.isNullOrBlank()) return true
+        val parts = token.split(".")
+        if (parts.size < 2) return false // Tokens simples de fakes de teste não são considerados expirados
+        return try {
+            val payload = parts[1]
+            val decodedBytes = android.util.Base64.decode(payload, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
+            val json = JSONObject(String(decodedBytes, Charsets.UTF_8))
+            val exp = json.optLong("exp", 0L)
+            if (exp == 0L) return false
+            val nowSeconds = System.currentTimeMillis() / 1000L
+            (nowSeconds + clockSkewSeconds) >= exp
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    suspend fun ensureFreshSession(): Result<AuthSession?> {
+        val current = _sessionState.value ?: getSavedSession() ?: return Result.success(null)
+        if (isTokenExpired(current.accessToken)) {
+            if (current.refreshToken.isNotBlank()) {
+                val refreshResult = refreshCurrentSession()
+                if (refreshResult.isSuccess) {
+                    return refreshResult
+                } else {
+                    return Result.failure(SessionExpiredException(
+                        "Sua sessão expirou. Entre novamente com sua conta para continuar sincronizando.",
+                        refreshResult.exceptionOrNull()
+                    ))
+                }
+            } else {
+                return Result.failure(SessionExpiredException(
+                    "Sua sessão expirou. Entre novamente com sua conta para continuar sincronizando."
+                ))
+            }
+        }
+        return Result.success(current)
+    }
+
     private val authInterceptor = Interceptor { chain ->
         val original = chain.request()
-        val token = activeToken ?: BuildConfig.SUPABASE_ANON_KEY
+        val path = original.url.encodedPath
+        val isPublicAuthEndpoint = path.contains("/auth/v1/token") || path.contains("/auth/v1/signup")
+        val token = if (isPublicAuthEndpoint) {
+            BuildConfig.SUPABASE_ANON_KEY
+        } else {
+            activeToken ?: BuildConfig.SUPABASE_ANON_KEY
+        }
         val request = original.newBuilder()
             .header("apikey", BuildConfig.SUPABASE_ANON_KEY)
             .header("Authorization", "Bearer $token")

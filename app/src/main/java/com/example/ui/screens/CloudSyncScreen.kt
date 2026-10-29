@@ -1093,6 +1093,8 @@ private fun SummaryStatItem(label: String, value: String, isDark: Boolean) {
 private fun translateAuthError(error: String): String {
     val lower = error.lowercase()
     return when {
+        "401" in lower || "jwt expired" in lower || "unauthorized" in lower || "sessão expirou" in lower ->
+            "Sua sessão expirou. Entre novamente com sua conta para continuar sincronizando."
         "invalid login credentials" in lower || "invalid_grant" in lower ->
             "E-mail ou senha incorretos. Verifique suas credenciais."
         "user already registered" in lower ->

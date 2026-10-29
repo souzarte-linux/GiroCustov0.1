@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.room.withTransaction
 import com.example.network.supabase.AuthSession
+import com.example.network.supabase.SessionExpiredException
 import com.example.network.supabase.SupabaseClient
 import com.example.network.supabase.SupabaseSyncManager
 import com.example.network.supabase.SyncResult
@@ -917,6 +918,16 @@ class GiroCustoRepository(
     suspend fun syncCurrentSession(): SyncResult {
         val client = SupabaseClient.getInstance()
         val userId = client.currentUserId ?: return SyncResult.Error(IllegalStateException("Usuário não autenticado no Supabase"))
+
+        // Garante que a sessão está fresca antes de iniciar a sincronização
+        val sessionCheck = client.ensureFreshSession()
+        if (sessionCheck.isFailure) {
+            val failure = sessionCheck.exceptionOrNull()
+            if (failure is SessionExpiredException) {
+                return SyncResult.Error(failure)
+            }
+        }
+
         return syncWithSupabase(userId)
     }
 
