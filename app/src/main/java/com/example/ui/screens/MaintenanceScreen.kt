@@ -26,12 +26,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.R
 import com.example.data.MaintenanceRecord
 import com.example.ui.GiroCustoViewModel
 import com.example.util.CurrencyUtils
@@ -67,18 +69,18 @@ fun MaintenanceScreen(viewModel: GiroCustoViewModel) {
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Warning,
-                        contentDescription = "Alerta",
+                        contentDescription = stringResource(R.string.maintenance_no_vehicle_alert_cd),
                         tint = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.size(48.dp)
                     )
                     Text(
-                        text = "Selecione ou Cadastre um Veículo Ativo",
+                        text = stringResource(R.string.maintenance_no_vehicle_title),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
                     Text(
-                        text = "Você precisa de um veículo ativo para gerenciar manutenções corretivas.",
+                        text = stringResource(R.string.maintenance_no_vehicle_desc),
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.padding(horizontal = 8.dp)
@@ -132,14 +134,14 @@ fun MaintenanceScreen(viewModel: GiroCustoViewModel) {
                     viewModel.saveMaintenanceRecord(updatedRecord)
                     Toast.makeText(
                         context,
-                        if (isEdit) "Manutenção atualizada com sucesso!" else "Manutenção registrada com sucesso!",
+                        if (isEdit) context.getString(R.string.maintenance_toast_updated) else context.getString(R.string.maintenance_toast_created),
                         Toast.LENGTH_SHORT
                     ).show()
                     editingRecordId = null
                 },
                 onDelete = {
                     viewModel.deleteMaintenanceRecord(recordToEdit)
-                    Toast.makeText(context, "Manutenção excluída.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.maintenance_toast_deleted), Toast.LENGTH_SHORT).show()
                     editingRecordId = null
                 }
             )
@@ -171,7 +173,7 @@ fun MaintenanceListSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Manutenção Corretiva",
+                    text = stringResource(R.string.maintenance_title),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -189,10 +191,10 @@ fun MaintenanceListSection(
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Adicionar", modifier = Modifier.size(18.dp))
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.maintenance_cd_add), modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Lançar",
+                        text = stringResource(R.string.maintenance_btn_add),
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         softWrap = false
@@ -218,7 +220,7 @@ fun MaintenanceListSection(
                         modifier = Modifier.size(28.dp)
                     )
                     Text(
-                        text = "Total Gasto em Reparos",
+                        text = stringResource(R.string.maintenance_summary_total_label),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -239,7 +241,7 @@ fun MaintenanceListSection(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Nenhuma manutenção corretiva registrada.",
+                        text = stringResource(R.string.maintenance_empty_message),
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
@@ -322,7 +324,10 @@ fun MaintenanceListSection(
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Text(
-                                            text = String.format(Locale.getDefault(), "%,.1f km", record.odometer),
+                                            text = stringResource(
+                                                R.string.maintenance_odometer_format,
+                                                String.format(CurrencyUtils.ptBrLocale, "%,.1f", record.odometer)
+                                            ),
                                             fontSize = 12.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -388,11 +393,11 @@ fun MaintenanceFormSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack, modifier = Modifier.testTag("back_btn")) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.maintenance_cd_back))
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = if (isEdit) "Editar Registro" else "Lançar Reparo",
+                text = if (isEdit) stringResource(R.string.maintenance_form_title_edit) else stringResource(R.string.maintenance_form_title_new),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -403,7 +408,7 @@ fun MaintenanceFormSection(
         TextField(
             value = description,
             onValueChange = { description = it },
-            label = { Text("Descrição (ex: Troca de pastilhas)") },
+            label = { Text(stringResource(R.string.maintenance_form_desc_label)) },
             modifier = Modifier.fillMaxWidth().testTag("maintenance_desc_input"),
             singleLine = true,
             leadingIcon = { Icon(Icons.Filled.Description, contentDescription = null) },
@@ -416,7 +421,7 @@ fun MaintenanceFormSection(
         TextField(
             value = valueStr,
             onValueChange = { valueStr = it },
-            label = { Text("Valor Pago (R$)") },
+            label = { Text(stringResource(R.string.maintenance_form_value_label)) },
             modifier = Modifier.fillMaxWidth().testTag("maintenance_value_input"),
             singleLine = true,
             leadingIcon = { Icon(Icons.Filled.AttachMoney, contentDescription = null) },
@@ -429,7 +434,7 @@ fun MaintenanceFormSection(
         TextField(
             value = odometerStr,
             onValueChange = { odometerStr = it },
-            label = { Text("Odômetro no Reparo (km)") },
+            label = { Text(stringResource(R.string.maintenance_form_odometer_label)) },
             modifier = Modifier.fillMaxWidth().testTag("maintenance_odometer_input"),
             singleLine = true,
             leadingIcon = { Icon(Icons.Filled.Speed, contentDescription = null) },
@@ -442,7 +447,7 @@ fun MaintenanceFormSection(
         TextField(
             value = location,
             onValueChange = { location = it },
-            label = { Text("Local / Oficina (Opcional)") },
+            label = { Text(stringResource(R.string.maintenance_form_location_label)) },
             modifier = Modifier.fillMaxWidth().testTag("maintenance_location_input"),
             singleLine = true,
             leadingIcon = { Icon(Icons.Filled.Place, contentDescription = null) },
@@ -472,7 +477,7 @@ fun MaintenanceFormSection(
             value = dateString,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Data do Reparo") },
+            label = { Text(stringResource(R.string.maintenance_form_date_label)) },
             leadingIcon = { Icon(Icons.Filled.DateRange, contentDescription = null) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -501,9 +506,9 @@ fun MaintenanceFormSection(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Excluir")
+                    Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.maintenance_btn_delete))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Excluir")
+                    Text(stringResource(R.string.maintenance_btn_delete))
                 }
             }
 
@@ -513,15 +518,15 @@ fun MaintenanceFormSection(
                     val odo = odometerStr.replace(",", ".").toDoubleOrNull() ?: 0.0
 
                     if (description.isBlank()) {
-                        Toast.makeText(context, "Por favor, digite uma descrição.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.maintenance_toast_error_desc), Toast.LENGTH_SHORT).show()
                         return@Button
                     }
                     if (valueCents <= 0L) {
-                        Toast.makeText(context, "Por favor, insira um valor pago válido.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.maintenance_toast_error_value), Toast.LENGTH_SHORT).show()
                         return@Button
                     }
                     if (odo <= 0) {
-                        Toast.makeText(context, "Por favor, insira um odômetro válido.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.maintenance_toast_error_odometer), Toast.LENGTH_SHORT).show()
                         return@Button
                     }
 
@@ -541,9 +546,9 @@ fun MaintenanceFormSection(
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Icon(Icons.Filled.Save, contentDescription = "Salvar")
+                Icon(Icons.Filled.Save, contentDescription = stringResource(R.string.maintenance_btn_save))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Salvar")
+                Text(stringResource(R.string.maintenance_btn_save))
             }
         }
     }

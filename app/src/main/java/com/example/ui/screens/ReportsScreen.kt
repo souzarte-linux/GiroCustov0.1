@@ -99,18 +99,22 @@ fun ReportsScreen(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Relatórios de Desempenho",
+                    text = stringResource(R.string.reports_title),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 val displayFormat = remember { SimpleDateFormat("dd/MM", Locale.getDefault()) }
                 val periodLabel = when (selectedPeriod) {
-                    Period.SEMANA -> "Período: Semana"
-                    Period.QUINZENA -> "Período: Quinzena"
-                    Period.MENSAL -> "Período: Mês Atual"
-                    Period.ULTIMOS_30_DIAS -> "Período: Últimos 30 dias"
-                    Period.PERSONALIZADO -> "Filtro: ${displayFormat.format(Date(customStart))} até ${displayFormat.format(Date(customEnd))}"
+                    Period.SEMANA -> stringResource(R.string.reports_period_prefix_week)
+                    Period.QUINZENA -> stringResource(R.string.reports_period_prefix_fortnight)
+                    Period.MENSAL -> stringResource(R.string.reports_period_prefix_month)
+                    Period.ULTIMOS_30_DIAS -> stringResource(R.string.reports_period_prefix_last_30_days)
+                    Period.PERSONALIZADO -> stringResource(
+                        R.string.reports_period_custom_range,
+                        displayFormat.format(Date(customStart)),
+                        displayFormat.format(Date(customEnd))
+                    )
                 }
                 Text(
                     text = periodLabel,
@@ -138,11 +142,11 @@ fun ReportsScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         val selectedLabel = when (selectedPeriod) {
-                            Period.SEMANA -> "Semana"
-                            Period.QUINZENA -> "Quinzena"
-                            Period.MENSAL -> "Mês Atual"
-                            Period.ULTIMOS_30_DIAS -> "Últimos 30 dias"
-                            Period.PERSONALIZADO -> "Personalizado"
+                            Period.SEMANA -> stringResource(R.string.reports_period_week)
+                            Period.QUINZENA -> stringResource(R.string.reports_period_fortnight)
+                            Period.MENSAL -> stringResource(R.string.reports_period_month)
+                            Period.ULTIMOS_30_DIAS -> stringResource(R.string.reports_period_last_30_days)
+                            Period.PERSONALIZADO -> stringResource(R.string.reports_period_custom)
                         }
                         Text(
                             text = selectedLabel,
@@ -152,7 +156,7 @@ fun ReportsScreen(
                         )
                         Icon(
                             imageVector = Icons.Filled.ArrowDropDown,
-                            contentDescription = "Selecionar Período",
+                            contentDescription = stringResource(R.string.reports_cd_select_period),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
                         )
@@ -164,35 +168,35 @@ fun ReportsScreen(
                         modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Semana", fontSize = 14.sp) },
+                            text = { Text(stringResource(R.string.reports_period_week), fontSize = 14.sp) },
                             onClick = {
                                 viewModel.setReportsPeriod(Period.SEMANA)
                                 dropdownExpanded = false
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Quinzena", fontSize = 14.sp) },
+                            text = { Text(stringResource(R.string.reports_period_fortnight), fontSize = 14.sp) },
                             onClick = {
                                 viewModel.setReportsPeriod(Period.QUINZENA)
                                 dropdownExpanded = false
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Mês Atual", fontSize = 14.sp) },
+                            text = { Text(stringResource(R.string.reports_period_month), fontSize = 14.sp) },
                             onClick = {
                                 viewModel.setReportsPeriod(Period.MENSAL)
                                 dropdownExpanded = false
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Últimos 30 dias", fontSize = 14.sp) },
+                            text = { Text(stringResource(R.string.reports_period_last_30_days), fontSize = 14.sp) },
                             onClick = {
                                 viewModel.setReportsPeriod(Period.ULTIMOS_30_DIAS)
                                 dropdownExpanded = false
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Personalizado", fontSize = 14.sp) },
+                            text = { Text(stringResource(R.string.reports_period_custom), fontSize = 14.sp) },
                             onClick = {
                                 viewModel.setReportsPeriod(Period.PERSONALIZADO)
                                 dropdownExpanded = false
@@ -208,7 +212,7 @@ fun ReportsScreen(
                 ) {
                     Icon(
                         imageVector = if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
-                        contentDescription = "Alternar Tema",
+                        contentDescription = stringResource(R.string.reports_cd_toggle_theme),
                         tint = if (isDark) Color(0xFFF59E0B) else Color(0xFF64748B),
                         modifier = Modifier.size(20.dp)
                     )
@@ -274,13 +278,13 @@ fun ReportsScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Evolução do Lucro Líquido Diário",
+                        text = stringResource(R.string.reports_chart_profit_title),
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         fontSize = 14.sp
                     )
                     Text(
-                        text = "Ganhos reais limpos nos últimos 7 dias de entregas",
+                        text = stringResource(R.string.reports_chart_profit_subtitle),
                         fontSize = 11.sp,
                         color = Color(0xFF94A3B8)
                     )
@@ -322,7 +326,11 @@ fun ReportsScreen(
                                 .height(180.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("Histórico sem registros suficientes para gráfico.", fontSize = 12.sp, color = Color(0xFF94A3B8))
+                            Text(
+                                text = stringResource(R.string.reports_chart_profit_empty),
+                                fontSize = 12.sp,
+                                color = Color(0xFF94A3B8)
+                            )
                         }
                     }
                 }
@@ -341,13 +349,13 @@ fun ReportsScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Produtividade: Faturamento vs Lucro Líquido",
+                        text = stringResource(R.string.reports_chart_productivity_title),
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         fontSize = 14.sp
                     )
                     Text(
-                        text = "Visualização da eficiência financeira de cada turno lançado",
+                        text = stringResource(R.string.reports_chart_productivity_subtitle),
                         fontSize = 11.sp,
                         color = Color(0xFF94A3B8)
                     )
@@ -372,14 +380,20 @@ fun ReportsScreen(
                         ) {
                             Box(modifier = Modifier.size(10.dp).background(Color(0xFF00B0FF)))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Faturamento Bruto", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                            Text(stringResource(R.string.reports_legend_gross), fontSize = 11.sp, color = Color(0xFF94A3B8))
                             Spacer(modifier = Modifier.width(16.dp))
                             Box(modifier = Modifier.size(10.dp).background(Color(0xFF10B981)))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Lucro Líquido", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                            Text(stringResource(R.string.reports_legend_net), fontSize = 11.sp, color = Color(0xFF94A3B8))
                         }
                     } else {
-                        Text("Sem histórico suficiente.", fontSize = 12.sp, color = Color(0xFF94A3B8), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                        Text(
+                            text = stringResource(R.string.reports_chart_productivity_empty),
+                            fontSize = 12.sp,
+                            color = Color(0xFF94A3B8),
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
             }

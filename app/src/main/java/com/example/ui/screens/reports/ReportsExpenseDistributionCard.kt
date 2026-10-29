@@ -12,13 +12,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.ui.ReportMetricsState
-import java.util.*
+import com.example.util.CurrencyUtils
 
 @Composable
 fun ExpenseLegendItem(label: String, color: Color, pct: Float, value: Double) {
@@ -51,7 +53,11 @@ fun ExpenseLegendItem(label: String, color: Color, pct: Float, value: Double) {
         }
         Spacer(modifier = Modifier.width(12.dp))
         Text(
-            text = "${String.format(Locale.GERMAN, "R$ %.2f", safeValue)} (${(safePct * 100).toInt()}%)",
+            text = stringResource(
+                R.string.reports_expense_legend_value,
+                CurrencyUtils.formatCents(CurrencyUtils.toCents(safeValue)),
+                (safePct * 100).toInt()
+            ),
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.Monospace,
@@ -73,13 +79,13 @@ fun ReportsExpenseDistributionCard(metrics: ReportMetricsState) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Distribuição de Despesas Operacionais",
+                text = stringResource(R.string.reports_expense_distribution_title),
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 fontSize = 14.sp
             )
             Text(
-                text = "A fatia de cada custo no orçamento total rodado",
+                text = stringResource(R.string.reports_expense_distribution_subtitle),
                 fontSize = 11.sp,
                 color = Color(0xFF94A3B8)
             )
@@ -112,14 +118,20 @@ fun ReportsExpenseDistributionCard(metrics: ReportMetricsState) {
 
                 // Legendas com percentual e valor
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ExpenseLegendItem(label = "Combustível", color = Color(0xFFFF9100), pct = metrics.pctFuel, value = metrics.totalFuelCost)
-                    ExpenseLegendItem(label = "Alimentação", color = Color(0xFF00B0FF), pct = metrics.pctFood, value = metrics.totalFoodCost)
-                    ExpenseLegendItem(label = "Desgaste / Peças", color = Color(0xFFEF5350), pct = metrics.pctWear, value = metrics.totalWearCost)
-                    ExpenseLegendItem(label = "Custos Fixos", color = Color(0xFFAB47BC), pct = metrics.pctFixed, value = metrics.totalFixedCost)
-                    ExpenseLegendItem(label = "Manut. Corretiva", color = Color(0xFFFBBF24), pct = metrics.pctMaintenance, value = metrics.totalMaintenanceCost)
+                    ExpenseLegendItem(label = stringResource(R.string.reports_expense_cat_fuel), color = Color(0xFFFF9100), pct = metrics.pctFuel, value = metrics.totalFuelCost)
+                    ExpenseLegendItem(label = stringResource(R.string.reports_expense_cat_food), color = Color(0xFF00B0FF), pct = metrics.pctFood, value = metrics.totalFoodCost)
+                    ExpenseLegendItem(label = stringResource(R.string.reports_expense_cat_wear), color = Color(0xFFEF5350), pct = metrics.pctWear, value = metrics.totalWearCost)
+                    ExpenseLegendItem(label = stringResource(R.string.reports_expense_cat_fixed), color = Color(0xFFAB47BC), pct = metrics.pctFixed, value = metrics.totalFixedCost)
+                    ExpenseLegendItem(label = stringResource(R.string.reports_expense_cat_maintenance), color = Color(0xFFFBBF24), pct = metrics.pctMaintenance, value = metrics.totalMaintenanceCost)
                 }
             } else {
-                Text("Nenhuma despesa registrada para cálculo.", fontSize = 12.sp, color = Color(0xFF94A3B8), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                Text(
+                    text = stringResource(R.string.reports_expense_empty),
+                    fontSize = 12.sp,
+                    color = Color(0xFF94A3B8),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }

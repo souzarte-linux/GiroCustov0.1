@@ -12,13 +12,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.ui.ReportMetricsState
 import com.example.util.CurrencyUtils
-import java.util.*
 
 @Composable
 fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
@@ -33,20 +34,20 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Filled.AccessTime,
-                    contentDescription = "Jornada e Horas",
+                    contentDescription = stringResource(R.string.reports_workhours_icon_desc),
                     tint = Color(0xFF10B981),
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Jornada & Eficiência por Hora",
+                    text = stringResource(R.string.reports_workhours_title),
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     fontSize = 14.sp
                 )
             }
             Text(
-                text = "Tempo em rota, pausas e remuneração calculada por hora trabalhada",
+                text = stringResource(R.string.reports_workhours_subtitle),
                 fontSize = 11.sp,
                 color = Color(0xFF94A3B8)
             )
@@ -64,12 +65,15 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
             ) {
                 Column {
                     Text(
-                        text = "Lucro Líquido / Hora",
+                        text = stringResource(R.string.reports_workhours_net_per_hour_label),
                         fontSize = 11.sp,
                         color = Color(0xFF94A3B8)
                     )
                     Text(
-                        text = String.format(Locale.GERMAN, "R$ %.2f /h", safeNetPerHour),
+                        text = stringResource(
+                            R.string.reports_workhours_rate_per_hour,
+                            CurrencyUtils.formatCents(CurrencyUtils.toCents(safeNetPerHour))
+                        ),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
@@ -79,12 +83,15 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "Faturamento Bruto / Hora",
+                        text = stringResource(R.string.reports_workhours_gross_per_hour_label),
                         fontSize = 11.sp,
                         color = Color(0xFF94A3B8)
                     )
                     Text(
-                        text = String.format(Locale.GERMAN, "R$ %.2f /h", safeGrossPerHour),
+                        text = stringResource(
+                            R.string.reports_workhours_rate_per_hour,
+                            CurrencyUtils.formatCents(CurrencyUtils.toCents(safeGrossPerHour))
+                        ),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
@@ -103,7 +110,11 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("Tempo Efetivo", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                    Text(
+                        text = stringResource(R.string.reports_workhours_effective_time_label),
+                        fontSize = 11.sp,
+                        color = Color(0xFF94A3B8)
+                    )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = metrics.formattedTotalWork,
@@ -114,7 +125,11 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
                 }
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Tempo em Pausa", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                    Text(
+                        text = stringResource(R.string.reports_workhours_pause_time_label),
+                        fontSize = 11.sp,
+                        color = Color(0xFF94A3B8)
+                    )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = metrics.formattedTotalPause,
@@ -125,10 +140,17 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
                 }
 
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("Média / Turno", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                    Text(
+                        text = stringResource(R.string.reports_workhours_avg_shift_label),
+                        fontSize = 11.sp,
+                        color = Color(0xFF94A3B8)
+                    )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = String.format(Locale.GERMAN, "%.1fh", safeAvgHours),
+                        text = stringResource(
+                            R.string.reports_workhours_avg_shift_value,
+                            String.format(CurrencyUtils.ptBrLocale, "%.1f", safeAvgHours)
+                        ),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color(0xFFE2E8F0)
@@ -142,9 +164,11 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
 @Composable
 fun ReportsHighlightsSection(metrics: ReportMetricsState) {
     if (metrics.bestDay != null || metrics.worstDay != null) {
+        val fallbackShift = stringResource(R.string.reports_highlights_shift_fallback)
+
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "DESTAQUES E RECORDES",
+                text = stringResource(R.string.reports_highlights_section_title),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF10B981), // Emerald accent
@@ -156,9 +180,7 @@ fun ReportsHighlightsSection(metrics: ReportMetricsState) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 if (metrics.bestDay != null) {
-                    val bestNet = CurrencyUtils.centsToDouble(metrics.bestDay.netProfit)
-                    val safeBestNet = if (bestNet.isFinite()) bestNet else 0.0
-                    val bestDate = metrics.bestDay.dateString.ifBlank { "Turno" }
+                    val bestDate = metrics.bestDay.dateString.ifBlank { fallbackShift }
 
                     Card(
                         modifier = Modifier.weight(1f),
@@ -168,18 +190,27 @@ fun ReportsHighlightsSection(metrics: ReportMetricsState) {
                         elevation = CardDefaults.cardElevation(0.dp)
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            Icon(Icons.Filled.ArrowUpward, "Melhor Dia", tint = Color(0xFF10B981), modifier = Modifier.size(18.dp))
+                            Icon(
+                                imageVector = Icons.Filled.ArrowUpward,
+                                contentDescription = stringResource(R.string.reports_highlights_best_shift_icon_desc),
+                                tint = Color(0xFF10B981),
+                                modifier = Modifier.size(18.dp)
+                            )
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("Melhor Turno", fontSize = 11.sp, color = Color(0xFF34D399))
                             Text(
-                                text = String.format(Locale.GERMAN, "R$ %.2f", safeBestNet),
+                                text = stringResource(R.string.reports_highlights_best_shift_label),
+                                fontSize = 11.sp,
+                                color = Color(0xFF34D399)
+                            )
+                            Text(
+                                text = CurrencyUtils.formatCents(metrics.bestDay.netProfit),
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = FontFamily.Monospace,
                                 color = Color.White
                             )
                             Text(
-                                text = "no dia $bestDate",
+                                text = stringResource(R.string.reports_highlights_on_day, bestDate),
                                 fontSize = 10.sp,
                                 color = Color(0xFF94A3B8)
                             )
@@ -188,9 +219,7 @@ fun ReportsHighlightsSection(metrics: ReportMetricsState) {
                 }
 
                 if (metrics.worstDay != null) {
-                    val worstNet = CurrencyUtils.centsToDouble(metrics.worstDay.netProfit)
-                    val safeWorstNet = if (worstNet.isFinite()) worstNet else 0.0
-                    val worstDate = metrics.worstDay.dateString.ifBlank { "Turno" }
+                    val worstDate = metrics.worstDay.dateString.ifBlank { fallbackShift }
 
                     Card(
                         modifier = Modifier.weight(1f),
@@ -200,18 +229,27 @@ fun ReportsHighlightsSection(metrics: ReportMetricsState) {
                         elevation = CardDefaults.cardElevation(0.dp)
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            Icon(Icons.Filled.ArrowDownward, "Menor Turno", tint = Color(0xFFF43F5E), modifier = Modifier.size(18.dp))
+                            Icon(
+                                imageVector = Icons.Filled.ArrowDownward,
+                                contentDescription = stringResource(R.string.reports_highlights_worst_shift_icon_desc),
+                                tint = Color(0xFFF43F5E),
+                                modifier = Modifier.size(18.dp)
+                            )
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("Menor Turno", fontSize = 11.sp, color = Color(0xFFFDA4AF))
                             Text(
-                                text = String.format(Locale.GERMAN, "R$ %.2f", safeWorstNet),
+                                text = stringResource(R.string.reports_highlights_worst_shift_label),
+                                fontSize = 11.sp,
+                                color = Color(0xFFFDA4AF)
+                            )
+                            Text(
+                                text = CurrencyUtils.formatCents(metrics.worstDay.netProfit),
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = FontFamily.Monospace,
                                 color = Color.White
                             )
                             Text(
-                                text = "no dia $worstDate",
+                                text = stringResource(R.string.reports_highlights_on_day, worstDate),
                                 fontSize = 10.sp,
                                 color = Color(0xFF94A3B8)
                             )

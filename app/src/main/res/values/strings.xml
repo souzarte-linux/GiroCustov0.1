@@ -528,4 +528,90 @@
     <string name="profile_vehicle_carbody_title">TIPO DE CARROCERIA (CARRO)</string>
     <string name="profile_vehicle_btn_save_changes">Salvar Alterações do Veículo</string>
     <string name="profile_vehicle_btn_register">Cadastrar Veículo</string>
+
+    <!-- Relatórios e Análises de Desempenho (T-25E [ACC-02C]) -->
+    <string name="reports_title">Relatórios de Desempenho</string>
+    <string name="reports_period_prefix_week">Período: Semana</string>
+    <string name="reports_period_prefix_fortnight">Período: Quinzena</string>
+    <string name="reports_period_prefix_month">Período: Mês Atual</string>
+    <string name="reports_period_prefix_last_30_days">Período: Últimos 30 dias</string>
+    <string name="reports_period_custom_range">Filtro: %1$s até %2$s</string>
+    <string name="reports_period_week">Semana</string>
+    <string name="reports_period_fortnight">Quinzena</string>
+    <string name="reports_period_month">Mês Atual</string>
+    <string name="reports_period_last_30_days">Últimos 30 dias</string>
+    <string name="reports_period_custom">Personalizado</string>
+    <string name="reports_cd_select_period">Selecionar Período</string>
+    <string name="reports_cd_toggle_theme">Alternar Tema</string>
+    <string name="reports_chart_profit_title">Evolução do Lucro Líquido Diário</string>
+    <string name="reports_chart_profit_subtitle">Ganhos reais limpos nos últimos 7 dias de entregas</string>
+    <string name="reports_chart_profit_empty">Histórico sem registros suficientes para gráfico.</string>
+    <string name="reports_chart_productivity_title">Produtividade: Faturamento vs Lucro Líquido</string>
+    <string name="reports_chart_productivity_subtitle">Visualização da eficiência financeira de cada turno lançado</string>
+    <string name="reports_legend_gross">Faturamento Bruto</string>
+    <string name="reports_legend_net">Lucro Líquido</string>
+    <string name="reports_chart_productivity_empty">Sem histórico suficiente.</string>
+
+    <string name="reports_expense_distribution_title">Distribuição de Despesas Operacionais</string>
+    <string name="reports_expense_distribution_subtitle">A fatia de cada custo no orçamento total rodado</string>
+    <string name="reports_expense_cat_fuel">Combustível</string>
+    <string name="reports_expense_cat_food">Alimentação</string>
+    <string name="reports_expense_cat_wear">Desgaste / Peças</string>
+    <string name="reports_expense_cat_fixed">Custos Fixos</string>
+    <string name="reports_expense_cat_maintenance">Manut. Corretiva</string>
+    <string name="reports_expense_empty">Nenhuma despesa registrada para cálculo.</string>
+    <string name="reports_expense_legend_value">%1$s (%2$d%%)</string>
+
+    <string name="reports_projections_icon_desc">Projeções</string>
+    <string name="reports_projections_title">Economia Acumulada e Projeções</string>
+    <string name="reports_projections_simulation_desc">Simulação para o mês se trabalhar os %1$d dias planejados no ritmo atual:</string>
+    <string name="reports_projections_gross_label">Projeção de Faturamento</string>
+    <string name="reports_projections_net_label">Projeção de Lucro Limpo</string>
+    <string name="reports_projections_goal_progress">Alcançará %1$d%% da meta mensal de Lucro</string>
+    <string name="reports_projections_goal_label">Meta: %1$s</string>
+
+    <string name="reports_workhours_icon_desc">Jornada e Horas</string>
+    <string name="reports_workhours_title">Jornada &amp; Eficiência por Hora</string>
+    <string name="reports_workhours_subtitle">Tempo em rota, pausas e remuneração calculada por hora trabalhada</string>
+    <string name="reports_workhours_net_per_hour_label">Lucro Líquido / Hora</string>
+    <string name="reports_workhours_gross_per_hour_label">Faturamento Bruto / Hora</string>
+    <string name="reports_workhours_rate_per_hour">%1$s /h</string>
+    <string name="reports_workhours_effective_time_label">Tempo Efetivo</string>
+    <string name="reports_workhours_pause_time_label">Tempo em Pausa</string>
+    <string name="reports_workhours_avg_shift_label">Média / Turno</string>
+    <string name="reports_workhours_avg_shift_value">%1$sh</string>
+    <string name="reports_highlights_section_title">DESTAQUES E RECORDES</string>
+    <string name="reports_highlights_best_shift_icon_desc">Melhor Dia</string>
+    <string name="reports_highlights_best_shift_label">Melhor Turno</string>
+    <string name="reports_highlights_worst_shift_icon_desc">Menor Turno</string>
+    <string name="reports_highlights_worst_shift_label">Menor Turno</string>
+    <string name="reports_highlights_shift_fallback">Turno</string>
+    <string name="reports_highlights_on_day">no dia %1$s</string>
+
+    <!-- Manutenção Corretiva (T-25E [ACC-02C]) -->
+    <string name="maintenance_title">Manutenção Corretiva</string>
+    <string name="maintenance_cd_add">Adicionar</string>
+    <string name="maintenance_btn_add">Lançar</string>
+    <string name="maintenance_no_vehicle_alert_cd">Alerta</string>
+    <string name="maintenance_no_vehicle_title">Selecione ou Cadastre um Veículo Ativo</string>
+    <string name="maintenance_no_vehicle_desc">Você precisa de um veículo ativo para gerenciar manutenções corretivas.</string>
+    <string name="maintenance_summary_total_label">Total Gasto em Reparos</string>
+    <string name="maintenance_empty_message">Nenhuma manutenção corretiva registrada.</string>
+    <string name="maintenance_odometer_format">%1$s km</string>
+    <string name="maintenance_cd_back">Voltar</string>
+    <string name="maintenance_form_title_edit">Editar Registro</string>
+    <string name="maintenance_form_title_new">Lançar Reparo</string>
+    <string name="maintenance_form_desc_label">Descrição (ex: Troca de pastilhas)</string>
+    <string name="maintenance_form_value_label">Valor Pago (R$)</string>
+    <string name="maintenance_form_odometer_label">Odômetro no Reparo (km)</string>
+    <string name="maintenance_form_location_label">Local / Oficina (Opcional)</string>
+    <string name="maintenance_form_date_label">Data do Reparo</string>
+    <string name="maintenance_btn_delete">Excluir</string>
+    <string name="maintenance_btn_save">Salvar</string>
+    <string name="maintenance_toast_updated">Manutenção atualizada com sucesso!</string>
+    <string name="maintenance_toast_created">Manutenção registrada com sucesso!</string>
+    <string name="maintenance_toast_deleted">Manutenção excluída.</string>
+    <string name="maintenance_toast_error_desc">Por favor, digite uma descrição.</string>
+    <string name="maintenance_toast_error_value">Por favor, insira um valor pago válido.</string>
+    <string name="maintenance_toast_error_odometer">Por favor, insira um odômetro válido.</string>
 </resources>
