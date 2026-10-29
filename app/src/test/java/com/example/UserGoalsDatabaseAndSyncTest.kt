@@ -32,7 +32,8 @@ class UserGoalsDatabaseAndSyncTest {
     @get:Rule
     val migrationTestHelper: MigrationTestHelper = MigrationTestHelper(
         InstrumentationRegistry.getInstrumentation(),
-        GiroCustoDatabase::class.java.canonicalName,
+        GiroCustoDatabase::class.java,
+        emptyList(),
         FrameworkSQLiteOpenHelperFactory()
     )
 

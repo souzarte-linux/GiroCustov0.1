@@ -460,7 +460,7 @@ fun HistoryScreen(
                                 )
                             }
                             is HistoryListItem.WeekHeader -> {
-                                val sdfWeek = SimpleDateFormat("dd/MM", Locale("pt", "BR"))
+                                val sdfWeek = SimpleDateFormat("dd/MM", Locale.forLanguageTag("pt-BR"))
                                 val startStr = sdfWeek.format(Date(item.weekStartMillis))
                                 val endStr = sdfWeek.format(Date(item.weekEndMillis))
                                 val weekLabel = stringResource(R.string.history_week_header, startStr, endStr)

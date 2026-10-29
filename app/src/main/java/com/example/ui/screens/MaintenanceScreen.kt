@@ -153,7 +153,7 @@ fun MaintenanceListSection(
     onAddClick: () -> Unit,
     onEditClick: (Long) -> Unit
 ) {
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("pt", "BR")) }
+    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("pt-BR")) }
     val totalCost = remember(records) { records.sumOf { it.value } }
 
     Box(

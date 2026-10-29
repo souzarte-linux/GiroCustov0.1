@@ -19,7 +19,8 @@ class RoomMigration14To15Test {
     @get:Rule
     val helper: MigrationTestHelper = MigrationTestHelper(
         InstrumentationRegistry.getInstrumentation(),
-        GiroCustoDatabase::class.java.canonicalName ?: "com.example.data.GiroCustoDatabase",
+        GiroCustoDatabase::class.java,
+        emptyList(),
         FrameworkSQLiteOpenHelperFactory()
     )
 

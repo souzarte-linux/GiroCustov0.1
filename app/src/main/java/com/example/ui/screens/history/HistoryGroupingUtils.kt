@@ -95,10 +95,10 @@ fun getWeekSubdivisionBoundaries(recordTimestamp: Long, year: Int, month: Int): 
 }
 
 fun formatDayLabel(timestamp: Long): String {
-    val sdf = SimpleDateFormat("EEEE, dd 'de' MMM", Locale("pt", "BR"))
+    val sdf = SimpleDateFormat("EEEE, dd 'de' MMM", Locale.forLanguageTag("pt-BR"))
     val raw = sdf.format(Date(timestamp))
     return if (raw.isNotEmpty()) {
-        raw.substring(0, 1).uppercase(Locale("pt", "BR")) + raw.substring(1)
+        raw.substring(0, 1).uppercase(Locale.forLanguageTag("pt-BR")) + raw.substring(1)
     } else {
         raw
     }

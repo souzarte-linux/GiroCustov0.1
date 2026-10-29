@@ -157,7 +157,7 @@ class HistoryGroupingTest {
         
         assertTrue(label.isNotEmpty())
         val firstChar = label.substring(0, 1)
-        assertEquals(firstChar.uppercase(Locale("pt", "BR")), firstChar)
+        assertEquals(firstChar.uppercase(Locale.forLanguageTag("pt-BR")), firstChar)
         assertTrue(label.contains("Quinta-feira") || label.contains("Quinta"))
     }
 }
