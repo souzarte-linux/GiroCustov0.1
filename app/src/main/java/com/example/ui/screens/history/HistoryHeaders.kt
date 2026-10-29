@@ -18,9 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import java.util.Locale
 
 @Composable
@@ -48,7 +50,7 @@ fun YearHeaderCard(year: Int, totalGross: Double, totalNet: Double) {
             ) {
                 Column {
                     Text(
-                        text = "Faturamento",
+                        text = stringResource(R.string.history_header_gross),
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
@@ -61,7 +63,7 @@ fun YearHeaderCard(year: Int, totalGross: Double, totalNet: Double) {
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "Lucro Líquido",
+                        text = stringResource(R.string.history_header_net_profit),
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
@@ -103,7 +105,7 @@ fun MonthHeaderCard(monthLabel: String, totalGross: Double, totalNet: Double) {
             ) {
                 Column {
                     Text(
-                        text = "Faturamento",
+                        text = stringResource(R.string.history_header_gross),
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                     )
@@ -116,7 +118,7 @@ fun MonthHeaderCard(monthLabel: String, totalGross: Double, totalNet: Double) {
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "Lucro Líquido",
+                        text = stringResource(R.string.history_header_net_profit),
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                     )
@@ -164,7 +166,7 @@ fun WeekHeaderCard(weekLabel: String, totalGross: Double, totalNet: Double) {
             ) {
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "Fat.",
+                        text = stringResource(R.string.history_header_gross_short),
                         fontSize = 9.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
@@ -177,7 +179,7 @@ fun WeekHeaderCard(weekLabel: String, totalGross: Double, totalNet: Double) {
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "Lucro",
+                        text = stringResource(R.string.history_header_net_profit_short),
                         fontSize = 9.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )

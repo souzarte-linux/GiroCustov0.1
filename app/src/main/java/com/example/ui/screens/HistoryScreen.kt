@@ -50,14 +50,14 @@ import com.example.ui.util.filterByPeriod
 import java.text.SimpleDateFormat
 import java.util.*
 
-enum class HistorySortOption(val label: String) {
-    DATA_DECRESCENTE("Data decrescente"),
-    DATA_CRESCENTE("Data crescente"),
-    LUCRO_MAIOR("Lucro do Maior"),
-    LUCRO_MENOR("Lucro do Menor"),
-    KM_MAIOR("Por Maior KM"),
-    KM_MENOR("Por Menor KM"),
-    ENTREGAS("Quantidade Entregas")
+enum class HistorySortOption(val labelResId: Int) {
+    DATA_DECRESCENTE(R.string.history_sort_date_desc),
+    DATA_CRESCENTE(R.string.history_sort_date_asc),
+    LUCRO_MAIOR(R.string.history_sort_profit_desc),
+    LUCRO_MENOR(R.string.history_sort_profit_asc),
+    KM_MAIOR(R.string.history_sort_km_desc),
+    KM_MENOR(R.string.history_sort_km_asc),
+    ENTREGAS(R.string.history_sort_deliveries_desc)
 }
 
 @Composable
@@ -81,14 +81,15 @@ fun HistoryScreen(
     var historyCustomEnd by remember { mutableStateOf(System.currentTimeMillis()) }
     var showHistoryCustomPeriodDialog by remember { mutableStateOf(false) }
 
-    val platformsList = remember(records) {
-        listOf("Todas") + records.map { it.platform }.distinct().filter { it.isNotBlank() }
+    val allPlatformsLabel = stringResource(R.string.history_filter_all_platforms)
+    val platformsList = remember(records, allPlatformsLabel) {
+        listOf(allPlatformsLabel) + records.map { it.platform }.distinct().filter { it.isNotBlank() }
     }
-    var selectedPlatformFilter by remember { mutableStateOf("Todas") }
+    var selectedPlatformFilter by remember { mutableStateOf(allPlatformsLabel) }
 
-    LaunchedEffect(platformsList) {
+    LaunchedEffect(platformsList, allPlatformsLabel) {
         if (selectedPlatformFilter !in platformsList) {
-            selectedPlatformFilter = "Todas"
+            selectedPlatformFilter = allPlatformsLabel
         }
     }
 
@@ -99,12 +100,12 @@ fun HistoryScreen(
     var sortExpanded by remember { mutableStateOf(false) }
 
     // Filtragem e Ordenação
-    val filteredAndSortedRecords = remember(records, historyPeriod, historyCustomStart, historyCustomEnd, selectedPlatformFilter, selectedSortOption) {
+    val filteredAndSortedRecords = remember(records, historyPeriod, historyCustomStart, historyCustomEnd, selectedPlatformFilter, selectedSortOption, allPlatformsLabel) {
         // 1. Filtrar por Período usando utilitário padronizado
         val dateFiltered = filterByPeriod(records, historyPeriod, historyCustomStart, historyCustomEnd) { it.dateTimestamp }
 
         // 2. Filtrar por Plataforma
-        val platformFiltered = if (selectedPlatformFilter == "Todas") {
+        val platformFiltered = if (selectedPlatformFilter == allPlatformsLabel) {
             dateFiltered
         } else {
             dateFiltered.filter { it.platform.equals(selectedPlatformFilter, ignoreCase = true) }
@@ -134,7 +135,7 @@ fun HistoryScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Histórico",
+                text = stringResource(R.string.history_title),
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -190,11 +191,11 @@ fun HistoryScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     val label = when (historyPeriod) {
-                        Period.SEMANA -> "Semana"
-                        Period.QUINZENA -> "Quinzena"
-                        Period.MENSAL -> "Mês Atual"
-                        Period.ULTIMOS_30_DIAS -> "30 Dias"
-                        Period.PERSONALIZADO -> "Personaliz."
+                        Period.SEMANA -> stringResource(R.string.period_week)
+                        Period.QUINZENA -> stringResource(R.string.period_fortnight)
+                        Period.MENSAL -> stringResource(R.string.period_month)
+                        Period.ULTIMOS_30_DIAS -> stringResource(R.string.history_period_30_days_short)
+                        Period.PERSONALIZADO -> stringResource(R.string.history_period_custom_short)
                     }
                     Text(
                         text = label,
@@ -217,35 +218,35 @@ fun HistoryScreen(
                     modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Semana", fontSize = 13.sp) },
+                        text = { Text(stringResource(R.string.period_week), fontSize = 13.sp) },
                         onClick = {
                             historyPeriod = Period.SEMANA
                             periodExpanded = false
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Quinzena", fontSize = 13.sp) },
+                        text = { Text(stringResource(R.string.period_fortnight), fontSize = 13.sp) },
                         onClick = {
                             historyPeriod = Period.QUINZENA
                             periodExpanded = false
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Mês Atual", fontSize = 13.sp) },
+                        text = { Text(stringResource(R.string.period_month), fontSize = 13.sp) },
                         onClick = {
                             historyPeriod = Period.MENSAL
                             periodExpanded = false
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Últimos 30 dias", fontSize = 13.sp) },
+                        text = { Text(stringResource(R.string.period_last_30_days), fontSize = 13.sp) },
                         onClick = {
                             historyPeriod = Period.ULTIMOS_30_DIAS
                             periodExpanded = false
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Personalizado", fontSize = 13.sp) },
+                        text = { Text(stringResource(R.string.period_custom), fontSize = 13.sp) },
                         onClick = {
                             historyPeriod = Period.PERSONALIZADO
                             periodExpanded = false
@@ -316,13 +317,13 @@ fun HistoryScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     val sortShortLabel = when (selectedSortOption) {
-                        HistorySortOption.DATA_DECRESCENTE -> "Data Recente"
-                        HistorySortOption.DATA_CRESCENTE -> "Data Antiga"
-                        HistorySortOption.LUCRO_MAIOR -> "Maior Lucro"
-                        HistorySortOption.LUCRO_MENOR -> "Menor Lucro"
-                        HistorySortOption.KM_MAIOR -> "Maior KM"
-                        HistorySortOption.KM_MENOR -> "Menor KM"
-                        HistorySortOption.ENTREGAS -> "Entregas"
+                        HistorySortOption.DATA_DECRESCENTE -> stringResource(R.string.history_sort_short_date_desc)
+                        HistorySortOption.DATA_CRESCENTE -> stringResource(R.string.history_sort_short_date_asc)
+                        HistorySortOption.LUCRO_MAIOR -> stringResource(R.string.history_sort_short_profit_desc)
+                        HistorySortOption.LUCRO_MENOR -> stringResource(R.string.history_sort_short_profit_asc)
+                        HistorySortOption.KM_MAIOR -> stringResource(R.string.history_sort_short_km_desc)
+                        HistorySortOption.KM_MENOR -> stringResource(R.string.history_sort_short_km_asc)
+                        HistorySortOption.ENTREGAS -> stringResource(R.string.history_sort_short_deliveries)
                     }
                     Text(
                         text = sortShortLabel,
@@ -346,7 +347,7 @@ fun HistoryScreen(
                 ) {
                     HistorySortOption.values().forEach { option ->
                         DropdownMenuItem(
-                            text = { Text(option.label, fontSize = 13.sp) },
+                            text = { Text(stringResource(option.labelResId), fontSize = 13.sp) },
                             onClick = {
                                 selectedSortOption = option
                                 sortExpanded = false
@@ -381,7 +382,11 @@ fun HistoryScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
-                        text = "Filtro: ${dateFormat.format(Date(historyCustomStart))} até ${dateFormat.format(Date(historyCustomEnd))}",
+                        text = stringResource(
+                            R.string.history_custom_period_filter,
+                            dateFormat.format(Date(historyCustomStart)),
+                            dateFormat.format(Date(historyCustomEnd))
+                        ),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -458,7 +463,7 @@ fun HistoryScreen(
                                 val sdfWeek = SimpleDateFormat("dd/MM", Locale("pt", "BR"))
                                 val startStr = sdfWeek.format(Date(item.weekStartMillis))
                                 val endStr = sdfWeek.format(Date(item.weekEndMillis))
-                                val weekLabel = "Semana de $startStr a $endStr"
+                                val weekLabel = stringResource(R.string.history_week_header, startStr, endStr)
                                 WeekHeaderCard(
                                     weekLabel = weekLabel,
                                     totalGross = item.totalGross,
@@ -477,7 +482,7 @@ fun HistoryScreen(
                                     },
                                     onDeleteClick = {
                                         viewModel.deleteDailyRecord(item.record)
-                                        android.widget.Toast.makeText(context, "Lançamento excluído com sucesso!", android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(context, context.getString(R.string.history_toast_record_deleted), android.widget.Toast.LENGTH_SHORT).show()
                                     }
                                 )
                             }
@@ -496,7 +501,7 @@ fun HistoryScreen(
                             },
                             onDeleteClick = {
                                 viewModel.deleteDailyRecord(record)
-                                android.widget.Toast.makeText(context, "Lançamento excluído com sucesso!", android.widget.Toast.LENGTH_SHORT).show()
+                                android.widget.Toast.makeText(context, context.getString(R.string.history_toast_record_deleted), android.widget.Toast.LENGTH_SHORT).show()
                             }
                         )
                     }

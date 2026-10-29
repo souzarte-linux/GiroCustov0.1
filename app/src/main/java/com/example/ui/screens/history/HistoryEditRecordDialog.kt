@@ -90,7 +90,7 @@ fun EditRecordDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    "Editar Lançamento",
+                    stringResource(R.string.history_edit_dialog_title),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -100,12 +100,12 @@ fun EditRecordDialog(
                 TextField(
                     value = platformState,
                     onValueChange = { platformState = it },
-                    label = { Text("Plataforma", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    label = { Text(stringResource(R.string.history_edit_platform_label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     modifier = Modifier.fillMaxWidth().height(56.dp).testTag("edit_platform"),
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Filled.Storefront,
-                            contentDescription = "Plataforma",
+                            contentDescription = stringResource(R.string.cd_platform),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
@@ -120,7 +120,7 @@ fun EditRecordDialog(
                     TextField(
                         value = startOdo,
                         onValueChange = { startOdo = it },
-                        label = { Text("Hodôm. Inicial", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        label = { Text(stringResource(R.string.history_edit_start_odo_label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
@@ -130,7 +130,7 @@ fun EditRecordDialog(
                     TextField(
                         value = endOdo,
                         onValueChange = { endOdo = it },
-                        label = { Text("Hodôm. Final", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        label = { Text(stringResource(R.string.history_edit_end_odo_label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
@@ -143,7 +143,7 @@ fun EditRecordDialog(
                     TextField(
                         value = gross,
                         onValueChange = { gross = it },
-                        label = { Text("Ganhos (R$)", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        label = { Text(stringResource(R.string.history_edit_gross_label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
@@ -153,7 +153,7 @@ fun EditRecordDialog(
                     TextField(
                         value = deliveries,
                         onValueChange = { deliveries = it },
-                        label = { Text("Entregas", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        label = { Text(stringResource(R.string.history_edit_deliveries_label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
@@ -166,7 +166,7 @@ fun EditRecordDialog(
                     TextField(
                         value = fuelPrice,
                         onValueChange = { fuelPrice = it },
-                        label = { Text("Preço Comb. (R$)", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        label = { Text(stringResource(R.string.history_edit_fuel_price_label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
@@ -176,7 +176,7 @@ fun EditRecordDialog(
                     TextField(
                         value = foodExpense,
                         onValueChange = { foodExpense = it },
-                        label = { Text("Alimentação (R$)", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        label = { Text(stringResource(R.string.history_edit_food_expense_label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
@@ -189,7 +189,7 @@ fun EditRecordDialog(
                     TextField(
                         value = startTimeState,
                         onValueChange = { startTimeState = it },
-                        label = { Text("Hora Início", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        label = { Text(stringResource(R.string.history_edit_start_time_label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         placeholder = { Text("08:00") },
                         trailingIcon = {
                             IconButton(
@@ -216,7 +216,7 @@ fun EditRecordDialog(
                     TextField(
                         value = endTimeState,
                         onValueChange = { endTimeState = it },
-                        label = { Text("Hora Final", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        label = { Text(stringResource(R.string.history_edit_end_time_label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         placeholder = { Text("18:00") },
                         trailingIcon = {
                             IconButton(
@@ -244,7 +244,7 @@ fun EditRecordDialog(
                 TextField(
                     value = pauseDurationState,
                     onValueChange = { pauseDurationState = it },
-                    label = { Text("Total Tempo Pause", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    label = { Text(stringResource(R.string.history_edit_pause_duration_label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     placeholder = { Text("01:00") },
                     trailingIcon = {
                         IconButton(
@@ -276,7 +276,7 @@ fun EditRecordDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.btn_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -309,7 +309,7 @@ fun EditRecordDialog(
                         ),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text("Salvar", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                        Text(stringResource(R.string.btn_save), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
                     }
                 }
             }

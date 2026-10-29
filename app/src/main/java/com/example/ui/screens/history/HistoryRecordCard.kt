@@ -170,14 +170,14 @@ fun HistoryRecordCard(
                     ) {
                         Icon(Icons.Filled.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
                         Text(
-                            text = "${record.startTime} - ${record.endTime}",
+                            text = stringResource(R.string.history_shift_time_range, record.startTime, record.endTime),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         if (record.pauseDuration.isNotBlank()) {
                             Text(
-                                text = "• Pausa: ${record.pauseDuration}",
+                                text = stringResource(R.string.history_pause_duration, record.pauseDuration),
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -209,7 +209,7 @@ fun HistoryRecordCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            Text("Ganhos Brutos", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.history_card_gross_earnings), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
                                 text = String.format(Locale.GERMAN, "R$ %.2f", CurrencyUtils.centsToDouble(record.grossEarnings)),
                                 fontWeight = FontWeight.Bold,
@@ -219,7 +219,7 @@ fun HistoryRecordCard(
                         }
 
                         Column {
-                            Text("Km Rodados", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.history_card_km_traveled), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
                                 text = String.format(Locale.GERMAN, "%.1f km", record.kmRodados),
                                 fontWeight = FontWeight.Bold,
@@ -229,9 +229,9 @@ fun HistoryRecordCard(
                         }
 
                         Column {
-                            Text("Entregas", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.history_card_deliveries), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
-                                text = "${record.deliveriesCount} ent.",
+                                text = stringResource(R.string.history_card_deliveries_abbrev, record.deliveriesCount),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -244,7 +244,7 @@ fun HistoryRecordCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            Text("Custo Combustível", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.history_card_fuel_cost), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
                                 text = String.format(Locale.GERMAN, "R$ %.2f", CurrencyUtils.centsToDouble(record.fuelCost)),
                                 fontWeight = FontWeight.Normal,
@@ -254,7 +254,7 @@ fun HistoryRecordCard(
                         }
 
                         Column {
-                            Text("Desgaste/Peças", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.history_card_wear_cost), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
                                 text = String.format(Locale.GERMAN, "R$ %.2f", CurrencyUtils.centsToDouble(record.wearCost)),
                                 fontWeight = FontWeight.Normal,
@@ -264,7 +264,7 @@ fun HistoryRecordCard(
                         }
 
                         Column {
-                            Text("Alimentação", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.history_card_food_expense), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
                                 text = String.format(Locale.GERMAN, "R$ %.2f", CurrencyUtils.centsToDouble(record.foodExpense)),
                                 fontWeight = FontWeight.Normal,
@@ -289,12 +289,12 @@ fun HistoryRecordCard(
                 ) {
                     Icon(
                         imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                        contentDescription = if (expanded) "Colapsar" else "Expandir",
+                        contentDescription = stringResource(if (expanded) R.string.cd_collapse else R.string.cd_expand),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = "LUCRO LÍQUIDO",
+                        text = stringResource(R.string.history_card_net_profit),
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.primary
