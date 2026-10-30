@@ -41,7 +41,7 @@ fun LaunchNewPlatformDialog(
             Text(
                 text = stringResource(R.string.launch_dialog_new_platform_title),
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onSurface
             )
         },
         text = {
@@ -53,17 +53,25 @@ fun LaunchNewPlatformDialog(
                     value = newPlatformName,
                     onValueChange = { newPlatformName = it },
                     label = { Text(stringResource(R.string.launch_dialog_platform_name), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    placeholder = { Text(stringResource(R.string.launch_dialog_platform_name), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(64.dp)
                         .testTag("new_platform_name_input"),
                     singleLine = true,
+                    maxLines = 1,
+                    textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
                     shape = RoundedCornerShape(8.dp),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        cursorColor = MaterialTheme.colorScheme.primary,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent
@@ -72,7 +80,13 @@ fun LaunchNewPlatformDialog(
 
                 // SEGMENT SELECTOR
                 Column {
-                    Text(stringResource(R.string.launch_dialog_segment), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = stringResource(R.string.launch_dialog_segment),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Box(modifier = Modifier.fillMaxWidth()) {
                         Row(
                             modifier = Modifier
@@ -118,7 +132,13 @@ fun LaunchNewPlatformDialog(
 
                 // PAYMENT MODEL SELECTOR
                 Column {
-                    Text(stringResource(R.string.launch_dialog_payment_model), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = stringResource(R.string.launch_dialog_payment_model),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Box(modifier = Modifier.fillMaxWidth()) {
                         Row(
                             modifier = Modifier
@@ -162,7 +182,13 @@ fun LaunchNewPlatformDialog(
 
                 // CYCLE SELECTOR
                 Column {
-                    Text(stringResource(R.string.launch_dialog_payment_cycle), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = stringResource(R.string.launch_dialog_payment_cycle),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Box(modifier = Modifier.fillMaxWidth()) {
                         Row(
                             modifier = Modifier

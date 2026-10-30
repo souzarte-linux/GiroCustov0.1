@@ -56,7 +56,7 @@ fun LaunchShiftHoursSection(
                 value = startTimeVal,
                 onValueChange = onStartTimeChange,
                 label = { Text(stringResource(R.string.launch_start_time), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                placeholder = { Text("08:00") },
+                placeholder = { Text("08:00", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 modifier = Modifier
                     .weight(1f)
                     .height(64.dp)
@@ -80,14 +80,19 @@ fun LaunchShiftHoursSection(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                 singleLine = true,
+                maxLines = 1,
+                textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
                 shape = RoundedCornerShape(12.dp),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = inputFieldContainerColor,
                     unfocusedContainerColor = inputFieldContainerColor,
-                    focusedTextColor = inputFieldTextColor,
-                    unfocusedTextColor = inputFieldTextColor,
-                    focusedLabelColor = inputFieldLabelColor,
-                    unfocusedLabelColor = inputFieldLabelColor,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    cursorColor = MaterialTheme.colorScheme.primary,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                     disabledIndicatorColor = Color.Transparent
@@ -99,7 +104,7 @@ fun LaunchShiftHoursSection(
                 value = endTimeVal,
                 onValueChange = onEndTimeChange,
                 label = { Text(stringResource(R.string.launch_end_time), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                placeholder = { Text("18:00") },
+                placeholder = { Text("18:00", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 modifier = Modifier
                     .weight(1f)
                     .height(64.dp)
@@ -123,14 +128,19 @@ fun LaunchShiftHoursSection(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                 singleLine = true,
+                maxLines = 1,
+                textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
                 shape = RoundedCornerShape(12.dp),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = inputFieldContainerColor,
                     unfocusedContainerColor = inputFieldContainerColor,
-                    focusedTextColor = inputFieldTextColor,
-                    unfocusedTextColor = inputFieldTextColor,
-                    focusedLabelColor = inputFieldLabelColor,
-                    unfocusedLabelColor = inputFieldLabelColor,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    cursorColor = MaterialTheme.colorScheme.primary,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                     disabledIndicatorColor = Color.Transparent
@@ -143,11 +153,12 @@ fun LaunchShiftHoursSection(
             value = pauseDurationVal,
             onValueChange = onPauseDurationChange,
             label = { Text(stringResource(R.string.launch_pause_duration), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            placeholder = { Text("01:00") },
+            placeholder = { Text("01:00", maxLines = 1, overflow = TextOverflow.Ellipsis) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp)
                 .testTag("input_pause_duration"),
+            visualTransformation = com.example.util.PauseDurationVisualTransformation(),
             trailingIcon = {
                 IconButton(onClick = {
                     val pParts = pauseDurationVal.split(":")
@@ -167,14 +178,19 @@ fun LaunchShiftHoursSection(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
             singleLine = true,
+            maxLines = 1,
+            textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
             shape = RoundedCornerShape(12.dp),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = inputFieldContainerColor,
                 unfocusedContainerColor = inputFieldContainerColor,
-                focusedTextColor = inputFieldTextColor,
-                unfocusedTextColor = inputFieldTextColor,
-                focusedLabelColor = inputFieldLabelColor,
-                unfocusedLabelColor = inputFieldLabelColor,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                cursorColor = MaterialTheme.colorScheme.primary,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent

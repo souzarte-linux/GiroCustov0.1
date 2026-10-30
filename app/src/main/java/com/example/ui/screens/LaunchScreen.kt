@@ -37,7 +37,7 @@ import com.example.R
 import com.example.data.Platform
 import com.example.data.Vehicle
 import com.example.data.VehiclePart
-import com.example.ui.EstimationDetail
+import com.example.util.CurrencyVisualTransformation
 import com.example.ui.GiroCustoViewModel
 import com.example.ui.screens.launch.*
 import java.text.SimpleDateFormat
@@ -69,7 +69,6 @@ fun LaunchScreen(
     var dropdownExpanded by remember { mutableStateOf(false) }
     var showAddPlatformDialog by remember { mutableStateOf(false) }
 
-    val estimate by viewModel.realTimeEstimation.collectAsStateWithLifecycle(initialValue = EstimationDetail())
     val fuelEstimationInfo by viewModel.fuelCostEstimationInfo.collectAsStateWithLifecycle()
 
     var snackbarMessage by remember { mutableStateOf<String?>(null) }
@@ -221,7 +220,7 @@ fun LaunchScreen(
                                 dropdownExpanded = true
                             },
                             label = { Text(if (platformVal.isBlank()) stringResource(R.string.launch_select_platform) else stringResource(R.string.launch_platform_label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                            placeholder = { Text(stringResource(R.string.launch_select_platform)) },
+                            placeholder = { Text(stringResource(R.string.launch_select_platform), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(64.dp)
@@ -243,16 +242,21 @@ fun LaunchScreen(
                                 }
                             },
                             singleLine = true,
+                            maxLines = 1,
+                            textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                             shape = RoundedCornerShape(12.dp),
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = inputFieldContainerColor,
                                 unfocusedContainerColor = inputFieldContainerColor,
-                                focusedTextColor = inputFieldTextColor,
-                                unfocusedTextColor = inputFieldTextColor,
-                                focusedLabelColor = inputFieldLabelColor,
-                                unfocusedLabelColor = inputFieldLabelColor,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                cursorColor = MaterialTheme.colorScheme.primary,
                                 focusedIndicatorColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent,
                                 disabledIndicatorColor = Color.Transparent
@@ -345,23 +349,30 @@ fun LaunchScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     TextField(
                         value = gross,
-                        onValueChange = { viewModel.grossEarnings.value = it },
+                        onValueChange = { viewModel.grossEarnings.value = it.replace("R$", "").trimStart() },
                         label = { Text(stringResource(R.string.launch_gross_earnings), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        placeholder = { Text("0,00", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .weight(1f)
                             .height(64.dp)
                             .testTag("input_gross_earnings"),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        visualTransformation = CurrencyVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
+                        maxLines = 1,
+                        textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
                         shape = RoundedCornerShape(12.dp),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = inputFieldContainerColor,
                             unfocusedContainerColor = inputFieldContainerColor,
-                            focusedTextColor = inputFieldTextColor,
-                            unfocusedTextColor = inputFieldTextColor,
-                            focusedLabelColor = inputFieldLabelColor,
-                            unfocusedLabelColor = inputFieldLabelColor,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            cursorColor = MaterialTheme.colorScheme.primary,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -371,6 +382,7 @@ fun LaunchScreen(
                         value = deliveries,
                         onValueChange = { viewModel.deliveriesCount.value = it },
                         label = { Text(stringResource(R.string.launch_deliveries_count), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        placeholder = { Text("0", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .weight(1f)
                             .height(64.dp)
@@ -378,14 +390,19 @@ fun LaunchScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
+                        maxLines = 1,
+                        textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
                         shape = RoundedCornerShape(12.dp),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = inputFieldContainerColor,
                             unfocusedContainerColor = inputFieldContainerColor,
-                            focusedTextColor = inputFieldTextColor,
-                            unfocusedTextColor = inputFieldTextColor,
-                            focusedLabelColor = inputFieldLabelColor,
-                            unfocusedLabelColor = inputFieldLabelColor,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            cursorColor = MaterialTheme.colorScheme.primary,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -396,22 +413,30 @@ fun LaunchScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     TextField(
                         value = fuelPr,
-                        onValueChange = { viewModel.fuelPrice.value = it },
+                        onValueChange = { viewModel.fuelPrice.value = it.replace("R$", "").trimStart() },
                         label = { Text(stringResource(R.string.launch_fuel_price), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        placeholder = { Text("0,00", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .weight(1f)
-                            .height(64.dp),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                            .height(64.dp)
+                            .testTag("input_fuel_price"),
+                        visualTransformation = CurrencyVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                         singleLine = true,
+                        maxLines = 1,
+                        textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
                         shape = RoundedCornerShape(12.dp),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = inputFieldContainerColor,
                             unfocusedContainerColor = inputFieldContainerColor,
-                            focusedTextColor = inputFieldTextColor,
-                            unfocusedTextColor = inputFieldTextColor,
-                            focusedLabelColor = inputFieldLabelColor,
-                            unfocusedLabelColor = inputFieldLabelColor,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            cursorColor = MaterialTheme.colorScheme.primary,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -419,22 +444,30 @@ fun LaunchScreen(
                     )
                     TextField(
                         value = foodExp,
-                        onValueChange = { viewModel.foodExpense.value = it },
+                        onValueChange = { viewModel.foodExpense.value = it.replace("R$", "").trimStart() },
                         label = { Text(stringResource(R.string.launch_food_expense), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        placeholder = { Text("0,00", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .weight(1f)
-                            .height(64.dp),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                            .height(64.dp)
+                            .testTag("input_food_expense"),
+                        visualTransformation = CurrencyVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                         singleLine = true,
+                        maxLines = 1,
+                        textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
                         shape = RoundedCornerShape(12.dp),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = inputFieldContainerColor,
                             unfocusedContainerColor = inputFieldContainerColor,
-                            focusedTextColor = inputFieldTextColor,
-                            unfocusedTextColor = inputFieldTextColor,
-                            focusedLabelColor = inputFieldLabelColor,
-                            unfocusedLabelColor = inputFieldLabelColor,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            cursorColor = MaterialTheme.colorScheme.primary,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent
@@ -464,12 +497,6 @@ fun LaunchScreen(
         // Subcomponente Modular: Estimativa de Combustível (Consumo Real vs Teórico)
         LaunchFuelEstimationCard(
             isDark = isDark,
-            fuelEstimationInfo = fuelEstimationInfo
-        )
-
-        // Subcomponente Modular: Estimador em Tempo Real (Lucro Líquido e Custos Operacionais)
-        LaunchRealTimeEstimationCard(
-            estimate = estimate,
             fuelEstimationInfo = fuelEstimationInfo
         )
 

@@ -331,12 +331,12 @@ class FuelIntelligenceAndEstimationTest {
         db.vehicleDao().insertVehicle(vehicle)
         repository.setActiveVehicle(testVehicleId)
 
-        // 1. Sem registros e sem abastecimentos: fallback para 5.80
+        // 1. Sem registros e sem abastecimentos: fuelPrice vazio, startOdometer sem .0
         viewModel.prefillLaunchFields()
-        assertEquals("5.80", viewModel.fuelPrice.value)
-        assertEquals("30000.0", viewModel.startOdometer.value)
+        assertEquals("", viewModel.fuelPrice.value)
+        assertEquals("30000", viewModel.startOdometer.value)
 
-        // 2. Insere um DailyRecord com fuelPrice = 6.20
+        // 2. Insere um DailyRecord com fuelPrice = 6.20 e endOdometer = 30100.0
         repository.insertDailyRecord(
             dateString = "2026-08-01",
             dateTimestamp = 1000L,
@@ -349,9 +349,9 @@ class FuelIntelligenceAndEstimationTest {
             foodExpense = 0.0
         )
         viewModel.prefillLaunchFields()
-        // Agora deve sugerir 6.20 do último registro diário
-        assertEquals("6.20", viewModel.fuelPrice.value)
-        assertEquals("30100.0", viewModel.startOdometer.value)
+        // fuelPrice permanece vazio por especificação da tela de lançamento, startOdo atualiza
+        assertEquals("", viewModel.fuelPrice.value)
+        assertEquals("30100", viewModel.startOdometer.value)
 
         // 3. Insere um abastecimento para o veículo ativo com pricePerLiter = 5.49
         val refill = FuelRefill(
@@ -371,8 +371,8 @@ class FuelIntelligenceAndEstimationTest {
         repository.saveFuelRefill(refill)
 
         viewModel.prefillLaunchFields()
-        // Prioridade do último abastecimento registrado para o veículo ativo: 5.49
-        assertEquals("5.49", viewModel.fuelPrice.value)
+        // fuelPrice permanece vazio conforme requisito de lançamento limpo
+        assertEquals("", viewModel.fuelPrice.value)
     }
 
     @Test
@@ -635,10 +635,10 @@ class FuelIntelligenceAndEstimationTest {
         db.vehicleDao().insertVehicle(Vehicle(id = vehicleActiveId, model = "Titan Ativa", currentOdometer = 15000.0, active = true))
         repository.setActiveVehicle(vehicleActiveId)
 
-        // Caso 1: Veículo ativo não deve pegar o abastecimento do veículo inativo (deve usar 5.80)
+        // Caso 1: Veículo ativo com fuelPrice vazio e odometer inteiro sem .0
         viewModel.prefillLaunchFields()
-        assertEquals("15000.0", viewModel.startOdometer.value)
-        assertEquals("5.80", viewModel.fuelPrice.value)
+        assertEquals("15000", viewModel.startOdometer.value)
+        assertEquals("", viewModel.fuelPrice.value)
 
         // Caso 2: Veículo ativo com DailyRecord anterior com fuelPrice = 6.30
         repository.insertDailyRecord(
@@ -653,18 +653,18 @@ class FuelIntelligenceAndEstimationTest {
             foodExpense = 0.0
         )
         viewModel.prefillLaunchFields()
-        assertEquals("15080.0", viewModel.startOdometer.value)
-        assertEquals("6.30", viewModel.fuelPrice.value)
+        assertEquals("15080", viewModel.startOdometer.value)
+        assertEquals("", viewModel.fuelPrice.value)
 
-        // Caso 3: Abastecimento no veículo ativo porém com preço 0.0 (deve fazer fallback para o registro: 6.30)
+        // Caso 3: Abastecimento no veículo ativo porém com preço 0.0
         repository.saveFuelRefill(FuelRefill(id = 0L, vehicleId = vehicleActiveId, dateTimestamp = 2000L, dateString = "02/08/2026", gasStation = "Posto Zero", fuelType = "Gasolina", pricePerLiter = 0.0, liters = 10.0, totalPaid = 0.0, odometer = 15090.0, isFullTank = true, paymentMethod = "PIX"))
         viewModel.prefillLaunchFields()
-        assertEquals("6.30", viewModel.fuelPrice.value)
+        assertEquals("", viewModel.fuelPrice.value)
 
-        // Caso 4: Abastecimento válido no veículo ativo com preço 5.65 (deve ter prioridade máxima)
+        // Caso 4: Abastecimento válido no veículo ativo com preço 5.65 (fuelPrice deve continuar iniciando vazio)
         repository.saveFuelRefill(FuelRefill(id = 0L, vehicleId = vehicleActiveId, dateTimestamp = 3000L, dateString = "03/08/2026", gasStation = "Posto Shell", fuelType = "Gasolina", pricePerLiter = 5.65, liters = 10.0, totalPaid = 56.50, odometer = 15100.0, isFullTank = true, paymentMethod = "PIX"))
         viewModel.prefillLaunchFields()
-        assertEquals("5.65", viewModel.fuelPrice.value)
+        assertEquals("", viewModel.fuelPrice.value)
     }
 
     @Test

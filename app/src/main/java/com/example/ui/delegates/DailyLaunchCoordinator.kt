@@ -160,27 +160,39 @@ class DailyLaunchCoordinator(
         initialValue = FuelCostEstimationInfo()
     )
 
+    companion object {
+        fun normalizePauseDuration(raw: String): String {
+            val clean = raw.trim()
+            if (clean.isBlank()) return ""
+            return if (clean.contains(":")) {
+                val parts = clean.split(":")
+                val h = parts.getOrNull(0)?.trim()?.toIntOrNull() ?: 0
+                val m = parts.getOrNull(1)?.trim()?.toIntOrNull() ?: 0
+                val totalMinutes = (h * 60 + m).coerceAtLeast(0)
+                String.format(Locale.US, "%02d:%02d", totalMinutes / 60, totalMinutes % 60)
+            } else {
+                val totalMinutes = (clean.filter { it.isDigit() }.toIntOrNull() ?: 0).coerceAtLeast(0)
+                String.format(Locale.US, "%02d:%02d", totalMinutes / 60, totalMinutes % 60)
+            }
+        }
+    }
+
     suspend fun prefillLaunchFields() {
         val lastRecord = repository.allRecordsFlow.first().firstOrNull()
         val currentVehicle = repository.getVehicle()
-        val latestRefill = if (currentVehicle != null) {
-            repository.getLatestFuelRefill(currentVehicle.id)
+
+        val defaultStartOdo = lastRecord?.endOdometer ?: currentVehicle?.currentOdometer
+        startOdometer.value = if (defaultStartOdo != null) {
+            if (defaultStartOdo % 1.0 == 0.0) {
+                defaultStartOdo.toLong().toString()
+            } else {
+                String.format(Locale.US, "%.1f", defaultStartOdo)
+            }
         } else {
-            null
+            ""
         }
 
-        if (lastRecord != null || currentVehicle != null) {
-            val defaultStartOdo = lastRecord?.endOdometer ?: currentVehicle?.currentOdometer ?: 0.0
-            startOdometer.value = String.format(Locale.US, "%.1f", defaultStartOdo)
-            val defaultFuelPrice: Double = latestRefill?.pricePerLiter?.takeIf { it > 0L }?.let { CurrencyUtils.fuelPriceMillisToDouble(it) }
-                ?: lastRecord?.fuelPrice?.takeIf { it > 0L }?.let { CurrencyUtils.fuelPriceMillisToDouble(it) }
-                ?: 5.80
-            fuelPrice.value = String.format(Locale.US, "%.2f", defaultFuelPrice)
-        } else {
-            startOdometer.value = ""
-            fuelPrice.value = "5.80"
-        }
-
+        fuelPrice.value = ""
         endOdometer.value = ""
         grossEarnings.value = ""
         deliveriesCount.value = ""
@@ -225,6 +237,7 @@ class DailyLaunchCoordinator(
                 val dateStr = dateFormat.format(dateToUse)
                 val timestampToUse = launchDateTimestamp.value
                 val platformVal = platform.value.trim().ifBlank { "iFood" }
+                val normalizedPause = normalizePauseDuration(pauseDuration.value)
 
                 repository.insertDailyRecord(
                     dateString = dateStr,
@@ -238,7 +251,7 @@ class DailyLaunchCoordinator(
                     foodExpense = foodExpenseCents,
                     startTime = startTime.value.trim(),
                     endTime = endTime.value.trim(),
-                    pauseDuration = pauseDuration.value.trim()
+                    pauseDuration = normalizedPause
                 )
 
                 prefillLaunchFields()
@@ -291,7 +304,7 @@ class DailyLaunchCoordinator(
                     foodExpense = foodExpense,
                     startTime = startTime.trim(),
                     endTime = endTime.trim(),
-                    pauseDuration = pauseDuration.trim()
+                    pauseDuration = normalizePauseDuration(pauseDuration)
                 )
                 onSuccess()
             } catch (e: Exception) {

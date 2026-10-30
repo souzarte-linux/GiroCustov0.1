@@ -46,6 +46,7 @@ fun LaunchOdometerSection(
                 value = startOdo,
                 onValueChange = onStartOdoChange,
                 label = { Text(stringResource(R.string.launch_start_odometer), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                placeholder = { Text("0", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 modifier = Modifier
                     .weight(1f)
                     .height(64.dp)
@@ -53,14 +54,19 @@ fun LaunchOdometerSection(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                 singleLine = true,
+                maxLines = 1,
+                textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
                 shape = RoundedCornerShape(12.dp),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = inputFieldContainerColor,
                     unfocusedContainerColor = inputFieldContainerColor,
-                    focusedTextColor = inputFieldTextColor,
-                    unfocusedTextColor = inputFieldTextColor,
-                    focusedLabelColor = inputFieldLabelColor,
-                    unfocusedLabelColor = inputFieldLabelColor,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    cursorColor = MaterialTheme.colorScheme.primary,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                     disabledIndicatorColor = Color.Transparent
@@ -70,6 +76,7 @@ fun LaunchOdometerSection(
                 value = endOdo,
                 onValueChange = onEndOdoChange,
                 label = { Text(stringResource(R.string.launch_end_odometer), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                placeholder = { Text("0", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 modifier = Modifier
                     .weight(1f)
                     .height(64.dp)
@@ -77,14 +84,19 @@ fun LaunchOdometerSection(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                 singleLine = true,
+                maxLines = 1,
+                textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
                 shape = RoundedCornerShape(12.dp),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = inputFieldContainerColor,
                     unfocusedContainerColor = inputFieldContainerColor,
-                    focusedTextColor = inputFieldTextColor,
-                    unfocusedTextColor = inputFieldTextColor,
-                    focusedLabelColor = inputFieldLabelColor,
-                    unfocusedLabelColor = inputFieldLabelColor,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    cursorColor = MaterialTheme.colorScheme.primary,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                     disabledIndicatorColor = Color.Transparent

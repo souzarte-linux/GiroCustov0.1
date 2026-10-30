@@ -82,3 +82,80 @@ class BrazilianCepVisualTransformation : VisualTransformation {
         return TransformedText(AnnotatedString(transformed), offsetTranslator)
     }
 }
+
+class CurrencyVisualTransformation(val prefix: String = "R$ ") : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        if (text.text.isEmpty()) {
+            return TransformedText(text, OffsetMapping.Identity)
+        }
+
+        val transformed = prefix + text.text
+        val prefixLen = prefix.length
+
+        val offsetTranslator = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                val clamped = offset.coerceIn(0, text.text.length)
+                return (clamped + prefixLen).coerceIn(0, transformed.length)
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                val clamped = offset.coerceIn(0, transformed.length)
+                return (clamped - prefixLen).coerceIn(0, text.text.length)
+            }
+        }
+
+        return TransformedText(AnnotatedString(transformed), offsetTranslator)
+    }
+}
+
+class PauseDurationVisualTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val raw = text.text
+        if (raw.isBlank()) {
+            return TransformedText(text, OffsetMapping.Identity)
+        }
+
+        val hasColon = raw.contains(":")
+        val isAllDigits = raw.all { it.isDigit() }
+
+        if (!hasColon && !isAllDigits) {
+            return TransformedText(text, OffsetMapping.Identity)
+        }
+
+        val (h, m) = if (hasColon) {
+            val parts = raw.split(":")
+            val rawH = parts.getOrNull(0)?.trim()?.toIntOrNull() ?: 0
+            val rawM = parts.getOrNull(1)?.trim()?.toIntOrNull() ?: 0
+            val totalMinutes = (rawH * 60 + rawM).coerceAtLeast(0)
+            Pair(totalMinutes / 60, totalMinutes % 60)
+        } else {
+            val totalMinutes = (raw.trim().toIntOrNull() ?: 0).coerceAtLeast(0)
+            Pair(totalMinutes / 60, totalMinutes % 60)
+        }
+
+        val formatted = when {
+            h > 0 && m > 0 -> "${if (h == 1) "1 hora" else "$h horas"} e ${if (m == 1) "1 minuto" else "$m minutos"}"
+            h > 0 && m == 0 -> if (h == 1) "1 hora" else "$h horas"
+            h == 0 && m > 0 -> if (m == 1) "1 minuto" else "$m minutos"
+            else -> "0 minuto"
+        }
+
+        val offsetTranslator = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                val clamped = offset.coerceIn(0, raw.length)
+                if (raw.isEmpty()) return 0
+                val transformedOffset = (clamped.toLong() * formatted.length / raw.length).toInt()
+                return transformedOffset.coerceIn(0, formatted.length)
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                val clamped = offset.coerceIn(0, formatted.length)
+                if (formatted.isEmpty()) return 0
+                val originalOffset = (clamped.toLong() * raw.length / formatted.length).toInt()
+                return originalOffset.coerceIn(0, raw.length)
+            }
+        }
+
+        return TransformedText(AnnotatedString(formatted), offsetTranslator)
+    }
+}
