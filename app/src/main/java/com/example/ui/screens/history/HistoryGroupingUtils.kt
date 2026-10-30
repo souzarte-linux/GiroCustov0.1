@@ -14,10 +14,47 @@ val ptMonths = arrayOf(
 )
 
 sealed class HistoryListItem {
-    data class YearHeader(val year: Int, val totalGross: Double, val totalNet: Double) : HistoryListItem()
-    data class MonthHeader(val year: Int, val month: Int, val totalGross: Double, val totalNet: Double) : HistoryListItem()
-    data class WeekHeader(val weekStartMillis: Long, val weekEndMillis: Long, val totalGross: Double, val totalNet: Double) : HistoryListItem()
-    data class DayHeader(val dateTimestamp: Long, val label: String) : HistoryListItem()
+    data class YearHeader(
+        val year: Int,
+        val totalGross: Double,
+        val totalNet: Double,
+        val totalDeliveries: Int = 0,
+        val totalKm: Double = 0.0,
+        val activeDays: Int = 0,
+        val dailyAverage: Double = 0.0,
+        val growthPercentage: Double? = null
+    ) : HistoryListItem()
+
+    data class MonthHeader(
+        val year: Int,
+        val month: Int,
+        val totalGross: Double,
+        val totalNet: Double,
+        val activeDays: Int = 0,
+        val totalDeliveries: Int = 0,
+        val totalKm: Double = 0.0
+    ) : HistoryListItem()
+
+    data class WeekHeader(
+        val weekStartMillis: Long,
+        val weekEndMillis: Long,
+        val totalGross: Double,
+        val totalNet: Double,
+        val weekNumber: Int = 1,
+        val totalDeliveries: Int = 0,
+        val totalWorkMinutes: Long = 0L,
+        val hourlyRate: Double = 0.0
+    ) : HistoryListItem()
+
+    data class DayHeader(
+        val dateTimestamp: Long,
+        val label: String,
+        val totalGross: Double = 0.0,
+        val totalDeliveries: Int = 0,
+        val totalWorkMinutes: Long = 0L,
+        val platformCount: Int = 0
+    ) : HistoryListItem()
+
     data class RecordRow(val record: DailyRecord) : HistoryListItem()
 }
 
@@ -95,10 +132,18 @@ fun getWeekSubdivisionBoundaries(recordTimestamp: Long, year: Int, month: Int): 
 }
 
 fun formatDayLabel(timestamp: Long): String {
-    val sdf = SimpleDateFormat("EEEE, dd 'de' MMM", Locale.forLanguageTag("pt-BR"))
+    val sdf = SimpleDateFormat("EEEE, dd 'de' MMMM", Locale.forLanguageTag("pt-BR"))
     val raw = sdf.format(Date(timestamp))
     return if (raw.isNotEmpty()) {
-        raw.substring(0, 1).uppercase(Locale.forLanguageTag("pt-BR")) + raw.substring(1)
+        val capitalized = raw.substring(0, 1).uppercase(Locale.forLanguageTag("pt-BR")) + raw.substring(1)
+        val deIndex = capitalized.lastIndexOf(" de ")
+        if (deIndex != -1 && deIndex + 4 < capitalized.length) {
+            capitalized.substring(0, deIndex + 4) +
+                capitalized.substring(deIndex + 4, deIndex + 5).uppercase(Locale.forLanguageTag("pt-BR")) +
+                capitalized.substring(deIndex + 5)
+        } else {
+            capitalized
+        }
     } else {
         raw
     }
@@ -149,45 +194,135 @@ fun groupRecordsHierarchically(records: List<DailyRecord>, isAscending: Boolean)
     for ((y, monthsMap) in yearToMonths) {
         var yearGross = 0.0
         var yearNet = 0.0
+        var yearDeliveries = 0
+        var yearKm = 0.0
+        val yearDaysSet = mutableSetOf<DayKey>()
         val yearItems = mutableListOf<HistoryListItem>()
 
         for ((m, weeksMap) in monthsMap) {
             var monthGross = 0.0
             var monthNet = 0.0
+            var monthDeliveries = 0
+            var monthKm = 0.0
+            val monthDaysSet = mutableSetOf<DayKey>()
             val monthItems = mutableListOf<HistoryListItem>()
 
             for ((weekKey, daysMap) in weeksMap) {
                 var weekGross = 0.0
                 var weekNet = 0.0
+                var weekDeliveries = 0
+                var weekKm = 0.0
+                var weekWorkMinutes = 0L
                 val weekItems = mutableListOf<HistoryListItem>()
 
                 for ((dayKey, dayRecords) in daysMap) {
+                    monthDaysSet.add(dayKey)
+                    yearDaysSet.add(dayKey)
+
                     val representativeTimestamp = dayRecords.first().dateTimestamp
                     val dayLabel = formatDayLabel(representativeTimestamp)
 
-                    weekItems.add(HistoryListItem.DayHeader(representativeTimestamp, dayLabel))
+                    var dayGross = 0.0
+                    var dayDeliveries = 0
+                    var dayKm = 0.0
+                    var dayWorkMinutes = 0L
+                    val platforms = mutableSetOf<String>()
+
+                    for (rec in dayRecords) {
+                        val g = CurrencyUtils.centsToDouble(rec.grossEarnings)
+                        val n = CurrencyUtils.centsToDouble(rec.netProfit)
+                        dayGross += g
+                        dayDeliveries += rec.deliveriesCount
+                        dayKm += rec.kmRodados
+                        dayWorkMinutes += rec.totalWorkMinutes
+                        if (rec.platform.isNotBlank()) {
+                            platforms.add(rec.platform.trim())
+                        }
+                        weekGross += g
+                        weekNet += n
+                        weekDeliveries += rec.deliveriesCount
+                        weekKm += rec.kmRodados
+                        weekWorkMinutes += rec.totalWorkMinutes
+                    }
+
+                    weekItems.add(
+                        HistoryListItem.DayHeader(
+                            dateTimestamp = representativeTimestamp,
+                            label = dayLabel,
+                            totalGross = dayGross,
+                            totalDeliveries = dayDeliveries,
+                            totalWorkMinutes = dayWorkMinutes,
+                            platformCount = platforms.size
+                        )
+                    )
                     for (rec in dayRecords) {
                         weekItems.add(HistoryListItem.RecordRow(rec))
-                        weekGross += CurrencyUtils.centsToDouble(rec.grossEarnings)
-                        weekNet += CurrencyUtils.centsToDouble(rec.netProfit)
                     }
                 }
 
-                monthItems.add(HistoryListItem.WeekHeader(weekKey.weekStart, weekKey.weekEnd, weekGross, weekNet))
+                val weekCal = Calendar.getInstance().apply {
+                    timeInMillis = weekKey.weekStart
+                    firstDayOfWeek = Calendar.MONDAY
+                }
+                val weekNum = weekCal.get(Calendar.WEEK_OF_MONTH).coerceAtLeast(1)
+                val weekHourlyRate = if (weekWorkMinutes > 0) {
+                    weekGross / (weekWorkMinutes.toDouble() / 60.0)
+                } else 0.0
+
+                monthItems.add(
+                    HistoryListItem.WeekHeader(
+                        weekStartMillis = weekKey.weekStart,
+                        weekEndMillis = weekKey.weekEnd,
+                        totalGross = weekGross,
+                        totalNet = weekNet,
+                        weekNumber = weekNum,
+                        totalDeliveries = weekDeliveries,
+                        totalWorkMinutes = weekWorkMinutes,
+                        hourlyRate = weekHourlyRate
+                    )
+                )
                 monthItems.addAll(weekItems)
 
                 monthGross += weekGross
                 monthNet += weekNet
+                monthDeliveries += weekDeliveries
+                monthKm += weekKm
             }
 
-            yearItems.add(HistoryListItem.MonthHeader(y, m, monthGross, monthNet))
+            yearItems.add(
+                HistoryListItem.MonthHeader(
+                    year = y,
+                    month = m,
+                    totalGross = monthGross,
+                    totalNet = monthNet,
+                    activeDays = monthDaysSet.size,
+                    totalDeliveries = monthDeliveries,
+                    totalKm = monthKm
+                )
+            )
             yearItems.addAll(monthItems)
 
             yearGross += monthGross
             yearNet += monthNet
+            yearDeliveries += monthDeliveries
+            yearKm += monthKm
         }
 
-        resultList.add(HistoryListItem.YearHeader(y, yearGross, yearNet))
+        val activeDays = yearDaysSet.size
+        val dailyAvg = if (activeDays > 0) yearGross / activeDays else 0.0
+
+        resultList.add(
+            HistoryListItem.YearHeader(
+                year = y,
+                totalGross = yearGross,
+                totalNet = yearNet,
+                totalDeliveries = yearDeliveries,
+                totalKm = yearKm,
+                activeDays = activeDays,
+                dailyAverage = dailyAvg,
+                growthPercentage = null
+            )
+        )
         resultList.addAll(yearItems)
     }
 

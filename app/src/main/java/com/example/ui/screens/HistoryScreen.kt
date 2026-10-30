@@ -1,43 +1,31 @@
 package com.example.ui.screens
 
 import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.animation.*
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.data.DailyRecord
-import com.example.util.CurrencyUtils
 import com.example.ui.GiroCustoViewModel
 import com.example.ui.Period
 import com.example.ui.SyncState
@@ -48,7 +36,12 @@ import com.example.ui.components.OfflineNoticeBanner
 import com.example.ui.components.SyncLoadingBanner
 import com.example.ui.util.filterByPeriod
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+
+private val ColorPrimary = Color(0xFF38BDF8)
+private val ColorOnSurfaceVariant = Color(0xFFBDC8D1)
 
 enum class HistorySortOption(val labelResId: Int) {
     DATA_DECRESCENTE(R.string.history_sort_date_desc),
@@ -58,6 +51,12 @@ enum class HistorySortOption(val labelResId: Int) {
     KM_MAIOR(R.string.history_sort_km_desc),
     KM_MENOR(R.string.history_sort_km_asc),
     ENTREGAS(R.string.history_sort_deliveries_desc)
+}
+
+enum class QuickFilterOption {
+    TODOS,
+    LOGISTICA,
+    DELIVERY
 }
 
 @Composable
@@ -72,15 +71,24 @@ fun HistoryScreen(
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
     val syncErrorMessage by viewModel.syncErrorMessage.collectAsStateWithLifecycle()
 
+    var isPrivacyEnabled by rememberSaveable { mutableStateOf(false) }
+
     var showEditDialog by remember { mutableStateOf(false) }
     var recordToEdit by remember { mutableStateOf<DailyRecord?>(null) }
 
-    // Estados dos novos filtros
+    // Busca Textual
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+
+    // Filtro Rápido (Chips)
+    var selectedQuickFilter by rememberSaveable { mutableStateOf(QuickFilterOption.TODOS) }
+
+    // Filtros de Período
     var historyPeriod by remember { mutableStateOf(Period.SEMANA) }
     var historyCustomStart by remember { mutableStateOf(System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000) }
     var historyCustomEnd by remember { mutableStateOf(System.currentTimeMillis()) }
     var showHistoryCustomPeriodDialog by remember { mutableStateOf(false) }
 
+    // Dropdown Plataformas
     val allPlatformsLabel = stringResource(R.string.history_filter_all_platforms)
     val platformsList = remember(records, allPlatformsLabel) {
         listOf(allPlatformsLabel) + records.map { it.platform }.distinct().filter { it.isNotBlank() }
@@ -95,31 +103,75 @@ fun HistoryScreen(
 
     var selectedSortOption by remember { mutableStateOf(HistorySortOption.DATA_DECRESCENTE) }
 
-    var periodExpanded by remember { mutableStateOf(false) }
-    var platformExpanded by remember { mutableStateOf(false) }
-    var sortExpanded by remember { mutableStateOf(false) }
+    // Estado do Acordeão de Meses Expandidos (o mais recente expandido por padrão)
+    var expandedMonths by remember(records) {
+        val initial = records.maxByOrNull { it.dateTimestamp }?.let {
+            val cal = Calendar.getInstance().apply { timeInMillis = it.dateTimestamp }
+            setOf("${cal.get(Calendar.YEAR)}_${cal.get(Calendar.MONTH)}")
+        } ?: emptySet()
+        mutableStateOf(initial)
+    }
 
-    // Filtragem e Ordenação
-    val filteredAndSortedRecords = remember(records, historyPeriod, historyCustomStart, historyCustomEnd, selectedPlatformFilter, selectedSortOption, allPlatformsLabel) {
-        // 1. Filtrar por Período usando utilitário padronizado
+    // Filtragem combinada: Período + Quick Filter + Plataforma Dropdown + Busca Textual + Ordenação
+    val filteredAndSortedRecords = remember(
+        records,
+        historyPeriod,
+        historyCustomStart,
+        historyCustomEnd,
+        selectedQuickFilter,
+        selectedPlatformFilter,
+        searchQuery,
+        selectedSortOption,
+        allPlatformsLabel
+    ) {
+        // 1. Filtrar por Período
         val dateFiltered = filterByPeriod(records, historyPeriod, historyCustomStart, historyCustomEnd) { it.dateTimestamp }
 
-        // 2. Filtrar por Plataforma
-        val platformFiltered = if (selectedPlatformFilter == allPlatformsLabel) {
-            dateFiltered
-        } else {
-            dateFiltered.filter { it.platform.equals(selectedPlatformFilter, ignoreCase = true) }
+        // 2. Filtrar por Quick Filter
+        val quickFiltered = when (selectedQuickFilter) {
+            QuickFilterOption.TODOS -> dateFiltered
+            QuickFilterOption.LOGISTICA -> dateFiltered.filter {
+                val p = it.platform.lowercase(Locale.ROOT)
+                p.contains("mercado") || p.contains("livre") || p.contains("meli") ||
+                    p.contains("shopee") || p.contains("loggi") || p.contains("lalamove")
+            }
+            QuickFilterOption.DELIVERY -> dateFiltered.filter {
+                val p = it.platform.lowercase(Locale.ROOT)
+                p.contains("ifood") || p.contains("uber") || p.contains("99") ||
+                    p.contains("rappi") || p.contains("aiqfome") || p.contains("ze")
+            }
         }
 
-        // 3. Ordenar
+        // 3. Filtrar por Plataforma Dropdown
+        val platformFiltered = if (selectedPlatformFilter == allPlatformsLabel) {
+            quickFiltered
+        } else {
+            quickFiltered.filter { it.platform.equals(selectedPlatformFilter, ignoreCase = true) }
+        }
+
+        // 4. Filtrar por Busca Textual
+        val searchFiltered = if (searchQuery.isBlank()) {
+            platformFiltered
+        } else {
+            val q = searchQuery.trim().lowercase(Locale.ROOT)
+            platformFiltered.filter { rec ->
+                rec.platform.lowercase(Locale.ROOT).contains(q) ||
+                    rec.dateString.lowercase(Locale.ROOT).contains(q) ||
+                    try {
+                        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(rec.dateTimestamp)).contains(q)
+                    } catch (e: Exception) { false }
+            }
+        }
+
+        // 5. Ordenar
         when (selectedSortOption) {
-            HistorySortOption.DATA_DECRESCENTE -> platformFiltered.sortedByDescending { it.dateTimestamp }
-            HistorySortOption.DATA_CRESCENTE -> platformFiltered.sortedBy { it.dateTimestamp }
-            HistorySortOption.LUCRO_MAIOR -> platformFiltered.sortedByDescending { it.netProfit }
-            HistorySortOption.LUCRO_MENOR -> platformFiltered.sortedBy { it.netProfit }
-            HistorySortOption.KM_MAIOR -> platformFiltered.sortedByDescending { it.kmRodados }
-            HistorySortOption.KM_MENOR -> platformFiltered.sortedBy { it.kmRodados }
-            HistorySortOption.ENTREGAS -> platformFiltered.sortedByDescending { it.deliveriesCount }
+            HistorySortOption.DATA_DECRESCENTE -> searchFiltered.sortedByDescending { it.dateTimestamp }
+            HistorySortOption.DATA_CRESCENTE -> searchFiltered.sortedBy { it.dateTimestamp }
+            HistorySortOption.LUCRO_MAIOR -> searchFiltered.sortedByDescending { it.netProfit }
+            HistorySortOption.LUCRO_MENOR -> searchFiltered.sortedBy { it.netProfit }
+            HistorySortOption.KM_MAIOR -> searchFiltered.sortedByDescending { it.kmRodados }
+            HistorySortOption.KM_MENOR -> searchFiltered.sortedBy { it.kmRodados }
+            HistorySortOption.ENTREGAS -> searchFiltered.sortedByDescending { it.deliveriesCount }
         }
     }
 
@@ -127,23 +179,49 @@ fun HistoryScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // TopBar: Título + Botão de Privacidade + Botão de Tema
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = stringResource(R.string.history_title),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.history_title),
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
 
+                // Botão de Privacidade com min 48dp e contentDescription dinâmico
+                IconButton(
+                    onClick = { isPrivacyEnabled = !isPrivacyEnabled },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .testTag("privacy_toggle_btn_history")
+                ) {
+                    Icon(
+                        imageVector = if (isPrivacyEnabled) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                        contentDescription = stringResource(
+                            if (isPrivacyEnabled) R.string.cd_privacy_toggle_show else R.string.cd_privacy_toggle_hide
+                        ),
+                        tint = if (isPrivacyEnabled) ColorPrimary else ColorOnSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            // Botão de Tema com min 48dp
             IconButton(
                 onClick = { viewModel.toggleTheme() },
-                modifier = Modifier.size(48.dp).testTag("theme_toggle_btn_history")
+                modifier = Modifier
+                    .size(48.dp)
+                    .testTag("theme_toggle_btn_history")
             ) {
                 Icon(
                     imageVector = if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
@@ -171,192 +249,29 @@ fun HistoryScreen(
             )
         }
 
-        // Dropdowns de Filtros
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Dropdown 1: Período
-            Box(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .defaultMinSize(minHeight = 48.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.surface)
-                        .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(10.dp))
-                        .clickable { periodExpanded = true }
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    val label = when (historyPeriod) {
-                        Period.SEMANA -> stringResource(R.string.period_week)
-                        Period.QUINZENA -> stringResource(R.string.period_fortnight)
-                        Period.MENSAL -> stringResource(R.string.period_month)
-                        Period.ULTIMOS_30_DIAS -> stringResource(R.string.history_period_30_days_short)
-                        Period.PERSONALIZADO -> stringResource(R.string.history_period_custom_short)
-                    }
-                    Text(
-                        text = label,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Icon(
-                        imageVector = Icons.Filled.ArrowDropDown,
-                        contentDescription = stringResource(R.string.cd_select_period),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-                DropdownMenu(
-                    expanded = periodExpanded,
-                    onDismissRequest = { periodExpanded = false },
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.period_week), fontSize = 13.sp) },
-                        onClick = {
-                            historyPeriod = Period.SEMANA
-                            periodExpanded = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.period_fortnight), fontSize = 13.sp) },
-                        onClick = {
-                            historyPeriod = Period.QUINZENA
-                            periodExpanded = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.period_month), fontSize = 13.sp) },
-                        onClick = {
-                            historyPeriod = Period.MENSAL
-                            periodExpanded = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.period_last_30_days), fontSize = 13.sp) },
-                        onClick = {
-                            historyPeriod = Period.ULTIMOS_30_DIAS
-                            periodExpanded = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.period_custom), fontSize = 13.sp) },
-                        onClick = {
-                            historyPeriod = Period.PERSONALIZADO
-                            periodExpanded = false
-                            showHistoryCustomPeriodDialog = true
-                        }
-                    )
-                }
-            }
+        // Barra de Busca Textual
+        HistorySearchBar(
+            searchQuery = searchQuery,
+            onSearchQueryChange = { searchQuery = it }
+        )
 
-            // Dropdown 2: Plataforma
-            Box(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .defaultMinSize(minHeight = 48.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.surface)
-                        .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(10.dp))
-                        .clickable { platformExpanded = true }
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = selectedPlatformFilter,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Icon(
-                        imageVector = Icons.Filled.ArrowDropDown,
-                        contentDescription = stringResource(R.string.cd_filter_platform),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-                DropdownMenu(
-                    expanded = platformExpanded,
-                    onDismissRequest = { platformExpanded = false },
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-                ) {
-                    platformsList.forEach { p ->
-                        DropdownMenuItem(
-                            text = { Text(p, fontSize = 13.sp) },
-                            onClick = {
-                                selectedPlatformFilter = p
-                                platformExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
+        // Chips de Filtro Rápido
+        HistoryQuickFilterChips(
+            selectedQuickFilter = selectedQuickFilter,
+            onSelectQuickFilter = { selectedQuickFilter = it }
+        )
 
-            // Dropdown 3: Ordenação
-            Box(modifier = Modifier.weight(1.2f)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .defaultMinSize(minHeight = 48.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.surface)
-                        .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(10.dp))
-                        .clickable { sortExpanded = true }
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    val sortShortLabel = when (selectedSortOption) {
-                        HistorySortOption.DATA_DECRESCENTE -> stringResource(R.string.history_sort_short_date_desc)
-                        HistorySortOption.DATA_CRESCENTE -> stringResource(R.string.history_sort_short_date_asc)
-                        HistorySortOption.LUCRO_MAIOR -> stringResource(R.string.history_sort_short_profit_desc)
-                        HistorySortOption.LUCRO_MENOR -> stringResource(R.string.history_sort_short_profit_asc)
-                        HistorySortOption.KM_MAIOR -> stringResource(R.string.history_sort_short_km_desc)
-                        HistorySortOption.KM_MENOR -> stringResource(R.string.history_sort_short_km_asc)
-                        HistorySortOption.ENTREGAS -> stringResource(R.string.history_sort_short_deliveries)
-                    }
-                    Text(
-                        text = sortShortLabel,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Icon(
-                        imageVector = Icons.Filled.ArrowDropDown,
-                        contentDescription = stringResource(R.string.cd_sort_by),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-                DropdownMenu(
-                    expanded = sortExpanded,
-                    onDismissRequest = { sortExpanded = false },
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-                ) {
-                    HistorySortOption.values().forEach { option ->
-                        DropdownMenuItem(
-                            text = { Text(stringResource(option.labelResId), fontSize = 13.sp) },
-                            onClick = {
-                                selectedSortOption = option
-                                sortExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
-        }
+        // Dropdowns de Filtros (Período, Plataforma, Ordenação)
+        HistoryFilterDropdowns(
+            historyPeriod = historyPeriod,
+            onPeriodSelected = { historyPeriod = it },
+            onOpenCustomPeriodDialog = { showHistoryCustomPeriodDialog = true },
+            selectedPlatformFilter = selectedPlatformFilter,
+            platformsList = platformsList,
+            onPlatformSelected = { selectedPlatformFilter = it },
+            selectedSortOption = selectedSortOption,
+            onSortSelected = { selectedSortOption = it }
+        )
 
         if (historyPeriod == Period.PERSONALIZADO) {
             val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
@@ -430,17 +345,35 @@ fun HistoryScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .weight(1f),
+                    .weight(1f)
+                    .testTag("history_list"),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Se a ordenação for por data (crescente ou decrescente), usamos o agrupamento hierárquico.
-                // Caso contrário (por lucro, km, entregas, etc.), usamos uma lista plana para não quebrar a lógica de ordenação.
+                // Se a ordenação for por data, usamos agrupamento hierárquico com suporte ao acordeão de meses
                 if (selectedSortOption == HistorySortOption.DATA_DECRESCENTE || selectedSortOption == HistorySortOption.DATA_CRESCENTE) {
                     val isAsc = selectedSortOption == HistorySortOption.DATA_CRESCENTE
                     val groupedList = groupRecordsHierarchically(filteredAndSortedRecords, isAsc)
-                    
+
+                    // Filtragem visual baseada no acordeão de meses
+                    var currentMonthKey = ""
+                    val visibleItems = mutableListOf<HistoryListItem>()
+                    for (item in groupedList) {
+                        when (item) {
+                            is HistoryListItem.YearHeader -> visibleItems.add(item)
+                            is HistoryListItem.MonthHeader -> {
+                                currentMonthKey = "${item.year}_${item.month}"
+                                visibleItems.add(item)
+                            }
+                            else -> {
+                                if (currentMonthKey.isEmpty() || expandedMonths.contains(currentMonthKey)) {
+                                    visibleItems.add(item)
+                                }
+                            }
+                        }
+                    }
+
                     items(
-                        items = groupedList,
+                        items = visibleItems,
                         key = { getHistoryListItemKey(it) }
                     ) { item ->
                         when (item) {
@@ -448,15 +381,33 @@ fun HistoryScreen(
                                 YearHeaderCard(
                                     year = item.year,
                                     totalGross = item.totalGross,
-                                    totalNet = item.totalNet
+                                    totalNet = item.totalNet,
+                                    totalDeliveries = item.totalDeliveries,
+                                    dailyAverage = item.dailyAverage,
+                                    growthPercentage = item.growthPercentage,
+                                    isPrivacyEnabled = isPrivacyEnabled
                                 )
                             }
                             is HistoryListItem.MonthHeader -> {
                                 val monthLabel = "${ptMonths[item.month]} ${item.year}"
+                                val monthKey = "${item.year}_${item.month}"
+                                val isExpanded = expandedMonths.contains(monthKey)
                                 MonthHeaderCard(
                                     monthLabel = monthLabel,
                                     totalGross = item.totalGross,
-                                    totalNet = item.totalNet
+                                    totalNet = item.totalNet,
+                                    activeDays = item.activeDays,
+                                    totalDeliveries = item.totalDeliveries,
+                                    totalKm = item.totalKm,
+                                    isExpanded = isExpanded,
+                                    isPrivacyEnabled = isPrivacyEnabled,
+                                    onToggleExpand = {
+                                        expandedMonths = if (isExpanded) {
+                                            expandedMonths - monthKey
+                                        } else {
+                                            expandedMonths + monthKey
+                                        }
+                                    }
                                 )
                             }
                             is HistoryListItem.WeekHeader -> {
@@ -467,11 +418,22 @@ fun HistoryScreen(
                                 WeekHeaderCard(
                                     weekLabel = weekLabel,
                                     totalGross = item.totalGross,
-                                    totalNet = item.totalNet
+                                    totalNet = item.totalNet,
+                                    totalDeliveries = item.totalDeliveries,
+                                    totalWorkMinutes = item.totalWorkMinutes,
+                                    hourlyRate = item.hourlyRate,
+                                    isPrivacyEnabled = isPrivacyEnabled
                                 )
                             }
                             is HistoryListItem.DayHeader -> {
-                                DayHeaderView(label = item.label)
+                                DayHeaderView(
+                                    label = item.label,
+                                    totalGross = item.totalGross,
+                                    totalDeliveries = item.totalDeliveries,
+                                    totalWorkMinutes = item.totalWorkMinutes,
+                                    platformCount = item.platformCount,
+                                    isPrivacyEnabled = isPrivacyEnabled
+                                )
                             }
                             is HistoryListItem.RecordRow -> {
                                 HistoryRecordCard(
@@ -482,8 +444,9 @@ fun HistoryScreen(
                                     },
                                     onDeleteClick = {
                                         viewModel.deleteDailyRecord(item.record)
-                                        android.widget.Toast.makeText(context, context.getString(R.string.history_toast_record_deleted), android.widget.Toast.LENGTH_SHORT).show()
-                                    }
+                                        Toast.makeText(context, context.getString(R.string.history_toast_record_deleted), Toast.LENGTH_SHORT).show()
+                                    },
+                                    isPrivacyEnabled = isPrivacyEnabled
                                 )
                             }
                         }
@@ -501,8 +464,9 @@ fun HistoryScreen(
                             },
                             onDeleteClick = {
                                 viewModel.deleteDailyRecord(record)
-                                android.widget.Toast.makeText(context, context.getString(R.string.history_toast_record_deleted), android.widget.Toast.LENGTH_SHORT).show()
-                            }
+                                Toast.makeText(context, context.getString(R.string.history_toast_record_deleted), Toast.LENGTH_SHORT).show()
+                            },
+                            isPrivacyEnabled = isPrivacyEnabled
                         )
                     }
                 }
@@ -550,7 +514,7 @@ fun HistoryScreen(
                         recordToEdit = null
                     },
                     onError = { error ->
-                        android.widget.Toast.makeText(context, error, android.widget.Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, error, Toast.LENGTH_LONG).show()
                     }
                 )
             }

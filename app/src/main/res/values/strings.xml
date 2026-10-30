@@ -325,6 +325,31 @@
     <string name="history_edit_end_time_label">Hora Final</string>
     <string name="history_edit_pause_duration_label">Total Tempo Pause</string>
 
+    <!-- Strings da Aba Histórico (T-HIST-01) -->
+    <string name="cd_privacy_toggle_hide">Ocultar valores monetários</string>
+    <string name="cd_privacy_toggle_show">Exibir valores monetários</string>
+    <string name="history_search_placeholder">Buscar por data, rota ou plataforma...</string>
+    <string name="history_filter_quick_all">Todos</string>
+    <string name="history_filter_quick_logistics">Logística (ML/Shopee)</string>
+    <string name="history_filter_quick_delivery">Delivery/Apps (iFood/Uber)</string>
+    <string name="history_annual_consolidated_title">RESUMO CONSOLIDADO %1$d</string>
+    <string name="history_annual_consolidated_subtitle">Faturamento bruto anual apurado</string>
+    <string name="history_stat_deliveries">Entregas</string>
+    <string name="history_stat_daily_avg">Média / Dia</string>
+    <string name="history_month_active_days">%1$d dias em rota ativa</string>
+    <string name="history_month_metric_packages">Pacotes</string>
+    <string name="history_month_metric_km">KM</string>
+    <string name="history_month_metric_gross">Ganho Bruto</string>
+    <string name="history_month_metric_net">Lucro Líquido</string>
+    <string name="history_week_label">Semana %1$d (%2$s a %3$s)</string>
+    <string name="history_week_online_hours">%1$dh Online</string>
+    <string name="history_week_hourly_rate">Média: %1$s/h</string>
+    <string name="history_day_glance_deliveries">%1$d entregas</string>
+    <string name="history_day_glance_online">%1$s Online</string>
+    <string name="history_day_glance_platforms">%1$d plataformas</string>
+    <string name="history_export_hint">Toque para exportar extrato em PDF/CSV.</string>
+    <string name="history_masked_currency">R$ ••••••</string>
+
     <!-- Abastecimento e Subcomponentes (T-25C [ACC-02C]) -->
     <string name="cd_fuel_alert_icon">Alerta</string>
     <string name="cd_fuel_tank_alert">Alerta Tanque</string>
