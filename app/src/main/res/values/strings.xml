@@ -547,6 +547,7 @@
     <string name="reports_chart_profit_subtitle">Ganhos reais limpos nos últimos 7 dias de entregas</string>
     <string name="reports_chart_profit_empty">Histórico sem registros suficientes para gráfico.</string>
     <string name="reports_chart_productivity_title">Faturamento vs Lucro Líquido</string>
+    <string name="reports_chart_productivity_icon_desc">Faturamento vs Lucro</string>
     <string name="reports_chart_productivity_subtitle">Visualização da eficiência financeira de cada turno lançado</string>
     <string name="reports_legend_gross">Faturamento Bruto</string>
     <string name="reports_legend_net">Lucro Líquido</string>
@@ -582,7 +583,8 @@
     <string name="reports_workhours_pause_time_label">Tempo em Pausa</string>
     <string name="reports_workhours_avg_shift_label">Média / Turno</string>
     <string name="reports_workhours_avg_shift_value">%1$sh</string>
-    <string name="reports_highlights_section_title">DESTAQUES E RECORDES</string>
+    <string name="reports_highlights_icon_desc">Destaques e Recordes</string>
+    <string name="reports_highlights_section_title">Destaques e Recordes</string>
     <string name="reports_highlights_best_shift_icon_desc">Melhor Dia</string>
     <string name="reports_highlights_best_shift_label">Melhor Turno</string>
     <string name="reports_highlights_worst_shift_icon_desc">Menor Turno</string>

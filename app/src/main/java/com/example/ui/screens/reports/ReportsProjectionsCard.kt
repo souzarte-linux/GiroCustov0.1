@@ -109,6 +109,7 @@ fun ReportsProjectionsCard(metrics: ReportMetricsState, monthlyNGoal: Double) {
                 Text(
                     text = stringResource(R.string.reports_projections_goal_progress, (safePctOfGoal * 100).toInt()),
                     fontSize = 11.sp,
+                    lineHeight = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f).padding(end = 8.dp)
                 )

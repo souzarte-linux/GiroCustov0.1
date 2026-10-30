@@ -2,6 +2,7 @@ package com.example
 
 import android.app.Application
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -498,4 +499,57 @@ class ReportsScreenRenderingTest {
         assertEquals(10, metrics.recordsCount)
         assertEquals(10, metrics.chronologicalRecords.size)
     }
+
+    @Test
+    fun testHighlightsSection_rendersOuterCardWithCenteredTrophyAndTitle() {
+        val record = DailyRecord(
+            id = 1L,
+            dateString = "2026-10-30",
+            dateTimestamp = System.currentTimeMillis(),
+            grossEarnings = 25000L,
+            deliveriesCount = 8,
+            startOdometer = 1000.0,
+            endOdometer = 1050.0,
+            fuelPrice = 5890L,
+            foodExpense = 1500L,
+            fuelCost = 2500L,
+            wearCost = 500L,
+            proportionalFixedCost = 500L,
+            netProfit = 20000L
+        )
+        val state = ReportMetricsState(bestDay = record, worstDay = null)
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                ReportsHighlightsSection(metrics = state)
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Destaques e Recordes").assertExists()
+        composeTestRule.onNodeWithContentDescription("Destaques e Recordes").assertExists()
+        composeTestRule.onNodeWithText("Melhor Turno").assertExists()
+    }
+
+    @Test
+    fun testReportsWorkHoursCard_rendersCenteredTitleAndSubtitle() {
+        val state = ReportMetricsState(
+            netPerHour = 25.0,
+            grossPerHour = 35.0,
+            avgHoursPerShift = 6.5,
+            formattedTotalWork = "13h 00m",
+            formattedTotalPause = "1h 30m"
+        )
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                ReportsWorkHoursCard(metrics = state)
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Jornada & Eficiência por Hora").assertExists()
+        composeTestRule.onNodeWithContentDescription("Jornada e Horas").assertExists()
+    }
 }
+
