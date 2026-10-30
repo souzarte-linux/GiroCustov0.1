@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
@@ -13,6 +15,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.data.DailyRecord
 import com.example.ui.GiroCustoViewModel
 import com.example.ui.screens.*
+import com.example.ui.theme.AppTheme
 import com.example.ui.theme.MyApplicationTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -261,5 +264,68 @@ class HistoryRefactorTest {
         composeTestRule.onNodeWithTag("history_list")
             .performScrollToNode(hasTestTag("history_item_1"))
         composeTestRule.onNodeWithTag("history_item_1").assertIsDisplayed()
+    }
+
+    @Test
+    fun testHistoryCardsAndComponents_renderInAllThemesHarmoniously() {
+        val record = createDummyRecord(99L, "Uber", 120.00, 95.50)
+        val themeVariations = AppTheme.entries.flatMap { listOf(it to true, it to false) }
+
+        composeTestRule.setContent {
+            androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())
+            ) {
+                for ((theme, isDark) in themeVariations) {
+                    val mode = if (isDark) "dark" else "light"
+                    MyApplicationTheme(appTheme = theme, darkTheme = isDark) {
+                        androidx.compose.foundation.layout.Column(
+                            modifier = androidx.compose.ui.Modifier.testTag("theme_container_${theme.name}_$mode")
+                        ) {
+                            YearHeaderCard(
+                                year = 2026,
+                                totalGross = 10000.0,
+                                totalNet = 8000.0,
+                                totalDeliveries = 500,
+                                dailyAverage = 200.0
+                            )
+                            MonthHeaderCard(
+                                monthLabel = "Outubro 2026",
+                                totalGross = 2500.0,
+                                totalNet = 2000.0,
+                                activeDays = 15,
+                                totalDeliveries = 120,
+                                totalKm = 450.0
+                            )
+                            WeekHeaderCard(
+                                weekLabel = "Semana 42",
+                                totalGross = 600.0,
+                                totalNet = 480.0,
+                                totalDeliveries = 30,
+                                totalWorkMinutes = 1200L,
+                                hourlyRate = 24.0
+                            )
+                            DayHeaderView(
+                                label = "23 de Outubro",
+                                totalGross = 120.0,
+                                totalDeliveries = 6,
+                                totalWorkMinutes = 240L,
+                                platformCount = 1
+                            )
+                            HistoryRecordCard(
+                                record = record,
+                                onEditClick = {},
+                                onDeleteClick = {}
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        for ((theme, isDark) in themeVariations) {
+            val mode = if (isDark) "dark" else "light"
+            composeTestRule.onNodeWithTag("theme_container_${theme.name}_$mode", useUnmergedTree = true).assertExists()
+        }
     }
 }

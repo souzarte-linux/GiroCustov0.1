@@ -40,8 +40,6 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-private val ColorPrimary = Color(0xFF38BDF8)
-private val ColorOnSurfaceVariant = Color(0xFFBDC8D1)
 
 enum class HistorySortOption(val labelResId: Int) {
     DATA_DECRESCENTE(R.string.history_sort_date_desc),
@@ -210,7 +208,7 @@ fun HistoryScreen(
                         contentDescription = stringResource(
                             if (isPrivacyEnabled) R.string.cd_privacy_toggle_show else R.string.cd_privacy_toggle_hide
                         ),
-                        tint = if (isPrivacyEnabled) ColorPrimary else ColorOnSurfaceVariant,
+                        tint = if (isPrivacyEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                 }

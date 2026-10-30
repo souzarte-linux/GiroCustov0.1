@@ -45,15 +45,6 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.ui.Period
 
-private val ColorSurfaceContainer = Color(0xFF171F33)
-private val ColorSurfaceContainerLow = Color(0xFF131B2E)
-private val ColorSurfaceVariant = Color(0xFF2D3449)
-private val ColorPrimary = Color(0xFF38BDF8)
-private val ColorOnSurface = Color(0xFFDAE2FD)
-private val ColorOnSurfaceVariant = Color(0xFFBDC8D1)
-private val ColorAmberBadge = Color(0xFFFFB020)
-private val ColorRedBadge = Color(0xFFEF4444)
-
 @Composable
 fun HistorySearchBar(
     searchQuery: String,
@@ -67,14 +58,14 @@ fun HistorySearchBar(
             Text(
                 text = stringResource(R.string.history_search_placeholder),
                 fontSize = 13.sp,
-                color = ColorOnSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         leadingIcon = {
             Icon(
                 imageVector = Icons.Filled.Search,
                 contentDescription = null,
-                tint = ColorOnSurfaceVariant,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
         },
@@ -87,7 +78,7 @@ fun HistorySearchBar(
                     Icon(
                         imageVector = Icons.Filled.Clear,
                         contentDescription = "Limpar busca",
-                        tint = ColorOnSurfaceVariant,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -96,12 +87,12 @@ fun HistorySearchBar(
         singleLine = true,
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = ColorSurfaceContainer,
-            unfocusedContainerColor = ColorSurfaceContainerLow,
-            focusedBorderColor = ColorPrimary,
-            unfocusedBorderColor = ColorSurfaceVariant,
-            focusedTextColor = ColorOnSurface,
-            unfocusedTextColor = ColorOnSurface
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
         ),
         modifier = modifier
             .fillMaxWidth()
@@ -127,10 +118,10 @@ fun HistoryQuickFilterChips(
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .background(if (isAll) ColorPrimary.copy(alpha = 0.15f) else ColorSurfaceContainer)
+                .background(if (isAll) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface)
                 .border(
                     1.dp,
-                    if (isAll) ColorPrimary else ColorSurfaceVariant,
+                    if (isAll) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                     RoundedCornerShape(8.dp)
                 )
                 .clickable { onSelectQuickFilter(QuickFilterOption.TODOS) }
@@ -143,7 +134,7 @@ fun HistoryQuickFilterChips(
                 Icon(
                     imageVector = Icons.Filled.Done,
                     contentDescription = null,
-                    tint = ColorPrimary,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -151,7 +142,7 @@ fun HistoryQuickFilterChips(
                 text = stringResource(R.string.history_filter_quick_all),
                 fontSize = 12.sp,
                 fontWeight = if (isAll) FontWeight.Bold else FontWeight.Medium,
-                color = if (isAll) ColorPrimary else ColorOnSurfaceVariant
+                color = if (isAll) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -160,10 +151,10 @@ fun HistoryQuickFilterChips(
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .background(if (isLogistics) ColorPrimary.copy(alpha = 0.15f) else ColorSurfaceContainer)
+                .background(if (isLogistics) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface)
                 .border(
                     1.dp,
-                    if (isLogistics) ColorPrimary else ColorSurfaceVariant,
+                    if (isLogistics) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                     RoundedCornerShape(8.dp)
                 )
                 .clickable { onSelectQuickFilter(QuickFilterOption.LOGISTICA) }
@@ -176,13 +167,13 @@ fun HistoryQuickFilterChips(
                 modifier = Modifier
                     .size(8.dp)
                     .clip(CircleShape)
-                    .background(ColorAmberBadge)
+                    .background(MaterialTheme.colorScheme.tertiary)
             )
             Text(
                 text = stringResource(R.string.history_filter_quick_logistics),
                 fontSize = 12.sp,
                 fontWeight = if (isLogistics) FontWeight.Bold else FontWeight.Medium,
-                color = if (isLogistics) ColorPrimary else ColorOnSurfaceVariant
+                color = if (isLogistics) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -191,10 +182,10 @@ fun HistoryQuickFilterChips(
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .background(if (isDelivery) ColorPrimary.copy(alpha = 0.15f) else ColorSurfaceContainer)
+                .background(if (isDelivery) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface)
                 .border(
                     1.dp,
-                    if (isDelivery) ColorPrimary else ColorSurfaceVariant,
+                    if (isDelivery) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                     RoundedCornerShape(8.dp)
                 )
                 .clickable { onSelectQuickFilter(QuickFilterOption.DELIVERY) }
@@ -207,13 +198,13 @@ fun HistoryQuickFilterChips(
                 modifier = Modifier
                     .size(8.dp)
                     .clip(CircleShape)
-                    .background(ColorRedBadge)
+                    .background(MaterialTheme.colorScheme.error)
             )
             Text(
                 text = stringResource(R.string.history_filter_quick_delivery),
                 fontSize = 12.sp,
                 fontWeight = if (isDelivery) FontWeight.Bold else FontWeight.Medium,
-                color = if (isDelivery) ColorPrimary else ColorOnSurfaceVariant
+                color = if (isDelivery) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

@@ -32,6 +32,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -45,18 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import java.util.Locale
-
-// Paleta de Cores de Alta Precisão (Design System Nocturne Courier Logistics)
-private val ColorSurfaceContainer = Color(0xFF171F33)
-private val ColorSurfaceContainerLow = Color(0xFF131B2E)
-private val ColorSurfaceContainerHigh = Color(0xFF222A3D)
-private val ColorSurfaceVariant = Color(0xFF2D3449)
-private val ColorPrimary = Color(0xFF38BDF8)
-private val ColorSecondary = Color(0xFFBDC2FF)
-private val ColorTertiary = Color(0xFF4EE6AA)
-private val ColorOnSurface = Color(0xFFDAE2FD)
-private val ColorOnSurfaceVariant = Color(0xFFBDC8D1)
-private val ColorOutline = Color(0xFF87929A)
 
 fun formatHistoryCurrency(amount: Double, isPrivacyEnabled: Boolean): String {
     return if (isPrivacyEnabled) {
@@ -83,9 +72,9 @@ fun YearHeaderCard(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("year_header_$year"),
-        colors = CardDefaults.cardColors(containerColor = ColorSurfaceContainer),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, ColorSurfaceVariant.copy(alpha = 0.6f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Box(
@@ -99,7 +88,7 @@ fun YearHeaderCard(
                     .size(100.dp)
                     .align(Alignment.BottomEnd)
                     .clip(CircleShape)
-                    .background(ColorPrimary.copy(alpha = 0.05f))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
             )
 
             Column(
@@ -119,14 +108,14 @@ fun YearHeaderCard(
                         Icon(
                             imageVector = Icons.Filled.Verified,
                             contentDescription = null,
-                            tint = ColorPrimary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
                             text = stringResource(R.string.history_annual_consolidated_title, year),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = ColorOnSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             letterSpacing = 0.8.sp
                         )
                     }
@@ -135,28 +124,28 @@ fun YearHeaderCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(999.dp))
-                                .background(ColorTertiary.copy(alpha = 0.15f))
+                                .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f))
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "+${String.format(Locale.GERMAN, "%.1f", growthPercentage)}% vs ${year - 1}",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = ColorTertiary
+                                color = MaterialTheme.colorScheme.tertiary
                             )
                         }
                     } else {
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(999.dp))
-                                .background(ColorTertiary.copy(alpha = 0.15f))
+                                .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f))
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "CONSOLIDADO",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = ColorTertiary
+                                color = MaterialTheme.colorScheme.tertiary
                             )
                         }
                     }
@@ -168,13 +157,13 @@ fun YearHeaderCard(
                         text = formatHistoryCurrency(totalGross, isPrivacyEnabled),
                         fontSize = 28.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = ColorPrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         letterSpacing = (-0.5).sp
                     )
                     Text(
                         text = stringResource(R.string.history_annual_consolidated_subtitle),
                         fontSize = 12.sp,
-                        color = ColorOnSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -190,7 +179,7 @@ fun YearHeaderCard(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(ColorSurfaceContainerHigh)
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
                             .padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -199,13 +188,13 @@ fun YearHeaderCard(
                             modifier = Modifier
                                 .size(32.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(ColorSurfaceContainer),
+                                .background(MaterialTheme.colorScheme.surface),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Inventory2,
                                 contentDescription = null,
-                                tint = ColorPrimary,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -213,13 +202,13 @@ fun YearHeaderCard(
                             Text(
                                 text = stringResource(R.string.history_stat_deliveries),
                                 fontSize = 10.sp,
-                                color = ColorOnSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = if (totalDeliveries > 0) String.format(Locale.GERMAN, "%,d", totalDeliveries) else "--",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = ColorOnSurface
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -229,7 +218,7 @@ fun YearHeaderCard(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(ColorSurfaceContainerHigh)
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
                             .padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -238,13 +227,13 @@ fun YearHeaderCard(
                             modifier = Modifier
                                 .size(32.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(ColorSurfaceContainer),
+                                .background(MaterialTheme.colorScheme.surface),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Speed,
                                 contentDescription = null,
-                                tint = ColorTertiary,
+                                tint = MaterialTheme.colorScheme.tertiary,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -252,13 +241,13 @@ fun YearHeaderCard(
                             Text(
                                 text = stringResource(R.string.history_stat_daily_avg),
                                 fontSize = 10.sp,
-                                color = ColorOnSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = if (dailyAverage > 0) formatHistoryCurrency(dailyAverage, isPrivacyEnabled) else "--",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = ColorOnSurface
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -309,9 +298,9 @@ fun MonthHeaderCard(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("month_header_$monthLabel"),
-        colors = CardDefaults.cardColors(containerColor = ColorSurfaceContainerLow),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, ColorSurfaceVariant.copy(alpha = 0.5f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
     ) {
         Column(
             modifier = Modifier
@@ -334,13 +323,13 @@ fun MonthHeaderCard(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(ColorPrimary.copy(alpha = 0.15f)),
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Filled.CalendarMonth,
                             contentDescription = null,
-                            tint = ColorPrimary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -349,12 +338,12 @@ fun MonthHeaderCard(
                             text = monthLabel,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = ColorOnSurface
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = stringResource(R.string.history_month_active_days, activeDays),
                             fontSize = 12.sp,
-                            color = ColorOnSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -367,12 +356,12 @@ fun MonthHeaderCard(
                         text = formatHistoryCurrency(totalGross, isPrivacyEnabled),
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorPrimary
+                        color = MaterialTheme.colorScheme.primary
                     )
                     Icon(
                         imageVector = if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
                         contentDescription = stringResource(if (isExpanded) R.string.cd_collapse else R.string.cd_expand),
-                        tint = ColorOnSurfaceVariant,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -390,7 +379,7 @@ fun MonthHeaderCard(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(ColorSurfaceContainerHigh.copy(alpha = 0.8f))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
@@ -401,13 +390,13 @@ fun MonthHeaderCard(
                         Text(
                             text = stringResource(R.string.history_month_metric_packages),
                             fontSize = 10.sp,
-                            color = ColorOnSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = totalDeliveries.toString(),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = ColorOnSurface
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     Row(
@@ -417,13 +406,13 @@ fun MonthHeaderCard(
                         Text(
                             text = stringResource(R.string.history_month_metric_km),
                             fontSize = 10.sp,
-                            color = ColorOnSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = String.format(Locale.GERMAN, "%.0f km", totalKm),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = ColorOnSurface
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -433,7 +422,7 @@ fun MonthHeaderCard(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(ColorSurfaceContainerHigh.copy(alpha = 0.8f))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
                         .padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -441,13 +430,13 @@ fun MonthHeaderCard(
                         text = stringResource(R.string.history_month_metric_gross),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
-                        color = ColorPrimary
+                        color = MaterialTheme.colorScheme.primary
                     )
                     Text(
                         text = formatHistoryCurrency(totalGross, isPrivacyEnabled),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorPrimary
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
 
@@ -456,7 +445,7 @@ fun MonthHeaderCard(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(ColorSurfaceContainerHigh.copy(alpha = 0.8f))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
                         .padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -464,13 +453,13 @@ fun MonthHeaderCard(
                         text = stringResource(R.string.history_month_metric_net),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
-                        color = ColorTertiary
+                        color = MaterialTheme.colorScheme.tertiary
                     )
                     Text(
                         text = formatHistoryCurrency(totalNet, isPrivacyEnabled),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorTertiary
+                        color = if (totalNet >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
                     )
                 }
             }
@@ -480,7 +469,7 @@ fun MonthHeaderCard(
                 Text(
                     text = stringResource(R.string.history_export_hint),
                     fontSize = 11.sp,
-                    color = ColorOutline,
+                    color = MaterialTheme.colorScheme.outline,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(top = 2.dp)
                 )
@@ -506,9 +495,9 @@ fun WeekHeaderCard(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("week_header_$weekLabel"),
-        colors = CardDefaults.cardColors(containerColor = ColorSurfaceContainer),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, ColorSurfaceVariant.copy(alpha = 0.4f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
     ) {
         Column(
             modifier = Modifier
@@ -531,13 +520,13 @@ fun WeekHeaderCard(
                             .width(4.dp)
                             .height(18.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(ColorSecondary)
+                            .background(MaterialTheme.colorScheme.secondary)
                     )
                     Text(
                         text = weekLabel,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = ColorOnSurface
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
@@ -545,7 +534,7 @@ fun WeekHeaderCard(
                     text = formatHistoryCurrency(totalNet, isPrivacyEnabled),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ColorTertiary
+                    color = if (totalNet >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
                 )
             }
 
@@ -554,7 +543,7 @@ fun WeekHeaderCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(ColorSurfaceContainerHigh.copy(alpha = 0.7f))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
                     .padding(horizontal = 10.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
@@ -566,13 +555,13 @@ fun WeekHeaderCard(
                     Icon(
                         imageVector = Icons.Filled.LocalShipping,
                         contentDescription = null,
-                        tint = ColorPrimary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(15.dp)
                     )
                     Text(
                         text = "$totalDeliveries entregas",
                         fontSize = 11.sp,
-                        color = ColorOnSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -583,14 +572,14 @@ fun WeekHeaderCard(
                     Icon(
                         imageVector = Icons.Filled.Schedule,
                         contentDescription = null,
-                        tint = ColorTertiary,
+                        tint = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.size(15.dp)
                     )
                     val onlineHours = totalWorkMinutes / 60
                     Text(
                         text = stringResource(R.string.history_week_online_hours, onlineHours),
                         fontSize = 11.sp,
-                        color = ColorOnSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -601,14 +590,14 @@ fun WeekHeaderCard(
                     Icon(
                         imageVector = Icons.Filled.Payments,
                         contentDescription = null,
-                        tint = ColorSecondary,
+                        tint = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.size(15.dp)
                     )
                     val rateStr = if (isPrivacyEnabled) "••••" else String.format(Locale.GERMAN, "R$ %.2f", hourlyRate)
                     Text(
                         text = stringResource(R.string.history_week_hourly_rate, rateStr),
                         fontSize = 11.sp,
-                        color = ColorOnSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -645,19 +634,19 @@ fun DayHeaderView(
                 modifier = Modifier
                     .size(8.dp)
                     .clip(CircleShape)
-                    .background(ColorPrimary)
+                    .background(MaterialTheme.colorScheme.primary)
             )
 
             Text(
                 text = label,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = ColorOnSurface
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             HorizontalDivider(
                 modifier = Modifier.weight(1f),
-                color = ColorSurfaceVariant
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
             )
 
             if (totalGross > 0.0) {
@@ -665,7 +654,7 @@ fun DayHeaderView(
                     text = formatHistoryCurrency(totalGross, isPrivacyEnabled),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ColorPrimary
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -676,7 +665,7 @@ fun DayHeaderView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(ColorSurfaceContainerHigh.copy(alpha = 0.8f))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
                     .padding(horizontal = 10.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
@@ -688,13 +677,13 @@ fun DayHeaderView(
                     Icon(
                         imageVector = Icons.Filled.DoneAll,
                         contentDescription = null,
-                        tint = ColorPrimary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
                         text = stringResource(R.string.history_day_glance_deliveries, totalDeliveries),
                         fontSize = 11.sp,
-                        color = ColorOnSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -708,13 +697,13 @@ fun DayHeaderView(
                     Icon(
                         imageVector = Icons.Filled.Timer,
                         contentDescription = null,
-                        tint = ColorOnSurfaceVariant,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
                         text = stringResource(R.string.history_day_glance_online, durationStr),
                         fontSize = 11.sp,
-                        color = ColorOnSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -725,13 +714,13 @@ fun DayHeaderView(
                     Icon(
                         imageVector = Icons.Filled.TrendingUp,
                         contentDescription = null,
-                        tint = ColorTertiary,
+                        tint = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
                         text = stringResource(R.string.history_day_glance_platforms, platformCount.coerceAtLeast(1)),
                         fontSize = 11.sp,
-                        color = ColorOnSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

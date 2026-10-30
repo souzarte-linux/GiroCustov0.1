@@ -57,14 +57,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val ColorSurfaceContainer = Color(0xFF171F33)
-private val ColorSurfaceContainerHigh = Color(0xFF222A3D)
-private val ColorSurfaceVariant = Color(0xFF2D3449)
-private val ColorTertiary = Color(0xFF4EE6AA)
-private val ColorOnSurface = Color(0xFFDAE2FD)
-private val ColorOnSurfaceVariant = Color(0xFFBDC8D1)
-private val ColorAmberHighlight = Color(0xFFFFB020)
-
 fun getPlatformBrandColor(platform: String): Color {
     val clean = platform.trim().lowercase(Locale.ROOT)
     return when {
@@ -95,7 +87,7 @@ fun HistoryRecordCard(
             .fillMaxWidth()
             .testTag("history_item_${record.id}")
             .clickable { expanded = !expanded },
-        colors = CardDefaults.cardColors(containerColor = ColorSurfaceContainer),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, brandColor.copy(alpha = 0.35f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -143,14 +135,14 @@ fun HistoryRecordCard(
                         Text(
                             text = "•",
                             fontWeight = FontWeight.Bold,
-                            color = ColorOnSurfaceVariant.copy(alpha = 0.6f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                             fontSize = 12.sp
                         )
 
                         Icon(
                             imageVector = Icons.Filled.DateRange,
                             contentDescription = null,
-                            tint = ColorOnSurfaceVariant,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(14.dp)
                         )
                         val formattedDateShort = remember(record.dateTimestamp) {
@@ -163,27 +155,27 @@ fun HistoryRecordCard(
                         Text(
                             text = formattedDateShort,
                             fontWeight = FontWeight.Medium,
-                            color = ColorOnSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp
                         )
 
                         Text(
                             text = "•",
                             fontWeight = FontWeight.Bold,
-                            color = ColorOnSurfaceVariant.copy(alpha = 0.6f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                             fontSize = 12.sp
                         )
 
                         Icon(
                             imageVector = Icons.Filled.Inventory2,
                             contentDescription = null,
-                            tint = ColorOnSurfaceVariant,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(14.dp)
                         )
                         Text(
                             text = "${record.deliveriesCount} Entreg.",
                             fontWeight = FontWeight.Medium,
-                            color = ColorOnSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp
                         )
                     }
@@ -202,7 +194,7 @@ fun HistoryRecordCard(
                             Icon(
                                 imageVector = Icons.Filled.Edit,
                                 contentDescription = stringResource(R.string.cd_edit_record),
-                                tint = ColorAmberHighlight,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -228,7 +220,7 @@ fun HistoryRecordCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .background(ColorSurfaceContainerHigh.copy(alpha = 0.9f))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -240,7 +232,7 @@ fun HistoryRecordCard(
                         Icon(
                             imageVector = Icons.Filled.Schedule,
                             contentDescription = null,
-                            tint = ColorAmberHighlight,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(15.dp)
                         )
                         val hasTimes = record.startTime.isNotBlank() && record.endTime.isNotBlank()
@@ -249,14 +241,14 @@ fun HistoryRecordCard(
                             text = shiftRange,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = ColorOnSurface
+                            color = MaterialTheme.colorScheme.onSurface
                         )
 
                         val workMins = record.totalWorkMinutes
                         if (workMins > 0) {
                             Text(
                                 text = "•",
-                                color = ColorOnSurfaceVariant.copy(alpha = 0.6f),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                 fontSize = 11.sp
                             )
                             val durH = workMins / 60
@@ -266,7 +258,7 @@ fun HistoryRecordCard(
                                 text = durStr,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = ColorTertiary
+                                color = MaterialTheme.colorScheme.tertiary
                             )
                         }
                     }
@@ -278,14 +270,14 @@ fun HistoryRecordCard(
                         Icon(
                             imageVector = Icons.Filled.NearMe,
                             contentDescription = null,
-                            tint = ColorOnSurfaceVariant,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(14.dp)
                         )
                         Text(
                             text = String.format(Locale.GERMAN, "%.1f km", record.kmRodados),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = ColorOnSurface
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -302,7 +294,7 @@ fun HistoryRecordCard(
                     ) {
                         HorizontalDivider(
                             modifier = Modifier.padding(top = 2.dp),
-                            color = ColorSurfaceVariant.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                         )
 
                         // Linha 1 da Grade: Ganhos Brutos | Km Rodados | Entregas
@@ -314,13 +306,13 @@ fun HistoryRecordCard(
                                 Text(
                                     text = stringResource(R.string.history_card_gross_earnings),
                                     fontSize = 11.sp,
-                                    color = ColorOnSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = formatHistoryCurrency(CurrencyUtils.centsToDouble(record.grossEarnings), isPrivacyEnabled),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
-                                    color = ColorOnSurface
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
 
@@ -328,13 +320,13 @@ fun HistoryRecordCard(
                                 Text(
                                     text = stringResource(R.string.history_card_km_traveled),
                                     fontSize = 11.sp,
-                                    color = ColorOnSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = String.format(Locale.GERMAN, "%.1f km", record.kmRodados),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
-                                    color = ColorOnSurface
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
 
@@ -342,13 +334,13 @@ fun HistoryRecordCard(
                                 Text(
                                     text = stringResource(R.string.history_card_deliveries),
                                     fontSize = 11.sp,
-                                    color = ColorOnSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = "${record.deliveriesCount} ent.",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
-                                    color = ColorOnSurface
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -362,13 +354,13 @@ fun HistoryRecordCard(
                                 Text(
                                     text = stringResource(R.string.history_card_fuel_cost),
                                     fontSize = 11.sp,
-                                    color = ColorOnSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = formatHistoryCurrency(CurrencyUtils.centsToDouble(record.fuelCost), isPrivacyEnabled),
                                     fontWeight = FontWeight.Normal,
                                     fontSize = 12.sp,
-                                    color = ColorOnSurface
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
 
@@ -376,13 +368,13 @@ fun HistoryRecordCard(
                                 Text(
                                     text = stringResource(R.string.history_card_wear_cost),
                                     fontSize = 11.sp,
-                                    color = ColorOnSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = formatHistoryCurrency(CurrencyUtils.centsToDouble(record.wearCost), isPrivacyEnabled),
                                     fontWeight = FontWeight.Normal,
                                     fontSize = 12.sp,
-                                    color = ColorOnSurface
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
 
@@ -390,13 +382,13 @@ fun HistoryRecordCard(
                                 Text(
                                     text = stringResource(R.string.history_card_food_expense),
                                     fontSize = 11.sp,
-                                    color = ColorOnSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = formatHistoryCurrency(CurrencyUtils.centsToDouble(record.foodExpense), isPrivacyEnabled),
                                     fontWeight = FontWeight.Normal,
                                     fontSize = 12.sp,
-                                    color = ColorOnSurface
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -406,7 +398,7 @@ fun HistoryRecordCard(
                 // Rodapé: LUCRO LÍQUIDO + Chevron + Valor Destacado
                 HorizontalDivider(
                     modifier = Modifier.padding(top = 2.dp),
-                    color = ColorSurfaceVariant.copy(alpha = 0.5f)
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                 )
 
                 Row(
@@ -426,14 +418,14 @@ fun HistoryRecordCard(
                         Icon(
                             imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
                             contentDescription = stringResource(if (expanded) R.string.cd_collapse else R.string.cd_expand),
-                            tint = ColorAmberHighlight,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
                             text = stringResource(R.string.history_card_net_profit),
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp,
-                            color = ColorAmberHighlight,
+                            color = MaterialTheme.colorScheme.primary,
                             letterSpacing = 0.5.sp
                         )
                     }
@@ -443,7 +435,7 @@ fun HistoryRecordCard(
                         text = formatHistoryCurrency(netAmount, isPrivacyEnabled),
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 16.sp,
-                        color = if (record.netProfit >= 0) ColorTertiary else MaterialTheme.colorScheme.error,
+                        color = if (record.netProfit >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
                         letterSpacing = (-0.3).sp
                     )
                 }
