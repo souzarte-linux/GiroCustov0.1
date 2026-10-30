@@ -203,7 +203,7 @@ object GiroCustoDomainCalculations {
     ): ReportMetricsState {
         val filtered = filterByPeriod(records, selectedPeriod, customStart, customEnd) { it.dateTimestamp }
         val filteredMaint = filterByPeriod(maintenanceRecords, selectedPeriod, customStart, customEnd) { it.dateTimestamp }
-        val chronological = filtered.take(7).sortedBy { it.dateTimestamp }
+        val chronological = filtered.sortedBy { it.dateTimestamp }
 
         val totalEarnings = CurrencyUtils.centsToDouble(filtered.sumOf { it.grossEarnings })
         val totalFuel = CurrencyUtils.centsToDouble(filtered.sumOf { it.fuelCost })

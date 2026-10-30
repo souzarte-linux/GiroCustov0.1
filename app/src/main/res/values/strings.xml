@@ -546,11 +546,13 @@
     <string name="reports_chart_profit_title">Evolução do Lucro Líquido Diário</string>
     <string name="reports_chart_profit_subtitle">Ganhos reais limpos nos últimos 7 dias de entregas</string>
     <string name="reports_chart_profit_empty">Histórico sem registros suficientes para gráfico.</string>
-    <string name="reports_chart_productivity_title">Produtividade: Faturamento vs Lucro Líquido</string>
+    <string name="reports_chart_productivity_title">Faturamento vs Lucro Líquido</string>
     <string name="reports_chart_productivity_subtitle">Visualização da eficiência financeira de cada turno lançado</string>
     <string name="reports_legend_gross">Faturamento Bruto</string>
     <string name="reports_legend_net">Lucro Líquido</string>
     <string name="reports_chart_productivity_empty">Sem histórico suficiente.</string>
+    <string name="reports_chart_bar_hint">Toque em uma barra para ver detalhes</string>
+    <string name="reports_chart_selected_bar_format">%1$s • %2$s: %3$s</string>
 
     <string name="reports_expense_distribution_title">Distribuição de Despesas Operacionais</string>
     <string name="reports_expense_distribution_subtitle">A fatia de cada custo no orçamento total rodado</string>
@@ -567,7 +569,7 @@
     <string name="reports_projections_simulation_desc">Simulação para o mês se trabalhar os %1$d dias planejados no ritmo atual:</string>
     <string name="reports_projections_gross_label">Projeção de Faturamento</string>
     <string name="reports_projections_net_label">Projeção de Lucro Limpo</string>
-    <string name="reports_projections_goal_progress">Alcançará %1$d%% da meta mensal de Lucro</string>
+    <string name="reports_projections_goal_progress">Alcançará %1$d%% da meta\nmensal de Lucro</string>
     <string name="reports_projections_goal_label">Meta: %1$s</string>
 
     <string name="reports_workhours_icon_desc">Jornada e Horas</string>

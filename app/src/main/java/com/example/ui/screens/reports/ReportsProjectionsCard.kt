@@ -1,6 +1,7 @@
 package com.example.ui.screens.reports
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -101,30 +103,52 @@ fun ReportsProjectionsCard(metrics: ReportMetricsState, monthlyNGoal: Double) {
             // Progresso em relação ao Alvo Mensal
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
                 Text(
                     text = stringResource(R.string.reports_projections_goal_progress, (safePctOfGoal * 100).toInt()),
                     fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f).padding(end = 8.dp)
                 )
                 Text(
                     text = stringResource(R.string.reports_projections_goal_label, CurrencyUtils.formatCentsCompact(CurrencyUtils.toCents(safeGoal))),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    softWrap = false
                 )
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            LinearProgressIndicator(
-                progress = { safePctOfGoal.coerceIn(0.0, 1.0).toFloat() },
+            Spacer(modifier = Modifier.height(6.dp))
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
-                    .clip(CircleShape),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                val progressFraction = safePctOfGoal.coerceIn(0.0, 1.0).toFloat()
+                if (progressFraction > 0f) {
+                    val fullWidthPx = constraints.maxWidth.toFloat()
+                    val gradientBrush = Brush.horizontalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                            MaterialTheme.colorScheme.primary
+                        ),
+                        startX = 0f,
+                        endX = fullWidthPx
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(fraction = progressFraction)
+                            .fillMaxHeight()
+                            .clip(CircleShape)
+                            .background(gradientBrush)
+                    )
+                }
+            }
         }
     }
 }

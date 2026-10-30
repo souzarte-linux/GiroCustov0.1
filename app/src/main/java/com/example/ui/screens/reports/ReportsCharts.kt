@@ -1,8 +1,18 @@
 package com.example.ui.screens.reports
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -11,8 +21,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.unit.sp
 import com.example.data.DailyRecord
 import com.example.util.CurrencyUtils
 
@@ -163,54 +178,204 @@ fun NetProfitCurveChart(records: List<DailyRecord>) {
     }
 }
 
+data class SelectedChartBar(
+    val recordIndex: Int,
+    val isGross: Boolean,
+    val dateText: String,
+    val label: String,
+    val valueText: String,
+    val color: Color
+)
+
+fun getProductivityBarColors(
+    colorGross: Color,
+    colorNet: Color
+): Pair<Color, Color> {
+    val lumGross = colorGross.luminance()
+    val lumNet = colorNet.luminance()
+
+    return if (lumNet >= lumGross) {
+        val lighterNet = Color(
+            red = (colorNet.red + (1f - colorNet.red) * 0.28f).coerceIn(0f, 1f),
+            green = (colorNet.green + (1f - colorNet.green) * 0.28f).coerceIn(0f, 1f),
+            blue = (colorNet.blue + (1f - colorNet.blue) * 0.28f).coerceIn(0f, 1f),
+            alpha = 1f
+        )
+        val adjustedGross = if (Math.abs(lumNet - lumGross) < 0.05f) {
+            Color(
+                red = (colorGross.red * 0.82f).coerceIn(0f, 1f),
+                green = (colorGross.green * 0.82f).coerceIn(0f, 1f),
+                blue = (colorGross.blue * 0.82f).coerceIn(0f, 1f),
+                alpha = 1f
+            )
+        } else {
+            colorGross
+        }
+        Pair(adjustedGross, lighterNet)
+    } else {
+        val lighterGross = Color(
+            red = (colorGross.red + (1f - colorGross.red) * 0.28f).coerceIn(0f, 1f),
+            green = (colorGross.green + (1f - colorGross.green) * 0.28f).coerceIn(0f, 1f),
+            blue = (colorGross.blue + (1f - colorGross.blue) * 0.28f).coerceIn(0f, 1f),
+            alpha = 1f
+        )
+        Pair(lighterGross, colorNet)
+    }
+}
+
 // Custom bar-based comparison chart (Faturamento vs Lucro)
 @Composable
-fun ProductivityComparisonChart(records: List<DailyRecord>) {
+fun ProductivityComparisonChart(
+    records: List<DailyRecord>,
+    modifier: Modifier = Modifier
+) {
     if (records.isEmpty()) return
 
-    val maxVal = records.maxOfOrNull { 
-        CurrencyUtils.centsToDouble(it.grossEarnings).coerceAtLeast(CurrencyUtils.centsToDouble(it.netProfit)) 
-    } ?: 100.0
-    val maxScale = (maxVal * 1.15).coerceAtLeast(10.0)
+    val baseGross = MaterialTheme.colorScheme.secondary
+    val baseNet = MaterialTheme.colorScheme.primary
+    val (colorGross, colorNet) = remember(baseGross, baseNet) {
+        getProductivityBarColors(baseGross, baseNet)
+    }
 
-    val colorGross = MaterialTheme.colorScheme.secondary
-    val colorNet = MaterialTheme.colorScheme.primary
+    var selectedBar by remember { mutableStateOf<SelectedChartBar?>(null) }
 
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val width = size.width
-        val height = size.height
+    Column(modifier = modifier.fillMaxWidth()) {
+        AnimatedVisibility(
+            visible = selectedBar != null,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            val bar = selectedBar
+            if (bar != null) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(1.dp, bar.color.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = bar.dateText,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "${bar.label}: ${bar.valueText}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                            color = bar.color
+                        )
+                    }
+                }
+            }
+        }
 
-        if (width <= 0f || height <= 0f) return@Canvas
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(160.dp)
+        ) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag("productivity_chart_canvas")
+                    .pointerInput(records, colorGross, colorNet) {
+                        detectTapGestures { offset ->
+                            if (records.isEmpty()) return@detectTapGestures
+                            val totalBars = records.size
+                            val sectionWidth = size.width / totalBars
+                            val sectionIdx = (offset.x / sectionWidth).toInt().coerceIn(0, records.lastIndex)
+                            val record = records[sectionIdx]
+                            val midX = sectionIdx * sectionWidth + (sectionWidth / 2f)
+                            val isGross = offset.x < midX
 
-        val totalBars = records.size.coerceAtLeast(1)
-        val sectionWidth = width / totalBars
-        val barWidth = (sectionWidth * 0.35f).coerceIn(4f, (sectionWidth * 0.45f).coerceAtLeast(4f))
-        val spacing = (sectionWidth * 0.08f).coerceAtLeast(2f)
+                            val dateFormatted = formatHighlightDate(record.dateTimestamp, record.dateString, "Turno")
+                            val label = if (isGross) "Faturamento" else "Lucro Líquido"
+                            val value = if (isGross) record.grossEarnings else record.netProfit
+                            val valueFormatted = CurrencyUtils.formatCents(value)
+                            val barColor = if (isGross) colorGross else colorNet
 
-        records.forEachIndexed { idx, record ->
-            val sectionX = idx * sectionWidth
+                            if (selectedBar?.recordIndex == sectionIdx && selectedBar?.isGross == isGross) {
+                                selectedBar = null
+                            } else {
+                                selectedBar = SelectedChartBar(
+                                    recordIndex = sectionIdx,
+                                    isGross = isGross,
+                                    dateText = dateFormatted,
+                                    label = label,
+                                    valueText = valueFormatted,
+                                    color = barColor
+                                )
+                            }
+                        }
+                    }
+            ) {
+                val width = size.width
+                val height = size.height
 
-            // Faturamento Bar
-            val grossDouble = CurrencyUtils.centsToDouble(record.grossEarnings).coerceAtLeast(0.0)
-            val grossH = ((grossDouble / maxScale) * height).toFloat().coerceIn(0f, height)
-            val grossX = sectionX + (sectionWidth / 2f) - barWidth - spacing
-            val grossY = height - grossH
-            drawRect(
-                color = colorGross,
-                topLeft = Offset(grossX, grossY),
-                size = Size(barWidth, grossH)
-            )
+                if (width <= 0f || height <= 0f) return@Canvas
 
-            // Lucro Líquido Bar
-            val netDouble = CurrencyUtils.centsToDouble(record.netProfit).coerceAtLeast(0.0)
-            val netH = ((netDouble / maxScale) * height).toFloat().coerceIn(0f, height)
-            val netX = sectionX + (sectionWidth / 2f) + spacing
-            val netY = height - netH
-            drawRect(
-                color = colorNet,
-                topLeft = Offset(netX, netY),
-                size = Size(barWidth, netH)
-            )
+                val maxVal = records.maxOfOrNull { 
+                    CurrencyUtils.centsToDouble(it.grossEarnings).coerceAtLeast(CurrencyUtils.centsToDouble(it.netProfit)) 
+                } ?: 100.0
+                val maxScale = (maxVal * 1.15).coerceAtLeast(10.0)
+
+                val totalBars = records.size.coerceAtLeast(1)
+                val sectionWidth = width / totalBars
+                val barWidth = (sectionWidth * 0.35f).coerceIn(4f, (sectionWidth * 0.45f).coerceAtLeast(4f))
+                val spacing = (sectionWidth * 0.08f).coerceAtLeast(2f)
+
+                records.forEachIndexed { idx, record ->
+                    val sectionX = idx * sectionWidth
+
+                    // Faturamento Bar
+                    val grossDouble = CurrencyUtils.centsToDouble(record.grossEarnings).coerceAtLeast(0.0)
+                    val grossH = ((grossDouble / maxScale) * height).toFloat().coerceIn(0f, height)
+                    val grossX = sectionX + (sectionWidth / 2f) - barWidth - spacing
+                    val grossY = height - grossH
+                    drawRect(
+                        color = colorGross,
+                        topLeft = Offset(grossX, grossY),
+                        size = Size(barWidth, grossH)
+                    )
+
+                    // Lucro Líquido Bar
+                    val netDouble = CurrencyUtils.centsToDouble(record.netProfit).coerceAtLeast(0.0)
+                    val netH = ((netDouble / maxScale) * height).toFloat().coerceIn(0f, height)
+                    val netX = sectionX + (sectionWidth / 2f) + spacing
+                    val netY = height - netH
+                    drawRect(
+                        color = colorNet,
+                        topLeft = Offset(netX, netY),
+                        size = Size(barWidth, netH)
+                    )
+
+                    // Indicador de destaque visual na barra selecionada
+                    if (selectedBar?.recordIndex == idx) {
+                        val isSelectedGross = selectedBar?.isGross == true
+                        val selX = if (isSelectedGross) grossX else netX
+                        val selY = if (isSelectedGross) grossY else netY
+                        val selH = if (isSelectedGross) grossH else netH
+
+                        drawRect(
+                            color = Color.White.copy(alpha = 0.9f),
+                            topLeft = Offset(selX - 1.dp.toPx(), (selY - 2.dp.toPx()).coerceAtLeast(0f)),
+                            size = Size(barWidth + 2.dp.toPx(), (selH + 2.dp.toPx()).coerceAtLeast(2.dp.toPx())),
+                            style = Stroke(width = 2.dp.toPx())
+                        )
+                    }
+                }
+            }
         }
     }
 }

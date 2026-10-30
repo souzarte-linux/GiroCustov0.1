@@ -20,6 +20,25 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.ui.ReportMetricsState
 import com.example.util.CurrencyUtils
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+internal fun formatHighlightDate(dateTimestamp: Long, dateString: String, fallback: String): String {
+    if (dateTimestamp > 0L) {
+        return SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(dateTimestamp))
+    }
+    if (dateString.isNotBlank()) {
+        try {
+            val parsed = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(dateString)
+            if (parsed != null) {
+                return SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(parsed)
+            }
+        } catch (_: Exception) {}
+        return dateString
+    }
+    return fallback
+}
 
 @Composable
 fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
@@ -180,7 +199,7 @@ fun ReportsHighlightsSection(metrics: ReportMetricsState) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 if (metrics.bestDay != null) {
-                    val bestDate = metrics.bestDay.dateString.ifBlank { fallbackShift }
+                    val bestDate = formatHighlightDate(metrics.bestDay.dateTimestamp, metrics.bestDay.dateString, fallbackShift)
 
                     Card(
                         modifier = Modifier.weight(1f),
@@ -219,7 +238,7 @@ fun ReportsHighlightsSection(metrics: ReportMetricsState) {
                 }
 
                 if (metrics.worstDay != null) {
-                    val worstDate = metrics.worstDay.dateString.ifBlank { fallbackShift }
+                    val worstDate = formatHighlightDate(metrics.worstDay.dateTimestamp, metrics.worstDay.dateString, fallbackShift)
 
                     Card(
                         modifier = Modifier.weight(1f),

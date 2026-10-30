@@ -3,11 +3,15 @@ package com.example
 import android.app.Application
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.DailyRecord
 import com.example.data.Vehicle
 import com.example.ui.GiroCustoViewModel
+import com.example.ui.Period
 import com.example.ui.screens.ReportsScreen
 import com.example.ui.theme.MyApplicationTheme
 import androidx.compose.foundation.layout.Box
@@ -16,11 +20,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.ui.ReportMetricsState
 import com.example.ui.screens.reports.*
+import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Calendar
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -326,5 +332,170 @@ class ReportsScreenRenderingTest {
             ReportsHighlightsSection(metrics = stateWithNaN)
         }
         composeTestRule.waitForIdle()
+    }
+
+    @Test
+    fun testHighlightsSection_formatsDatesInBrazilianFormat() {
+        val calBest = Calendar.getInstance().apply {
+            set(2026, Calendar.OCTOBER, 25, 12, 0, 0)
+        }
+        val calWorst = Calendar.getInstance().apply {
+            set(2026, Calendar.OCTOBER, 18, 12, 0, 0)
+        }
+
+        val bestRecord = DailyRecord(
+            id = 1L,
+            dateString = "2026-10-25",
+            dateTimestamp = calBest.timeInMillis,
+            grossEarnings = 35000L,
+            deliveriesCount = 15,
+            startOdometer = 1000.0,
+            endOdometer = 1100.0,
+            fuelPrice = 5890L,
+            foodExpense = 2000L,
+            fuelCost = 3000L,
+            wearCost = 1000L,
+            proportionalFixedCost = 500L,
+            netProfit = 28500L
+        )
+
+        val worstRecord = DailyRecord(
+            id = 2L,
+            dateString = "2026-10-18",
+            dateTimestamp = calWorst.timeInMillis,
+            grossEarnings = 8000L,
+            deliveriesCount = 3,
+            startOdometer = 1100.0,
+            endOdometer = 1130.0,
+            fuelPrice = 5890L,
+            foodExpense = 1000L,
+            fuelCost = 1500L,
+            wearCost = 500L,
+            proportionalFixedCost = 500L,
+            netProfit = 4500L
+        )
+
+        val state = ReportMetricsState(
+            bestDay = bestRecord,
+            worstDay = worstRecord
+        )
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                ReportsHighlightsSection(metrics = state)
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("25/10/2026", substring = true).assertExists()
+        composeTestRule.onNodeWithText("18/10/2026", substring = true).assertExists()
+    }
+
+    @Test
+    fun testProductivityBarColors_lighterBarHasEnhancedVisibleContrast() {
+        // Emerald Light: gross is dark green (0xFF059669), net is lighter green (0xFF10B981)
+        val grossBase = Color(0xFF059669)
+        val netBase = Color(0xFF10B981)
+        val (darkerGross, lighterNet) = getProductivityBarColors(grossBase, netBase)
+
+        // Barra mais clara deve ter luminância aumentada em relação à original
+        assertTrue(lighterNet.luminance() > netBase.luminance())
+        // Não deve ser totalmente clara / branca
+        assertTrue(lighterNet.luminance() < 0.90f)
+        // Diferença perceptível de contraste entre as barras
+        assertTrue(Math.abs(lighterNet.luminance() - darkerGross.luminance()) >= 0.15f)
+
+        // Caso onde ambas as cores de entrada são idênticas (ex.: Emerald Dark base)
+        val (darkerSame, lighterSame) = getProductivityBarColors(Color(0xFF10B981), Color(0xFF10B981))
+        assertNotEquals(darkerSame, lighterSame)
+        assertTrue(lighterSame.luminance() > darkerSame.luminance())
+    }
+
+    @Test
+    fun testProductivityComparisonChart_barClickDisplaysDateAndValue() {
+        val cal = Calendar.getInstance().apply {
+            set(2026, Calendar.OCTOBER, 29, 10, 0, 0)
+        }
+        val record = DailyRecord(
+            id = 1L,
+            dateString = "2026-10-29",
+            dateTimestamp = cal.timeInMillis,
+            grossEarnings = 25000L, // R$ 250,00
+            deliveriesCount = 10,
+            startOdometer = 1000.0,
+            endOdometer = 1080.0,
+            fuelPrice = 5890L,
+            foodExpense = 2000L,
+            fuelCost = 4000L,
+            wearCost = 1000L,
+            proportionalFixedCost = 500L,
+            netProfit = 17500L // R$ 175,00
+        )
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                ProductivityComparisonChart(records = listOf(record))
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Clica na barra para acionar a dinâmica
+        composeTestRule.onNodeWithTag("theme_toggle_btn_reports", useUnmergedTree = true).assertDoesNotExist()
+        // Clica no gráfico
+        composeTestRule.onNodeWithText("R$ 250,00", substring = true).assertDoesNotExist()
+
+        // Dispara clique sobre o componente do gráfico
+        composeTestRule.onNodeWithText("Faturamento vs Lucro Líquido", substring = true).assertDoesNotExist()
+
+        // Dispara clique sobre o Canvas do gráfico
+        composeTestRule.onNodeWithTag("productivity_chart_canvas").performClick()
+        composeTestRule.waitForIdle()
+
+        // Deve exibir a data no formato brasileiro e o valor
+        composeTestRule.onNodeWithText("29/10/2026", substring = true).assertExists()
+    }
+
+    @Test
+    fun testChronologicalRecords_includesAllRecordsInFilteredPeriodWithoutTake7Limit() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val viewModel = GiroCustoViewModel(app)
+
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.DAY_OF_MONTH, 2)
+            set(Calendar.HOUR_OF_DAY, 12)
+        }
+        val baseTs = cal.timeInMillis
+
+        // Cria 10 registros distribuídos no mesmo mês
+        val testRecords = (1..10).map { i ->
+            DailyRecord(
+                id = i.toLong(),
+                dateString = "2026-10-%02d".format(i + 1),
+                dateTimestamp = baseTs + (i * 24L * 60 * 60 * 1000),
+                grossEarnings = 10000L * i,
+                deliveriesCount = 5,
+                startOdometer = 1000.0 + (i * 20),
+                endOdometer = 1020.0 + (i * 20),
+                fuelPrice = 5890L,
+                foodExpense = 1000L,
+                fuelCost = 1000L,
+                wearCost = 500L,
+                proportionalFixedCost = 500L,
+                netProfit = 7000L * i
+            )
+        }
+
+        val metrics = viewModel.calculateReportMetrics(
+            records = testRecords,
+            maintenanceRecords = emptyList(),
+            selectedPeriod = Period.MENSAL,
+            customStart = 0L,
+            customEnd = 0L,
+            plannedWorkDays = 22,
+            monthlyGoalNet = 3000.0
+        )
+
+        assertEquals(10, metrics.recordsCount)
+        assertEquals(10, metrics.chronologicalRecords.size)
     }
 }

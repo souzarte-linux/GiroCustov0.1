@@ -64,10 +64,9 @@ fun ReportsScreen(
     val monthlyNGoal by viewModel.monthlyGoalNet.collectAsStateWithLifecycle()
     val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
 
-    val metrics = remember(records, maintenanceRecords, selectedPeriod, customStart, customEnd, monthlyNGoal, viewModelMetrics, vehicle?.plannedWorkDays) {
+    val metrics = remember(records, maintenanceRecords, selectedPeriod, customStart, customEnd, monthlyNGoal, vehicle?.plannedWorkDays, viewModelMetrics) {
         try {
-            if (records.isNotEmpty() && viewModelMetrics.recordsCount == 0) {
-                // Suporte para quando uma lista específica é passada diretamente (ex.: testes ou previews isolados)
+            if (records.isNotEmpty()) {
                 viewModel.calculateReportMetrics(
                     records = records,
                     maintenanceRecords = maintenanceRecords,
@@ -307,7 +306,16 @@ fun ReportsScreen(
                             horizontalArrangement = if (metrics.chronologicalRecords.size <= 1) Arrangement.Center else Arrangement.SpaceBetween
                         ) {
                             val displayFormat = remember { SimpleDateFormat("dd/MM", Locale.getDefault()) }
-                            metrics.chronologicalRecords.forEach { record ->
+                            val displayedRecords = remember(metrics.chronologicalRecords) {
+                                if (metrics.chronologicalRecords.size <= 7) {
+                                    metrics.chronologicalRecords
+                                } else {
+                                    val size = metrics.chronologicalRecords.size
+                                    val indices = listOf(0, size / 4, size / 2, 3 * size / 4, size - 1).distinct()
+                                    indices.map { metrics.chronologicalRecords[it] }
+                                }
+                            }
+                            displayedRecords.forEach { record ->
                                 val cal = remember(record.dateTimestamp) {
                                     Calendar.getInstance().apply { timeInMillis = record.dateTimestamp }
                                 }
@@ -352,37 +360,39 @@ fun ReportsScreen(
                         text = stringResource(R.string.reports_chart_productivity_title),
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 14.sp
+                        fontSize = 16.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Text(
                         text = stringResource(R.string.reports_chart_productivity_subtitle),
                         fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     if (metrics.chronologicalRecords.isNotEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(160.dp)
-                        ) {
-                            ProductivityComparisonChart(records = metrics.chronologicalRecords)
-                        }
+                        ProductivityComparisonChart(records = metrics.chronologicalRecords)
 
                         Spacer(modifier = Modifier.height(12.dp))
 
+                        val (legendGross, legendNet) = getProductivityBarColors(
+                            MaterialTheme.colorScheme.secondary,
+                            MaterialTheme.colorScheme.primary
+                        )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(modifier = Modifier.size(10.dp).background(MaterialTheme.colorScheme.secondary))
+                            Box(modifier = Modifier.size(10.dp).background(legendGross))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(stringResource(R.string.reports_legend_gross), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.width(16.dp))
-                            Box(modifier = Modifier.size(10.dp).background(MaterialTheme.colorScheme.primary))
+                            Box(modifier = Modifier.size(10.dp).background(legendNet))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(stringResource(R.string.reports_legend_net), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
