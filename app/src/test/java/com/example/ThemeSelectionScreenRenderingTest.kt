@@ -196,4 +196,38 @@ class ThemeSelectionScreenRenderingTest {
 
         assertEquals(DrawerDestination.TEMAS, selectedDestination)
     }
+
+    @Test
+    fun testAppDrawer_scrollableAndThemesItemDisplayed() {
+        var selectedDestination: DrawerDestination = DrawerDestination.NONE
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                val drawerState = androidx.compose.material3.rememberDrawerState(
+                    initialValue = androidx.compose.material3.DrawerValue.Open
+                )
+                AppDrawer(
+                    drawerState = drawerState,
+                    selectedDestination = selectedDestination,
+                    onDestinationSelected = { selectedDestination = it },
+                    content = {}
+                )
+            }
+        }
+
+        composeTestRule.waitForIdle()
+
+        // 1. Valida que o container do Drawer é rolável (hasScrollAction)
+        composeTestRule.onNode(hasScrollAction()).assertExists()
+
+        // 2. Valida que o item de temas existe e está visível
+        composeTestRule.onNodeWithTag("drawer_item_themes")
+            .assertExists()
+            .assertIsDisplayed()
+
+        // 3. Valida que o item possui o rótulo claro e destacado "Temas e Aparência"
+        composeTestRule.onNodeWithText("Temas e Aparência")
+            .assertExists()
+            .assertIsDisplayed()
+    }
 }

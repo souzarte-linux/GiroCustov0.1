@@ -1,6 +1,8 @@
 package com.example.ui.navigation
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -29,13 +31,18 @@ fun AppDrawer(
     onDestinationSelected: (DrawerDestination) -> Unit,
     content: @Composable () -> Unit
 ) {
+    val scrollState = rememberScrollState()
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
                 drawerContainerColor = MaterialTheme.colorScheme.surface,
                 drawerContentColor = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.width(280.dp)
+                modifier = Modifier
+                    .width(280.dp)
+                    .fillMaxHeight()
+                    .verticalScroll(scrollState)
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
@@ -109,6 +116,29 @@ fun AppDrawer(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline)
 
+                Text(
+                    text = stringResource(R.string.drawer_section_settings_appearance),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp),
+                    letterSpacing = 1.sp
+                )
+
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Filled.Palette, contentDescription = stringResource(R.string.theme_drawer_item)) },
+                    label = { Text(stringResource(R.string.theme_drawer_item)) },
+                    selected = selectedDestination == DrawerDestination.TEMAS,
+                    onClick = { onDestinationSelected(DrawerDestination.TEMAS) },
+                    modifier = Modifier
+                        .padding(NavigationDrawerItemDefaults.ItemPadding)
+                        .testTag("drawer_item_themes"),
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Filled.Cloud, contentDescription = "Nuvem & Backup") },
                     label = { Text("Nuvem & Backup") },
@@ -124,20 +154,7 @@ fun AppDrawer(
                     )
                 )
 
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Filled.Palette, contentDescription = stringResource(R.string.theme_screen_title)) },
-                    label = { Text(stringResource(R.string.theme_screen_title)) },
-                    selected = selectedDestination == DrawerDestination.TEMAS,
-                    onClick = { onDestinationSelected(DrawerDestination.TEMAS) },
-                    modifier = Modifier
-                        .padding(NavigationDrawerItemDefaults.ItemPadding)
-                        .testTag("drawer_item_themes"),
-                    colors = NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                        selectedTextColor = MaterialTheme.colorScheme.primary
-                    )
-                )
+                Spacer(modifier = Modifier.height(32.dp))
             }
         },
         content = content

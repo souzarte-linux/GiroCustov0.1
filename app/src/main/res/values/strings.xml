@@ -653,6 +653,7 @@
     <!-- Temas Visuais (T-THEME-01) -->
     <string name="theme_screen_title">Temas</string>
     <string name="theme_screen_title_full">Temas do GiroCusto</string>
+    <string name="theme_drawer_item">Temas e Aparência</string>
     <string name="theme_screen_subtitle">Personalize as cores para melhor visualização na rua, sob sol forte ou à noite.</string>
     <string name="theme_preview_title">Prévia em Tempo Real</string>
     <string name="theme_preview_metric_label">LUCRO LÍQUIDO (HOJE)</string>
@@ -687,4 +688,5 @@
 
     <string name="cd_theme_select">Selecionar tema %1$s</string>
     <string name="cd_theme_selected">Tema %1$s selecionado atualmente</string>
+    <string name="drawer_section_settings_appearance">CONFIGURAÇÕES &amp; APARÊNCIA</string>
 </resources>
