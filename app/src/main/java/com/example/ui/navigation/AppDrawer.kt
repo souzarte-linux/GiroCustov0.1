@@ -7,8 +7,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 
 enum class DrawerDestination {
     NONE,
@@ -16,7 +18,8 @@ enum class DrawerDestination {
     PLATAFORMAS,
     ABASTECIMENTOS,
     MANUTENCAO,
-    NUVEM
+    NUVEM,
+    TEMAS
 }
 
 @Composable
@@ -114,6 +117,21 @@ fun AppDrawer(
                     modifier = Modifier
                         .padding(NavigationDrawerItemDefaults.ItemPadding)
                         .testTag("drawer_item_cloud_sync"),
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Filled.Palette, contentDescription = stringResource(R.string.theme_screen_title)) },
+                    label = { Text(stringResource(R.string.theme_screen_title)) },
+                    selected = selectedDestination == DrawerDestination.TEMAS,
+                    onClick = { onDestinationSelected(DrawerDestination.TEMAS) },
+                    modifier = Modifier
+                        .padding(NavigationDrawerItemDefaults.ItemPadding)
+                        .testTag("drawer_item_themes"),
                     colors = NavigationDrawerItemDefaults.colors(
                         selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                         selectedIconColor = MaterialTheme.colorScheme.primary,

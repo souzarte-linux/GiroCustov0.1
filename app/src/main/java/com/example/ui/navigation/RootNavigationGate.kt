@@ -12,48 +12,52 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.GiroCustoViewModel
 import com.example.ui.screens.AuthGateScreen
 import com.example.ui.screens.OnboardingProfileScreen
+import com.example.ui.theme.MyApplicationTheme
 
 @Composable
 fun RootNavigationGate(viewModel: GiroCustoViewModel) {
     val navState by viewModel.rootNavState.collectAsStateWithLifecycle()
+    val currentTheme by viewModel.currentTheme.collectAsStateWithLifecycle()
+    val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
 
-    Crossfade(
-        targetState = navState,
-        animationSpec = tween(durationMillis = 350),
-        label = "root_navigation_crossfade"
-    ) { state ->
-        when (state) {
-            RootNavState.Initializing -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(48.dp),
-                        color = Color(0xFF10B981),
-                        strokeWidth = 3.dp
-                    )
+    MyApplicationTheme(appTheme = currentTheme, darkTheme = isDark) {
+        Crossfade(
+            targetState = navState,
+            animationSpec = tween(durationMillis = 350),
+            label = "root_navigation_crossfade"
+        ) { state ->
+            when (state) {
+                RootNavState.Initializing -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(48.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 3.dp
+                        )
+                    }
                 }
-            }
-            RootNavState.BiometricLocked -> {
-                AuthGateScreen(viewModel = viewModel, isBiometricLocked = true)
-            }
-            RootNavState.Unauthenticated -> {
-                AuthGateScreen(viewModel = viewModel, isBiometricLocked = false)
-            }
-            RootNavState.OnboardingPending -> {
-                OnboardingProfileScreen(viewModel = viewModel)
-            }
-            RootNavState.AuthenticatedReady -> {
-                GiroCustoMainApp(viewModel = viewModel)
+                RootNavState.BiometricLocked -> {
+                    AuthGateScreen(viewModel = viewModel, isBiometricLocked = true)
+                }
+                RootNavState.Unauthenticated -> {
+                    AuthGateScreen(viewModel = viewModel, isBiometricLocked = false)
+                }
+                RootNavState.OnboardingPending -> {
+                    OnboardingProfileScreen(viewModel = viewModel)
+                }
+                RootNavState.AuthenticatedReady -> {
+                    GiroCustoMainApp(viewModel = viewModel)
+                }
             }
         }
     }

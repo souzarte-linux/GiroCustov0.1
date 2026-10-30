@@ -11,6 +11,7 @@ import com.example.network.supabase.*
 import com.example.network.viacep.*
 import com.example.ui.delegates.*
 import com.example.ui.navigation.RootNavState
+import com.example.ui.theme.AppTheme
 import com.example.util.BiometricHelper
 import com.example.util.CurrencyUtils
 import kotlinx.coroutines.flow.*
@@ -212,7 +213,10 @@ class GiroCustoViewModel @JvmOverloads constructor(
     val monthlyGoalDeliveries: MutableStateFlow<Int> get() = goalsCoordinator.monthlyGoalDeliveries
 
     val isDarkTheme: MutableStateFlow<Boolean> get() = goalsCoordinator.isDarkTheme
+    val currentTheme: StateFlow<AppTheme> get() = goalsCoordinator.currentTheme
     fun toggleTheme() = goalsCoordinator.toggleTheme()
+    fun setAppTheme(theme: AppTheme) = goalsCoordinator.setAppTheme(theme)
+    fun setDarkTheme(isDark: Boolean) = goalsCoordinator.setDarkTheme(isDark)
     fun updateGoals(
         dailyG: Double, dailyN: Double, dailyK: Double, dailyD: Int,
         weeklyG: Double, weeklyN: Double, weeklyK: Double, weeklyD: Int,

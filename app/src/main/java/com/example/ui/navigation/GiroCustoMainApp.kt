@@ -38,6 +38,8 @@ import com.example.ui.screens.ProfileScreen
 import com.example.ui.screens.PlatformsScreen
 import com.example.ui.screens.FuelRefillsScreen
 import com.example.ui.screens.MaintenanceScreen
+import com.example.ui.screens.ThemeSelectionScreen
+import com.example.ui.theme.getThemeColorScheme
 import kotlinx.coroutines.launch
 
 enum class GiroTab(val title: String, val icon: ImageVector) {
@@ -60,6 +62,7 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
     val parts by viewModel.parts.collectAsStateWithLifecycle()
     val records by viewModel.records.collectAsStateWithLifecycle()
     val maintenanceRecords by viewModel.maintenanceRecords.collectAsStateWithLifecycle()
+    val currentTheme by viewModel.currentTheme.collectAsStateWithLifecycle()
     val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
@@ -68,46 +71,8 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
     val showClaimConfirm by viewModel.showClaimDataConfirmationDialog.collectAsStateWithLifecycle()
     val isSwitchingAccount by viewModel.isAccountSwitching.collectAsStateWithLifecycle()
 
-    // Configuração de Paleta de Cores do GiroCusto (Professional Dark charcoal and Emerald green theme, or soft slate light theme)
-    val customColorScheme = if (isDark) {
-        darkColorScheme(
-            primary = Color(0xFF10B981), // Emerald green brand color
-            onPrimary = Color(0xFF064E3B), // Dark green on emerald
-            primaryContainer = Color(0xFF064E3B), // Dark green container
-            onPrimaryContainer = Color(0xFF34D399), // Soft green text
-            secondary = Color(0xFF10B981), 
-            onSecondary = Color(0xFF064E3B),
-            secondaryContainer = Color(0xFF022C22),
-            onSecondaryContainer = Color(0xFF6EE7B7),
-            background = Color(0xFF121214), // Charcoal black
-            surface = Color(0xFF1E1E22), // Charcoal card surface
-            onBackground = Color(0xFFF1F5F9), // Slate-100
-            onSurface = Color(0xFFE2E8F0), // Slate-200
-            error = Color(0xFFF43F5E), // Rose-500
-            onError = Color.White,
-            outline = Color(0xFF2D2D34), // Zinc/charcoal border
-            onSurfaceVariant = Color(0xFF94A3B8)
-        )
-    } else {
-        lightColorScheme(
-            primary = Color(0xFF10B981), // Emerald green brand color
-            onPrimary = Color.White,
-            primaryContainer = Color(0xFFD1FAE5), // Soft green container
-            onPrimaryContainer = Color(0xFF065F46), // Dark green text
-            secondary = Color(0xFF059669),
-            onSecondary = Color.White,
-            secondaryContainer = Color(0xFFECFDF5),
-            onSecondaryContainer = Color(0xFF047857),
-            background = Color(0xFFF8FAFC), // soft slate 50
-            surface = Color.White, // pure white cards
-            onBackground = Color(0xFF0F172A), // Slate-900
-            onSurface = Color(0xFF1E293B), // Slate-800
-            error = Color(0xFFE11D48),
-            onError = Color.White,
-            outline = Color(0xFFE2E8F0), // Slate-200 border
-            onSurfaceVariant = Color(0xFF64748B)
-        )
-    }
+    // Resolução de Tema Dinâmico GiroCusto (4 temas personalizáveis com modo Claro/Escuro)
+    val customColorScheme = getThemeColorScheme(currentTheme, isDark)
 
     val currentScreen = remember(currentTab, drawerDestination) {
         if (drawerDestination != DrawerDestination.NONE) {
@@ -140,6 +105,7 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
                                         DrawerDestination.ABASTECIMENTOS -> "Abastecimentos"
                                         DrawerDestination.MANUTENCAO -> "Manutenção"
                                         DrawerDestination.NUVEM -> "Nuvem & Backup"
+                                        DrawerDestination.TEMAS -> "Temas"
                                         GiroTab.PAINEL -> "Painel"
                                         GiroTab.LANCAR -> "Lançar"
                                         GiroTab.RELATORIOS -> "Relatórios"
@@ -225,11 +191,11 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
                                         )
                                     },
                                     colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = Color(0xFF10B981),
-                                        selectedTextColor = Color(0xFF10B981),
+                                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                                        selectedTextColor = MaterialTheme.colorScheme.primary,
                                         unselectedIconColor = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8), // slate-500 or slate-400
                                         unselectedTextColor = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8),
-                                        indicatorColor = if (isDark) Color(0xFF064E3B) else Color(0xFFD1FAE5) // soft dark/light emerald capsule
+                                        indicatorColor = MaterialTheme.colorScheme.primaryContainer
                                     ),
                                     modifier = Modifier.testTag("nav_tab_${tab.name.lowercase()}")
                                 )
@@ -256,6 +222,10 @@ fun GiroCustoMainApp(viewModel: GiroCustoViewModel) {
                                 DrawerDestination.ABASTECIMENTOS -> FuelRefillsScreen(viewModel)
                                 DrawerDestination.MANUTENCAO -> MaintenanceScreen(viewModel)
                                 DrawerDestination.NUVEM -> CloudSyncScreen(viewModel, onNavigateBack = { drawerDestination = DrawerDestination.NONE })
+                                DrawerDestination.TEMAS -> ThemeSelectionScreen(
+                                    viewModel = viewModel,
+                                    onNavigateBack = { drawerDestination = DrawerDestination.NONE }
+                                )
                                 GiroTab.PAINEL -> DashboardScreen(
                                     viewModel = viewModel,
                                     vehicle = vehicle,

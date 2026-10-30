@@ -649,4 +649,42 @@
     <string name="onboarding_error_name_required">O nome completo é obrigatório.</string>
     <string name="onboarding_error_phone_required">O telefone para contato é obrigatório.</string>
     <string name="onboarding_error_cep_invalid">Informe um CEP válido com 8 dígitos.</string>
+
+    <!-- Temas Visuais (T-THEME-01) -->
+    <string name="theme_screen_title">Temas</string>
+    <string name="theme_screen_title_full">Temas do GiroCusto</string>
+    <string name="theme_screen_subtitle">Personalize as cores para melhor visualização na rua, sob sol forte ou à noite.</string>
+    <string name="theme_preview_title">Prévia em Tempo Real</string>
+    <string name="theme_preview_metric_label">LUCRO LÍQUIDO (HOJE)</string>
+    <string name="theme_preview_metric_value">R$ 184,50</string>
+    <string name="theme_preview_chip">Meta Diária +38%</string>
+    <string name="theme_preview_button">Nova Corrida</string>
+    <string name="theme_preview_details">R$ 2,45 / km • 68 km rodados</string>
+
+    <string name="theme_dark_mode_title">Modo Escuro (Noturno)</string>
+    <string name="theme_dark_mode_desc">Fundo escuro para economia de bateria e conforto visual à noite.</string>
+
+    <string name="theme_section_palette">ESCOLHA SUA PALETA DE CORES</string>
+    <string name="theme_badge_default">PADRÃO</string>
+
+    <string name="theme_emerald_name">Esmeralda GiroCusto</string>
+    <string name="theme_emerald_desc">Identidade original em verde esmeralda e carvão. Equilíbrio ótimo para produtividade diária.</string>
+
+    <string name="theme_electric_name">Electric Kinetic</string>
+    <string name="theme_electric_desc">Telemetria de alta performance com azul elétrico e ciano sobre chassi preto puro anti-reflexo.</string>
+
+    <string name="theme_titan_name">Titan Amber Telematics</string>
+    <string name="theme_titan_desc">Cockpit industrial em titânio com âmbar enérgico e laranja corrida. Máxima legibilidade contra sol direto.</string>
+
+    <string name="theme_orchid_name">Orchid Glint</string>
+    <string name="theme_orchid_desc">Estética brutalista com orquídea fúcsia luminescente e hortelã neon sobre obsidiana violeta profunda.</string>
+
+    <string name="theme_solar_nautico_name">Solar &amp; Náutico</string>
+    <string name="theme_solar_nautico_desc">Azul náutico profundo e realces solares de alta visibilidade sob claridade externa intensa.</string>
+
+    <string name="cd_theme_dark_mode_enabled">Modo escuro ativado. Toque duas vezes para desativar.</string>
+    <string name="cd_theme_dark_mode_disabled">Modo escuro desativado. Toque duas vezes para ativar.</string>
+
+    <string name="cd_theme_select">Selecionar tema %1$s</string>
+    <string name="cd_theme_selected">Tema %1$s selecionado atualmente</string>
 </resources>

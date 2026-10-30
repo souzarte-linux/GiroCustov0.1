@@ -669,8 +669,8 @@ class VehicleAndFipeIntegrationTest {
     fun testDrawerDestination_doesNotContainVeiculo() {
         val destinations = DrawerDestination.values().map { it.name }
 
-        // Deve conter exatamente NONE e os 5 destinos válidos
-        val expectedDestinations = listOf("NONE", "PERFIL", "PLATAFORMAS", "ABASTECIMENTOS", "MANUTENCAO", "NUVEM")
+        // Deve conter exatamente NONE e os 6 destinos operacionais válidos (incluindo TEMAS)
+        val expectedDestinations = listOf("NONE", "PERFIL", "PLATAFORMAS", "ABASTECIMENTOS", "MANUTENCAO", "NUVEM", "TEMAS")
         assertEquals(expectedDestinations.sorted(), destinations.sorted())
 
         // Assegurar explicitamente que VEICULO foi removido do DrawerDestination

@@ -5,6 +5,7 @@ import android.content.Context
 import com.example.data.GiroCustoRepository
 import com.example.data.UserGoals
 import com.example.network.supabase.SupabaseClient
+import com.example.ui.theme.AppTheme
 import com.example.util.CurrencyUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,6 +54,23 @@ class GoalsAndThemeCoordinator(
         val newVal = !isDarkTheme.value
         isDarkTheme.value = newVal
         appPrefs.edit().putBoolean("is_dark_theme", newVal).apply()
+    }
+
+    private fun getInitialThemeSelection(): AppTheme {
+        val savedId = appPrefs.getString("selected_app_theme", AppTheme.EMERALD_GIROCUSTO.id)
+        return AppTheme.fromId(savedId)
+    }
+
+    val currentTheme = MutableStateFlow(getInitialThemeSelection())
+
+    fun setAppTheme(theme: AppTheme) {
+        currentTheme.value = theme
+        appPrefs.edit().putString("selected_app_theme", theme.id).apply()
+    }
+
+    fun setDarkTheme(isDark: Boolean) {
+        isDarkTheme.value = isDark
+        appPrefs.edit().putBoolean("is_dark_theme", isDark).apply()
     }
 
     init {
