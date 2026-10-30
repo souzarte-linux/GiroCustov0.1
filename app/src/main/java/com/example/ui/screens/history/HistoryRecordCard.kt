@@ -44,6 +44,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -89,19 +92,22 @@ fun HistoryRecordCard(
             .clickable { expanded = !expanded },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, brandColor.copy(alpha = 0.35f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            // Friso lateral esquerdo de 4dp na cor da plataforma
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .matchParentSize()
-                    .align(Alignment.CenterStart)
-                    .background(brandColor)
-            )
-
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .drawBehind {
+                    // Friso lateral esquerdo de 4dp na cor da plataforma
+                    drawRect(
+                        color = brandColor,
+                        topLeft = Offset.Zero,
+                        size = Size(4.dp.toPx(), size.height)
+                    )
+                }
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
