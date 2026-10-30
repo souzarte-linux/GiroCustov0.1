@@ -614,4 +614,39 @@
     <string name="maintenance_toast_error_desc">Por favor, digite uma descrição.</string>
     <string name="maintenance_toast_error_value">Por favor, insira um valor pago válido.</string>
     <string name="maintenance_toast_error_odometer">Por favor, insira um odômetro válido.</string>
+
+    <!-- Onboarding - Primeiro Cadastro (T-29) -->
+    <string name="onboarding_step_badge">PASSO 1 DE 1 • CONFIGURAÇÃO INICIAL</string>
+    <string name="onboarding_title">Complete seu Cadastro</string>
+    <string name="onboarding_subtitle">Esses dados garantem o cálculo regional exato de combustível e personalizam seus relatórios de rendimento.</string>
+    <string name="onboarding_section_personal">1. Dados Pessoais &amp; Contato</string>
+    <string name="onboarding_name_label">Nome Completo</string>
+    <string name="onboarding_name_placeholder">ex: Carlos Silva</string>
+    <string name="onboarding_phone_label">Telefone de Contato</string>
+    <string name="onboarding_phone_placeholder">(11) 98765-4321</string>
+    <string name="onboarding_whatsapp_title">Este número é WhatsApp?</string>
+    <string name="onboarding_whatsapp_desc">Para relatórios diários e alertas de manutenção</string>
+    <string name="onboarding_whatsapp_icon_desc">WhatsApp</string>
+    <string name="onboarding_section_address">2. Localização &amp; Endereço</string>
+    <string name="onboarding_cep_label">CEP Residencial</string>
+    <string name="onboarding_cep_placeholder">01001-000</string>
+    <string name="onboarding_cd_cep_found">CEP Localizado</string>
+    <string name="onboarding_cd_cep_error">Erro no CEP</string>
+    <string name="onboarding_cd_cep_search">Buscar CEP</string>
+    <string name="onboarding_cep_manual_action">Não sei meu CEP / Preencher manual</string>
+    <string name="onboarding_cep_success_banner">Endereço localizado e preenchido automaticamente!</string>
+    <string name="onboarding_street_label">Rua / Avenida</string>
+    <string name="onboarding_street_placeholder">ex: Av. Paulista</string>
+    <string name="onboarding_neighborhood_label">Bairro</string>
+    <string name="onboarding_neighborhood_placeholder">ex: Bela Vista</string>
+    <string name="onboarding_number_label">Número e Complemento</string>
+    <string name="onboarding_number_placeholder">ex: 1000, Apto 42</string>
+    <string name="onboarding_city_label">Cidade</string>
+    <string name="onboarding_city_placeholder">São Paulo</string>
+    <string name="onboarding_uf_label">UF</string>
+    <string name="onboarding_uf_placeholder">SP</string>
+    <string name="onboarding_btn_save">Salvar e Acessar o GiroCusto</string>
+    <string name="onboarding_error_name_required">O nome completo é obrigatório.</string>
+    <string name="onboarding_error_phone_required">O telefone para contato é obrigatório.</string>
+    <string name="onboarding_error_cep_invalid">Informe um CEP válido com 8 dígitos.</string>
 </resources>
