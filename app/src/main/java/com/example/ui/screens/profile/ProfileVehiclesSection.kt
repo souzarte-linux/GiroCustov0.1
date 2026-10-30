@@ -82,7 +82,7 @@ internal fun MyVehiclesSection(
                         Icon(
                             imageVector = Icons.Filled.TwoWheeler,
                             contentDescription = null,
-                            tint = Color(0xFF64748B),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(44.dp)
                         )
                         Text(

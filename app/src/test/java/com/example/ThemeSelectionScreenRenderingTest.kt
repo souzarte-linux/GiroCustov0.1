@@ -39,6 +39,8 @@ class ThemeSelectionScreenRenderingTest {
         val context = ApplicationProvider.getApplicationContext<Application>()
         db = Room.inMemoryDatabaseBuilder(context, GiroCustoDatabase::class.java)
             .allowMainThreadQueries()
+            .setQueryExecutor { it.run() }
+            .setTransactionExecutor { it.run() }
             .build()
         GiroCustoDatabase.setTestDatabase(db)
         repository = GiroCustoRepository(db)

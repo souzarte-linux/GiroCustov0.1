@@ -95,9 +95,9 @@ fun LaunchOdometerSection(
         when (val dist = distanceState) {
             is LaunchDistanceState.Valid -> {
                 Surface(
-                    color = if (isDark) Color(0xFF064E3B).copy(alpha = 0.4f) else Color(0xFFD1FAE5),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                     shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.5f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
                     modifier = Modifier.fillMaxWidth().testTag("dynamic_distance_badge")
                 ) {
                     Row(
@@ -112,14 +112,14 @@ fun LaunchOdometerSection(
                             Icon(
                                 imageVector = Icons.Filled.DirectionsCar,
                                 contentDescription = stringResource(R.string.cd_launch_distance_travelled),
-                                tint = Color(0xFF10B981),
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp)
                             )
                             Text(
                                 text = stringResource(R.string.launch_distance_calculated_label),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = if (isDark) Color(0xFFE2E8F0) else Color(0xFF0F172A)
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                         Text(
@@ -127,16 +127,16 @@ fun LaunchOdometerSection(
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,
-                            color = Color(0xFF10B981)
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
             }
             is LaunchDistanceState.NegativeError -> {
                 Surface(
-                    color = if (isDark) Color(0xFF7F1D1D).copy(alpha = 0.3f) else Color(0xFFFEE2E2),
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
                     shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
                     modifier = Modifier.fillMaxWidth().testTag("dynamic_distance_badge_error")
                 ) {
                     Row(
@@ -147,14 +147,14 @@ fun LaunchOdometerSection(
                         Icon(
                             imageVector = Icons.Filled.Warning,
                             contentDescription = stringResource(R.string.cd_launch_odometer_error),
-                            tint = Color(0xFFEF4444),
+                            tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = stringResource(R.string.launch_distance_odometer_error),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFEF4444)
+                            color = MaterialTheme.colorScheme.onErrorContainer
                         )
                     }
                 }

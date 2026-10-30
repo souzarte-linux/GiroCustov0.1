@@ -28,18 +28,18 @@ fun PlatformBankingCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color(0xFF2D2D34))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text("Dados de recebimento", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Text("Dados de recebimento", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Instituição financeira", fontSize = 13.sp, color = Color(0xFF94A3B8))
+                Text("Instituição financeira", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TextField(
                     value = bankName,
                     onValueChange = onBankNameChange,
@@ -59,7 +59,7 @@ fun PlatformBankingCard(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text("Agência", fontSize = 13.sp, color = Color(0xFF94A3B8))
+                    Text("Agência", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     TextField(
                         value = bankAgency,
                         onValueChange = onBankAgencyChange,
@@ -75,7 +75,7 @@ fun PlatformBankingCard(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text("Conta", fontSize = 13.sp, color = Color(0xFF94A3B8))
+                    Text("Conta", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     TextField(
                         value = bankAccount,
                         onValueChange = onBankAccountChange,
@@ -102,15 +102,15 @@ fun PlatformPixCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color(0xFF2D2D34))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text("Chave PIX", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Text("Chave PIX", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -122,15 +122,15 @@ fun PlatformPixCard(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFF2D2D34), RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
                             .clickable { pixExpanded = true }
                             .padding(horizontal = 12.dp, vertical = 14.dp)
                             .testTag("pix_type_selector"),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(pixKeyType, color = Color.White, fontSize = 14.sp)
-                        Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = Color.White)
+                        Text(pixKeyType, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                        Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
 
                     DropdownMenu(

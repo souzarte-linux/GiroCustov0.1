@@ -28,26 +28,26 @@ fun FuelComparisonCard(
 ) {
     val (statusColor, containerBg, badgeBg, badgeTextColor, statusLabel, icon) = when (fuelComparison.alertLevel) {
         ConsumptionAlertLevel.GREEN -> StatusStyle(
-            borderColor = Color(0xFF10B981),
-            containerColor = Color(0xFF064E3B).copy(alpha = 0.15f),
-            badgeColor = Color(0xFF064E3B),
-            badgeTextColor = Color(0xFF34D399),
+            borderColor = MaterialTheme.colorScheme.tertiary,
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+            badgeColor = MaterialTheme.colorScheme.tertiaryContainer,
+            badgeTextColor = MaterialTheme.colorScheme.onTertiaryContainer,
             label = stringResource(R.string.fuel_comparison_status_excellent),
             icon = Icons.Filled.CheckCircle
         )
         ConsumptionAlertLevel.AMBER -> StatusStyle(
-            borderColor = Color(0xFFF59E0B),
-            containerColor = Color(0xFF78350F).copy(alpha = 0.15f),
-            badgeColor = Color(0xFF78350F),
-            badgeTextColor = Color(0xFFFBBF24),
+            borderColor = MaterialTheme.colorScheme.secondary,
+            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+            badgeColor = MaterialTheme.colorScheme.secondaryContainer,
+            badgeTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
             label = stringResource(R.string.fuel_comparison_status_moderate),
             icon = Icons.Filled.Warning
         )
         ConsumptionAlertLevel.RED -> StatusStyle(
-            borderColor = Color(0xFFEF4444),
-            containerColor = Color(0xFF7F1D1D).copy(alpha = 0.15f),
-            badgeColor = Color(0xFF7F1D1D),
-            badgeTextColor = Color(0xFFFCA5A5),
+            borderColor = MaterialTheme.colorScheme.error,
+            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+            badgeColor = MaterialTheme.colorScheme.errorContainer,
+            badgeTextColor = MaterialTheme.colorScheme.onErrorContainer,
             label = stringResource(R.string.fuel_comparison_status_high),
             icon = Icons.Filled.Error
         )

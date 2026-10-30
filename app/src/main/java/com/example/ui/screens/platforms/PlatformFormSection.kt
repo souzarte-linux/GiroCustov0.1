@@ -85,7 +85,7 @@ fun PlatformFormSection(
                     onClick = onBack,
                     modifier = Modifier.testTag("form_back_btn")
                 ) {
-                    Icon(Icons.Filled.ArrowBack, contentDescription = "Voltar", tint = Color.White)
+                    Icon(Icons.Filled.ArrowBack, contentDescription = "Voltar", tint = MaterialTheme.colorScheme.onBackground)
                 }
                 Text(
                     text = if (isEdit) androidx.compose.ui.res.stringResource(com.example.R.string.platforms_form_title_edit) else androidx.compose.ui.res.stringResource(com.example.R.string.platforms_form_title_new),
@@ -99,11 +99,11 @@ fun PlatformFormSection(
                 IconButton(
                     onClick = onDelete,
                     modifier = Modifier
-                        .background(Color(0xFFEF4444).copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.error.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
                         .size(36.dp)
                         .testTag("delete_platform_btn")
                 ) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Excluir", tint = Color(0xFFEF4444))
+                    Icon(Icons.Filled.Delete, contentDescription = "Excluir", tint = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -111,9 +111,9 @@ fun PlatformFormSection(
         // FORM FIELDS CARD
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(1.dp, Color(0xFF2D2D34))
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -121,7 +121,7 @@ fun PlatformFormSection(
             ) {
                 // NAME
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Nome da plataforma", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
+                    Text("Nome da plataforma", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     TextField(
                         value = name,
                         onValueChange = { name = it },
@@ -135,7 +135,7 @@ fun PlatformFormSection(
 
                 // SEGMENT
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Segmento de Operação", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
+                    Text("Segmento de Operação", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -146,8 +146,8 @@ fun PlatformFormSection(
                                 .weight(1f)
                                 .testTag("segment_logistica_btn"),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (segment == "logistica") MaterialTheme.colorScheme.primary else Color(0xFF2D2D34),
-                                contentColor = if (segment == "logistica") MaterialTheme.colorScheme.onPrimary else Color(0xFF94A3B8)
+                                containerColor = if (segment == "logistica") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = if (segment == "logistica") MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                             ),
                             shape = RoundedCornerShape(8.dp)
                         ) {
@@ -159,8 +159,8 @@ fun PlatformFormSection(
                                 .weight(1f)
                                 .testTag("segment_delivery_btn"),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (segment == "delivery") MaterialTheme.colorScheme.primary else Color(0xFF2D2D34),
-                                contentColor = if (segment == "delivery") MaterialTheme.colorScheme.onPrimary else Color(0xFF94A3B8)
+                                containerColor = if (segment == "delivery") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = if (segment == "delivery") MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                             ),
                             shape = RoundedCornerShape(8.dp)
                         ) {
@@ -171,7 +171,7 @@ fun PlatformFormSection(
 
                 // PAYMENT MODEL
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Modelo de Pagamento", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
+                    Text("Modelo de Pagamento", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -182,8 +182,8 @@ fun PlatformFormSection(
                                 .weight(1f)
                                 .testTag("model_producao_btn"),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (paymentModel == "producao") MaterialTheme.colorScheme.primary else Color(0xFF2D2D34),
-                                contentColor = if (paymentModel == "producao") MaterialTheme.colorScheme.onPrimary else Color(0xFF94A3B8)
+                                containerColor = if (paymentModel == "producao") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = if (paymentModel == "producao") MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                             ),
                             shape = RoundedCornerShape(8.dp)
                         ) {
@@ -195,8 +195,8 @@ fun PlatformFormSection(
                                 .weight(1f)
                                 .testTag("model_diaria_btn"),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (paymentModel == "diaria") MaterialTheme.colorScheme.primary else Color(0xFF2D2D34),
-                                contentColor = if (paymentModel == "diaria") MaterialTheme.colorScheme.onPrimary else Color(0xFF94A3B8)
+                                containerColor = if (paymentModel == "diaria") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = if (paymentModel == "diaria") MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                             ),
                             shape = RoundedCornerShape(8.dp)
                         ) {
@@ -273,11 +273,11 @@ fun PlatformFormSection(
                 .testTag("platform_save_btn"),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF10B981),
-                contentColor = Color(0xFF064E3B)
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             )
         ) {
-            Icon(Icons.Filled.Save, contentDescription = null, tint = Color(0xFF064E3B))
+            Icon(Icons.Filled.Save, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = if (isEdit) androidx.compose.ui.res.stringResource(com.example.R.string.platforms_btn_save_edit) else androidx.compose.ui.res.stringResource(com.example.R.string.platforms_btn_save_new),

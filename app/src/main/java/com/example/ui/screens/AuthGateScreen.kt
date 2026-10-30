@@ -176,9 +176,9 @@ fun AuthGateScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("auth_error_banner"),
-                    color = Color(0xFF4C1D24),
+                    color = MaterialTheme.colorScheme.errorContainer,
                     shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, ColorError)
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),
@@ -188,12 +188,12 @@ fun AuthGateScreen(
                         Icon(
                             imageVector = Icons.Filled.Warning,
                             contentDescription = "Erro de Autenticação",
-                            tint = ColorError,
+                            tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = errorMsg,
-                            color = ColorError,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -212,9 +212,9 @@ fun AuthGateScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("auth_success_banner"),
-                    color = Color(0xFF143E2E),
+                    color = MaterialTheme.colorScheme.primaryContainer,
                     shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, ColorBrandEmerald)
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),

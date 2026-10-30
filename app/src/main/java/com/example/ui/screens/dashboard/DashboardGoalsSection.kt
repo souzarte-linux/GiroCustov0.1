@@ -27,13 +27,13 @@ fun GoalCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color(0xFF2D2D34)), // dark charcoal border
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            Text(title, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
+            Text(title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
             Spacer(modifier = Modifier.height(10.dp))
 
             // Linhas de Progresso das sub-metas
@@ -53,13 +53,13 @@ fun GoalRow(label: String, value: Double, target: Double, format: String) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(label, fontSize = 12.sp, color = Color(0xFF94A3B8)) // slate-400
+            Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
                 text = "${String.format(Locale.GERMAN, format, value)} / ${String.format(Locale.GERMAN, format, target)} (${(pct * 100).toInt()}%)",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,
-                color = if (value >= target) Color(0xFF10B981) else Color(0xFFCBD5E1) // Emerald or Slate-300
+                color = if (value >= target) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
             )
         }
         Spacer(modifier = Modifier.height(4.dp))
@@ -69,8 +69,8 @@ fun GoalRow(label: String, value: Double, target: Double, format: String) {
                 .fillMaxWidth()
                 .height(6.dp)
                 .clip(CircleShape),
-            color = if (value >= target) Color(0xFF10B981) else Color(0xFF34D399), // Emerald/Mint
-            trackColor = Color(0xFF2D2D34) // Dark charcoal
+            color = if (value >= target) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant
         )
     }
 }
@@ -83,13 +83,13 @@ fun GoalRowInt(label: String, value: Int, target: Int) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(label, fontSize = 12.sp, color = Color(0xFF94A3B8))
+            Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
                 text = stringResource(R.string.dashboard_goal_deliveries_progress, value, target, (pct * 100).toInt()),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,
-                color = if (value >= target) Color(0xFF10B981) else Color(0xFFCBD5E1)
+                color = if (value >= target) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
             )
         }
         Spacer(modifier = Modifier.height(4.dp))
@@ -99,8 +99,8 @@ fun GoalRowInt(label: String, value: Int, target: Int) {
                 .fillMaxWidth()
                 .height(6.dp)
                 .clip(CircleShape),
-            color = if (value >= target) Color(0xFF10B981) else Color(0xFF34D399), // Emerald/Mint
-            trackColor = Color(0xFF2D2D34) // Dark charcoal
+            color = if (value >= target) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant
         )
     }
 }

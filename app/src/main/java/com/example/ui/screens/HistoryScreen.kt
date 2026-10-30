@@ -148,7 +148,7 @@ fun HistoryScreen(
                 Icon(
                     imageVector = if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
                     contentDescription = stringResource(R.string.cd_theme_toggle),
-                    tint = if (isDark) Color(0xFFF59E0B) else Color(0xFF64748B),
+                    tint = if (isDark) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }

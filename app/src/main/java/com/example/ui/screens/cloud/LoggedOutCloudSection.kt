@@ -61,9 +61,9 @@ fun LoggedOutCloudSection(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isDark) Color(0xFF1E1E22) else Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = BorderStroke(1.dp, if (isDark) Color(0xFF2D2D34) else Color(0xFFE2E8F0)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(
@@ -75,13 +75,13 @@ fun LoggedOutCloudSection(
                 modifier = Modifier
                     .size(64.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF10B981).copy(alpha = 0.15f)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Filled.CloudUpload,
                     contentDescription = "Nuvem",
-                    tint = Color(0xFF10B981),
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(36.dp)
                 )
             }
@@ -97,7 +97,7 @@ fun LoggedOutCloudSection(
             Text(
                 text = "Faça login ou crie sua conta gratuita para manter suas diárias, abastecimentos e manutenções protegidos e acessíveis em qualquer aparelho.",
                 fontSize = 13.sp,
-                color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 lineHeight = 18.sp
             )
@@ -118,14 +118,14 @@ fun LoggedOutCloudSection(
     // Alternador de Abas (Entrar / Criar Conta)
     TabRow(
         selectedTabIndex = selectedTab.ordinal,
-        containerColor = if (isDark) Color(0xFF1E1E22) else Color(0xFFF1F5F9),
-        contentColor = Color(0xFF10B981),
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.primary,
         indicator = {},
         divider = {},
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .border(1.dp, if (isDark) Color(0xFF2D2D34) else Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
     ) {
         Tab(
             selected = selectedTab == AuthTab.LOGIN,
@@ -138,14 +138,14 @@ fun LoggedOutCloudSection(
                 .padding(4.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(
-                    if (selectedTab == AuthTab.LOGIN) Color(0xFF10B981) else Color.Transparent
+                    if (selectedTab == AuthTab.LOGIN) MaterialTheme.colorScheme.primary else Color.Transparent
                 )
                 .testTag("tab_auth_login"),
             text = {
                 Text(
                     text = "Entrar",
                     fontWeight = FontWeight.Bold,
-                    color = if (selectedTab == AuthTab.LOGIN) Color.White else MaterialTheme.colorScheme.onSurface
+                    color = if (selectedTab == AuthTab.LOGIN) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                 )
             }
         )
@@ -161,14 +161,14 @@ fun LoggedOutCloudSection(
                 .padding(4.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(
-                    if (selectedTab == AuthTab.REGISTER) Color(0xFF10B981) else Color.Transparent
+                    if (selectedTab == AuthTab.REGISTER) MaterialTheme.colorScheme.primary else Color.Transparent
                 )
                 .testTag("tab_auth_register"),
             text = {
                 Text(
                     text = "Criar Conta",
                     fontWeight = FontWeight.Bold,
-                    color = if (selectedTab == AuthTab.REGISTER) Color.White else MaterialTheme.colorScheme.onSurface
+                    color = if (selectedTab == AuthTab.REGISTER) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                 )
             }
         )
@@ -179,9 +179,9 @@ fun LoggedOutCloudSection(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isDark) Color(0xFF1E1E22) else Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = BorderStroke(1.dp, if (isDark) Color(0xFF2D2D34) else Color(0xFFE2E8F0)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(
@@ -209,7 +209,7 @@ fun LoggedOutCloudSection(
                     Icon(
                         imageVector = Icons.Filled.Email,
                         contentDescription = "E-mail",
-                        tint = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 keyboardOptions = KeyboardOptions(
@@ -239,7 +239,7 @@ fun LoggedOutCloudSection(
                     Icon(
                         imageVector = Icons.Filled.Lock,
                         contentDescription = "Senha",
-                        tint = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 trailingIcon = {
@@ -247,7 +247,7 @@ fun LoggedOutCloudSection(
                         Icon(
                             imageVector = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
                             contentDescription = if (passwordVisible) "Ocultar senha" else "Mostrar senha",
-                            tint = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
@@ -280,7 +280,7 @@ fun LoggedOutCloudSection(
                         Icon(
                             imageVector = Icons.Filled.LockReset,
                             contentDescription = "Confirmar Senha",
-                            tint = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
                     keyboardOptions = KeyboardOptions(
@@ -328,7 +328,7 @@ fun LoggedOutCloudSection(
             if (!successNotice.isNullOrBlank()) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF10B981).copy(alpha = 0.12f)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Row(
@@ -339,12 +339,12 @@ fun LoggedOutCloudSection(
                         Icon(
                             imageVector = Icons.Filled.CheckCircle,
                             contentDescription = "Sucesso",
-                            tint = Color(0xFF10B981),
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = successNotice!!,
-                            color = Color(0xFF10B981),
+                            color = MaterialTheme.colorScheme.primary,
                             fontSize = 13.sp
                         )
                     }
@@ -399,14 +399,14 @@ fun LoggedOutCloudSection(
                     .testTag("auth_submit_btn"),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF10B981),
-                    contentColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -435,17 +435,17 @@ fun LoggedOutCloudSection(
             ) {
                 HorizontalDivider(
                     modifier = Modifier.weight(1f),
-                    color = if (isDark) Color(0xFF2D2D34) else Color(0xFFE2E8F0)
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                 )
                 Text(
                     text = if (selectedTab == AuthTab.LOGIN) "ou continue com" else "ou cadastre-se com",
                     fontSize = 12.sp,
-                    color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
                 HorizontalDivider(
                     modifier = Modifier.weight(1f),
-                    color = if (isDark) Color(0xFF2D2D34) else Color(0xFFE2E8F0)
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                 )
             }
 
@@ -482,10 +482,10 @@ fun LoggedOutCloudSection(
                     .testTag(if (selectedTab == AuthTab.REGISTER) "auth_google_signup_btn" else "auth_google_signin_btn"),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = if (isDark) Color(0xFF1E1E22) else Color.White,
+                    containerColor = MaterialTheme.colorScheme.surface,
                     contentColor = MaterialTheme.colorScheme.onSurface
                 ),
-                border = BorderStroke(1.dp, if (isDark) Color(0xFF2D2D34) else Color(0xFFE2E8F0))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -520,7 +520,7 @@ fun BenefitItem(text: String) {
         Icon(
             imageVector = Icons.Filled.Check,
             contentDescription = null,
-            tint = Color(0xFF10B981),
+            tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(16.dp)
         )
         Text(

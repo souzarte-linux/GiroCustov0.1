@@ -186,8 +186,8 @@ fun MaintenanceListSection(
                     onClick = onAddClick,
                     modifier = Modifier.testTag("add_maintenance_btn"),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFF59E0B), // Warm Amber color
-                        contentColor = Color(0xFF451A03)
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {

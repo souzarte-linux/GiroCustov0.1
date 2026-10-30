@@ -71,7 +71,7 @@ fun YearHeaderCard(year: Int, totalGross: Double, totalNet: Double) {
                         text = String.format(Locale.GERMAN, "R$ %.2f", totalNet),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (totalNet >= 0) Color(0xFF10B981) else Color(0xFFF43F5E)
+                        color = if (totalNet >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
                     )
                 }
             }
@@ -126,7 +126,7 @@ fun MonthHeaderCard(monthLabel: String, totalGross: Double, totalNet: Double) {
                         text = String.format(Locale.GERMAN, "R$ %.2f", totalNet),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (totalNet >= 0) Color(0xFF10B981) else Color(0xFFF43F5E)
+                        color = if (totalNet >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
                     )
                 }
             }
@@ -187,7 +187,7 @@ fun WeekHeaderCard(weekLabel: String, totalGross: Double, totalNet: Double) {
                         text = String.format(Locale.GERMAN, "R$ %.0f", totalNet),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (totalNet >= 0) Color(0xFF10B981) else Color(0xFFF43F5E)
+                        color = if (totalNet >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
                     )
                 }
             }

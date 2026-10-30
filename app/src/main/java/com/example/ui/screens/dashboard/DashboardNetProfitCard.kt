@@ -37,9 +37,9 @@ fun DashboardNetProfitCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF064E3B)), // Deep dark green/emerald
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         shape = RoundedCornerShape(24.dp), // Rounded-3xl
-        border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.3f)), // Emerald soft border glow
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(
@@ -68,18 +68,18 @@ fun DashboardNetProfitCard(
                     text = labelPeriod,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF34D399), // Soft vibrant emerald
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                     letterSpacing = 1.sp
                 )
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF10B981).copy(alpha = 0.15f))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
                         .padding(horizontal = 10.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.dashboard_badge_money_in_pocket),
-                        color = Color(0xFF34D399),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -93,7 +93,7 @@ fun DashboardNetProfitCard(
                     text = "R$ ",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF10B981), // Emerald
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
                 Text(
@@ -101,7 +101,7 @@ fun DashboardNetProfitCard(
                     fontSize = 32.sp,
                     fontWeight = FontWeight.ExtraBold,
                     fontFamily = FontFamily.Monospace,
-                    color = Color.White // High contrast White
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
             Spacer(modifier = Modifier.height(2.dp))
@@ -111,12 +111,12 @@ fun DashboardNetProfitCard(
                     String.format(Locale.GERMAN, "%,.2f", totalMaintenance)
                 ),
                 fontSize = 11.sp,
-                color = Color(0xFF34D399),
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
                 fontWeight = FontWeight.Medium
             )
 
             Spacer(modifier = Modifier.height(14.dp))
-            HorizontalDivider(color = Color(0xFF10B981).copy(alpha = 0.2f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
             Spacer(modifier = Modifier.height(14.dp))
 
             Row(
@@ -125,13 +125,13 @@ fun DashboardNetProfitCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.dashboard_gross_revenue), fontSize = 10.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.dashboard_gross_revenue), fontSize = 10.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f), fontWeight = FontWeight.Medium)
                     Text(
                         text = String.format(Locale.GERMAN, "R$ %,.2f", totalGross),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
 
@@ -139,57 +139,57 @@ fun DashboardNetProfitCard(
                     modifier = Modifier
                         .width(1.dp)
                         .height(30.dp)
-                        .background(Color(0xFF10B981).copy(alpha = 0.2f))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
                 )
 
                 Column(
                     modifier = Modifier.weight(1f).padding(start = 16.dp),
                     horizontalAlignment = Alignment.Start
                 ) {
-                    Text(stringResource(R.string.dashboard_operational_cost), fontSize = 10.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.dashboard_operational_cost), fontSize = 10.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f), fontWeight = FontWeight.Medium)
                     Text(
                         text = String.format(Locale.GERMAN, "- R$ %,.2f", totalExpenses),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
-                        color = Color(0xFFF43F5E) // Bright light rose/red for cost in dark mode
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = Color(0xFF10B981).copy(alpha = 0.1f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = stringResource(R.string.dashboard_expenses_summary_title),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF94A3B8),
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f),
                 letterSpacing = 1.sp
             )
             Spacer(modifier = Modifier.height(6.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(stringResource(R.string.dashboard_expense_fuel), fontSize = 12.sp, color = Color(0xFFCBD5E1))
-                    Text(String.format(Locale.GERMAN, "R$ %,.2f", totalFuel), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(stringResource(R.string.dashboard_expense_fuel), fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                    Text(String.format(Locale.GERMAN, "R$ %,.2f", totalFuel), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(stringResource(R.string.dashboard_expense_food), fontSize = 12.sp, color = Color(0xFFCBD5E1))
-                    Text(String.format(Locale.GERMAN, "R$ %,.2f", totalFood), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(stringResource(R.string.dashboard_expense_food), fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                    Text(String.format(Locale.GERMAN, "R$ %,.2f", totalFood), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(stringResource(R.string.dashboard_expense_wear), fontSize = 12.sp, color = Color(0xFFCBD5E1))
-                    Text(String.format(Locale.GERMAN, "R$ %,.2f", totalWear), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(stringResource(R.string.dashboard_expense_wear), fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                    Text(String.format(Locale.GERMAN, "R$ %,.2f", totalWear), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(stringResource(R.string.dashboard_expense_fixed), fontSize = 12.sp, color = Color(0xFFCBD5E1))
-                    Text(String.format(Locale.GERMAN, "R$ %,.2f", totalFixed), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(stringResource(R.string.dashboard_expense_fixed), fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                    Text(String.format(Locale.GERMAN, "R$ %,.2f", totalFixed), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(stringResource(R.string.dashboard_expense_maintenance), fontSize = 12.sp, color = Color(0xFFFBBF24), fontWeight = FontWeight.SemiBold)
-                    Text(String.format(Locale.GERMAN, "R$ %,.2f", totalMaintenance), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFBBF24))
+                    Text(stringResource(R.string.dashboard_expense_maintenance), fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.SemiBold)
+                    Text(String.format(Locale.GERMAN, "R$ %,.2f", totalMaintenance), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
                 }
             }
         }

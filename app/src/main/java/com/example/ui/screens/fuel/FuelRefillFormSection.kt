@@ -424,9 +424,9 @@ fun RefillFormSection(
 
         if (exceedsTankCapacity) {
             Surface(
-                color = Color(0xFFFEF3C7),
+                color = MaterialTheme.colorScheme.secondaryContainer,
                 shape = RoundedCornerShape(10.dp),
-                border = BorderStroke(1.dp, Color(0xFFF59E0B)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
                 modifier = Modifier.fillMaxWidth().testTag("tank_capacity_alert")
             ) {
                 Row(
@@ -437,7 +437,7 @@ fun RefillFormSection(
                     Icon(
                         imageVector = Icons.Filled.Warning,
                         contentDescription = stringResource(R.string.cd_fuel_tank_alert),
-                        tint = Color(0xFFD97706),
+                        tint = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
@@ -449,7 +449,7 @@ fun RefillFormSection(
                         ),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0xFF92400E)
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
             }

@@ -52,12 +52,12 @@ fun PlatformListSection(
                     onClick = onAddClick,
                     modifier = Modifier.testTag("add_platform_btn"),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF10B981),
-                        contentColor = Color(0xFF064E3B)
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Adicionar", tint = Color(0xFF064E3B))
+                    Icon(Icons.Filled.Add, contentDescription = "Adicionar", tint = MaterialTheme.colorScheme.onPrimary)
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(androidx.compose.ui.res.stringResource(com.example.R.string.platforms_btn_add), fontWeight = FontWeight.Bold)
                 }
@@ -77,19 +77,19 @@ fun PlatformListSection(
                         Icon(
                             imageVector = Icons.Filled.Layers,
                             contentDescription = null,
-                            tint = Color(0xFF64748B),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(64.dp)
                         )
                         Text(
                             text = androidx.compose.ui.res.stringResource(com.example.R.string.platforms_empty_title),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF64748B)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = androidx.compose.ui.res.stringResource(com.example.R.string.platforms_empty_subtitle),
                             fontSize = 12.sp,
-                            color = Color(0xFF94A3B8),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 32.dp),
                             lineHeight = 18.sp
                         )
@@ -111,9 +111,9 @@ fun PlatformListSection(
                                 .fillMaxWidth()
                                 .clickable { onEditClick(platform.id) }
                                 .testTag("platform_item_${platform.id}"),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                             shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, Color(0xFF2D2D34))
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                         ) {
                             Column(
                                 modifier = Modifier.padding(16.dp),
@@ -128,28 +128,30 @@ fun PlatformListSection(
                                         text = platform.name,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 16.sp,
-                                        color = Color.White
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Row(
                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
+                                        val isLogistica = platform.segment == "logistica"
                                         Badge(
-                                            containerColor = if (platform.segment == "logistica") Color(0xFF3B82F6) else Color(0xFFEF4444)
+                                            containerColor = if (isLogistica) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
                                         ) {
                                             Text(
-                                                text = if (platform.segment == "logistica") "Logística" else "Delivery",
-                                                color = Color.White,
+                                                text = if (isLogistica) "Logística" else "Delivery",
+                                                color = if (isLogistica) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
                                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.Bold
                                             )
                                         }
+                                        val isProducao = platform.paymentModel == "producao"
                                         Badge(
-                                            containerColor = if (platform.paymentModel == "producao") Color(0xFF8B5CF6) else Color(0xFFF59E0B)
+                                            containerColor = if (isProducao) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceVariant
                                         ) {
                                             Text(
-                                                text = if (platform.paymentModel == "producao") "Produção" else "Diária",
-                                                color = Color.White,
+                                                text = if (isProducao) "Produção" else "Diária",
+                                                color = if (isProducao) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.Bold
@@ -167,26 +169,26 @@ fun PlatformListSection(
                                         Text(
                                             text = "Ciclo: ${platform.cycle.uppercase()}",
                                             fontSize = 12.sp,
-                                            color = Color(0xFF94A3B8)
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                         if (platform.cycle == "semanal") {
                                             Text(
                                                 text = "Fechamento: ${platform.paymentDay} | Prazo: ${platform.fixedPayDelay} dias",
                                                 fontSize = 12.sp,
-                                                color = Color(0xFF64748B)
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         } else if (platform.cycle == "quinzenal" || platform.cycle == "mensal") {
                                             Text(
                                                 text = "Prazo: ${platform.fixedPayDelay} dias após fechamento",
                                                 fontSize = 12.sp,
-                                                color = Color(0xFF64748B)
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         } else {
                                             val entriesCount = parseCycleEntries(platform.cycleEntriesJson).size
                                             Text(
                                                 text = "$entriesCount ciclo(s) variável(is) cadastrado(s)",
                                                 fontSize = 12.sp,
-                                                color = Color(0xFF64748B)
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
@@ -194,7 +196,7 @@ fun PlatformListSection(
                                     Icon(
                                         imageVector = Icons.Filled.Edit,
                                         contentDescription = "Editar",
-                                        tint = Color(0xFF10B981),
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }

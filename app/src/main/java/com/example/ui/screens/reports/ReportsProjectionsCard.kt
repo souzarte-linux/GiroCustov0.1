@@ -25,9 +25,9 @@ import com.example.util.CurrencyUtils
 fun ReportsProjectionsCard(metrics: ReportMetricsState, monthlyNGoal: Double) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color(0xFF2D2D34)), // dark charcoal border
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -35,14 +35,14 @@ fun ReportsProjectionsCard(metrics: ReportMetricsState, monthlyNGoal: Double) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ShowChart,
                     contentDescription = stringResource(R.string.reports_projections_icon_desc),
-                    tint = Color(0xFF10B981),
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = stringResource(R.string.reports_projections_title),
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 14.sp
                 )
             }
@@ -50,7 +50,7 @@ fun ReportsProjectionsCard(metrics: ReportMetricsState, monthlyNGoal: Double) {
             Text(
                 text = stringResource(R.string.reports_projections_simulation_desc, metrics.monthlyWorkingDays),
                 fontSize = 11.sp,
-                color = Color(0xFF94A3B8)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -68,34 +68,34 @@ fun ReportsProjectionsCard(metrics: ReportMetricsState, monthlyNGoal: Double) {
                     Text(
                         text = stringResource(R.string.reports_projections_gross_label),
                         fontSize = 11.sp,
-                        color = Color(0xFF94A3B8)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = CurrencyUtils.formatCents(CurrencyUtils.toCents(safeEarnings)),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
-                        color = Color(0xFF38BDF8) // sky-400
+                        color = MaterialTheme.colorScheme.secondary
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = stringResource(R.string.reports_projections_net_label),
                         fontSize = 11.sp,
-                        color = Color(0xFF94A3B8)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = CurrencyUtils.formatCents(CurrencyUtils.toCents(safeProfit)),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
-                        color = Color(0xFF10B981) // Emerald
+                        color = MaterialTheme.colorScheme.tertiary
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
-            HorizontalDivider(color = Color(0xFF2D2D34))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             Spacer(modifier = Modifier.height(12.dp))
 
             // Progresso em relação ao Alvo Mensal
@@ -106,13 +106,13 @@ fun ReportsProjectionsCard(metrics: ReportMetricsState, monthlyNGoal: Double) {
                 Text(
                     text = stringResource(R.string.reports_projections_goal_progress, (safePctOfGoal * 100).toInt()),
                     fontSize = 11.sp,
-                    color = Color(0xFF94A3B8)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = stringResource(R.string.reports_projections_goal_label, CurrencyUtils.formatCentsCompact(CurrencyUtils.toCents(safeGoal))),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF10B981)
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
@@ -122,8 +122,8 @@ fun ReportsProjectionsCard(metrics: ReportMetricsState, monthlyNGoal: Double) {
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(CircleShape),
-                color = Color(0xFF10B981),
-                trackColor = Color(0xFF2D2D34)
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         }
     }

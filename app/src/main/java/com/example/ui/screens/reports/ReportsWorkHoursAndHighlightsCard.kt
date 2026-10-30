@@ -25,9 +25,9 @@ import com.example.util.CurrencyUtils
 fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color(0xFF2D2D34)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -35,21 +35,21 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
                 Icon(
                     imageVector = Icons.Filled.AccessTime,
                     contentDescription = stringResource(R.string.reports_workhours_icon_desc),
-                    tint = Color(0xFF10B981),
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = stringResource(R.string.reports_workhours_title),
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 14.sp
                 )
             }
             Text(
                 text = stringResource(R.string.reports_workhours_subtitle),
                 fontSize = 11.sp,
-                color = Color(0xFF94A3B8)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -67,7 +67,7 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
                     Text(
                         text = stringResource(R.string.reports_workhours_net_per_hour_label),
                         fontSize = 11.sp,
-                        color = Color(0xFF94A3B8)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = stringResource(
@@ -77,7 +77,7 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
-                        color = Color(0xFF10B981)
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
 
@@ -85,7 +85,7 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
                     Text(
                         text = stringResource(R.string.reports_workhours_gross_per_hour_label),
                         fontSize = 11.sp,
-                        color = Color(0xFF94A3B8)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = stringResource(
@@ -95,13 +95,13 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
-                        color = Color(0xFF38BDF8)
+                        color = MaterialTheme.colorScheme.secondary
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
-            HorizontalDivider(color = Color(0xFF2D2D34))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             Spacer(modifier = Modifier.height(14.dp))
 
             // Linha de Detalhes: Tempo Efetivo, Pausas e Média Diária
@@ -113,14 +113,14 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
                     Text(
                         text = stringResource(R.string.reports_workhours_effective_time_label),
                         fontSize = 11.sp,
-                        color = Color(0xFF94A3B8)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = metrics.formattedTotalWork,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
@@ -128,14 +128,14 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
                     Text(
                         text = stringResource(R.string.reports_workhours_pause_time_label),
                         fontSize = 11.sp,
-                        color = Color(0xFF94A3B8)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = metrics.formattedTotalPause,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFFBBF24)
+                        color = MaterialTheme.colorScheme.secondary
                     )
                 }
 
@@ -143,7 +143,7 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
                     Text(
                         text = stringResource(R.string.reports_workhours_avg_shift_label),
                         fontSize = 11.sp,
-                        color = Color(0xFF94A3B8)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
@@ -153,7 +153,7 @@ fun ReportsWorkHoursCard(metrics: ReportMetricsState) {
                         ),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFE2E8F0)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -171,7 +171,7 @@ fun ReportsHighlightsSection(metrics: ReportMetricsState) {
                 text = stringResource(R.string.reports_highlights_section_title),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF10B981), // Emerald accent
+                color = MaterialTheme.colorScheme.primary,
                 letterSpacing = 1.sp
             )
 
@@ -184,35 +184,35 @@ fun ReportsHighlightsSection(metrics: ReportMetricsState) {
 
                     Card(
                         modifier = Modifier.weight(1f),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF022C22)), // Dark emerald container
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                         shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.3f)), // Emerald soft border glow
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
                         elevation = CardDefaults.cardElevation(0.dp)
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Icon(
                                 imageVector = Icons.Filled.ArrowUpward,
                                 contentDescription = stringResource(R.string.reports_highlights_best_shift_icon_desc),
-                                tint = Color(0xFF10B981),
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = stringResource(R.string.reports_highlights_best_shift_label),
                                 fontSize = 11.sp,
-                                color = Color(0xFF34D399)
+                                color = MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 text = CurrencyUtils.formatCents(metrics.bestDay.netProfit),
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = FontFamily.Monospace,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
                                 text = stringResource(R.string.reports_highlights_on_day, bestDate),
                                 fontSize = 10.sp,
-                                color = Color(0xFF94A3B8)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -223,35 +223,35 @@ fun ReportsHighlightsSection(metrics: ReportMetricsState) {
 
                     Card(
                         modifier = Modifier.weight(1f),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF2E1018)), // deep ruby/dark charcoal
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
                         shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.dp, Color(0xFFF43F5E).copy(alpha = 0.3f)), // rose border glow
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
                         elevation = CardDefaults.cardElevation(0.dp)
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Icon(
                                 imageVector = Icons.Filled.ArrowDownward,
                                 contentDescription = stringResource(R.string.reports_highlights_worst_shift_icon_desc),
-                                tint = Color(0xFFF43F5E),
+                                tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = stringResource(R.string.reports_highlights_worst_shift_label),
                                 fontSize = 11.sp,
-                                color = Color(0xFFFDA4AF)
+                                color = MaterialTheme.colorScheme.error
                             )
                             Text(
                                 text = CurrencyUtils.formatCents(metrics.worstDay.netProfit),
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = FontFamily.Monospace,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onErrorContainer
                             )
                             Text(
                                 text = stringResource(R.string.reports_highlights_on_day, worstDate),
                                 fontSize = 10.sp,
-                                color = Color(0xFF94A3B8)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }

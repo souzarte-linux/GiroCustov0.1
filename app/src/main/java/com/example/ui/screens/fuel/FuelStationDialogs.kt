@@ -232,7 +232,7 @@ fun FuelTankCapacityConfirmDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
-            Icon(Icons.Filled.Warning, contentDescription = null, tint = Color(0xFFF59E0B))
+            Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
         },
         title = {
             Text(stringResource(R.string.fuel_dialog_tank_exceeded_title), fontWeight = FontWeight.Bold)

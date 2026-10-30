@@ -40,7 +40,7 @@ fun PlatformCycleConfigCard(
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         // CYCLE SELECTOR
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Ciclo de pagamento", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
+            Text("Ciclo de pagamento", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -53,8 +53,8 @@ fun PlatformCycleConfigCard(
                             .weight(1f)
                             .testTag("cycle_${c}_btn"),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (cycle == c) MaterialTheme.colorScheme.primary else Color(0xFF2D2D34),
-                            contentColor = if (cycle == c) MaterialTheme.colorScheme.onPrimary else Color(0xFF94A3B8)
+                            containerColor = if (cycle == c) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = if (cycle == c) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                         ),
                         shape = RoundedCornerShape(6.dp),
                         contentPadding = PaddingValues(0.dp)
@@ -73,7 +73,7 @@ fun PlatformCycleConfigCard(
         AnimatedVisibility(visible = cycle == "semanal") {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Dia de fechamento semanal", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
+                    Text("Dia de fechamento semanal", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -84,7 +84,7 @@ fun PlatformCycleConfigCard(
                                     .weight(1f)
                                     .height(40.dp)
                                     .background(
-                                        if (paymentDay == d) MaterialTheme.colorScheme.primary else Color(0xFF2D2D34),
+                                        if (paymentDay == d) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                                         RoundedCornerShape(8.dp)
                                     )
                                     .clickable { onPaymentDayChange(d) }
@@ -95,7 +95,7 @@ fun PlatformCycleConfigCard(
                                     text = d,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (paymentDay == d) MaterialTheme.colorScheme.onPrimary else Color.White
+                                    color = if (paymentDay == d) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -103,7 +103,7 @@ fun PlatformCycleConfigCard(
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Prazo de pagamento (dias após fechamento)", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
+                    Text("Prazo de pagamento (dias após fechamento)", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -119,12 +119,12 @@ fun PlatformCycleConfigCard(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true
                         )
-                        Text("dias", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
+                        Text("dias", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Text(
                         text = "Ex: se fechar toda $paymentDay e o prazo for ${fixedPayDelay.ifBlank { "0" }} dias, o pagamento cai ${fixedPayDelay.ifBlank { "0" }} dia(s) após o fechamento.",
                         fontSize = 11.sp,
-                        color = Color(0xFF64748B),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 16.sp
                     )
                 }
@@ -133,7 +133,7 @@ fun PlatformCycleConfigCard(
 
         AnimatedVisibility(visible = cycle == "quinzenal" || cycle == "mensal") {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Prazo de pagamento (dias após fechamento do ciclo)", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
+                Text("Prazo de pagamento (dias após fechamento do ciclo)", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -149,12 +149,12 @@ fun PlatformCycleConfigCard(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true
                     )
-                    Text("dias", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
+                    Text("dias", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Text(
                     text = "Quantos dias após o fechamento do ciclo ($cycle) o pagamento é realizado.",
                     fontSize = 11.sp,
-                    color = Color(0xFF64748B)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -162,8 +162,8 @@ fun PlatformCycleConfigCard(
         AnimatedVisibility(visible = cycle == "misto") {
             Column(
                 modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
-                    .border(1.dp, Color(0xFF2D2D34), RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -172,7 +172,7 @@ fun PlatformCycleConfigCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Ciclos de pagamento", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Ciclos de pagamento", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                     Button(
                         onClick = onAddEntry,
                         colors = ButtonDefaults.buttonColors(
@@ -188,15 +188,15 @@ fun PlatformCycleConfigCard(
                 Text(
                     text = "Configure cada ciclo: o dia em que fecha e quantos dias depois o pagamento é realizado.",
                     fontSize = 11.sp,
-                    color = Color(0xFF64748B)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     cycleEntries.forEachIndexed { idx, entry ->
                         Column(
                             modifier = Modifier
-                                .background(Color(0xFF131316), RoundedCornerShape(8.dp))
-                                .border(1.dp, Color(0xFF2D2D34), RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
                                 .padding(10.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
@@ -211,7 +211,7 @@ fun PlatformCycleConfigCard(
                                         onClick = { onRemoveEntry(idx) },
                                         modifier = Modifier.size(24.dp)
                                     ) {
-                                        Icon(Icons.Filled.Close, contentDescription = "Remover", tint = Color(0xFFEF4444), modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Filled.Close, contentDescription = "Remover", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
                                     }
                                 }
                             }
@@ -229,14 +229,14 @@ fun PlatformCycleConfigCard(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        Icon(Icons.Filled.ContentCut, contentDescription = null, tint = Color(0xFF64748B), modifier = Modifier.size(12.dp))
-                                        Text("Fechamento", fontSize = 10.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold)
+                                        Icon(Icons.Filled.ContentCut, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(12.dp))
+                                        Text("Fechamento", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                                     }
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        Text("Dia", fontSize = 11.sp, color = Color(0xFF64748B))
+                                        Text("Dia", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         TextField(
                                             value = entry.cut,
                                             onValueChange = { s -> onUpdateEntry(idx, "cut", s) },
@@ -250,7 +250,7 @@ fun PlatformCycleConfigCard(
                                                 unfocusedContainerColor = Color.Transparent
                                             )
                                         )
-                                        Text("do mês", fontSize = 11.sp, color = Color(0xFF64748B))
+                                        Text("do mês", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
 
@@ -263,8 +263,8 @@ fun PlatformCycleConfigCard(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        Icon(Icons.Filled.AccountBalanceWallet, contentDescription = null, tint = Color(0xFF64748B), modifier = Modifier.size(12.dp))
-                                        Text("Pagamento", fontSize = 10.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold)
+                                        Icon(Icons.Filled.AccountBalanceWallet, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(12.dp))
+                                        Text("Pagamento", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                                     }
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -283,7 +283,7 @@ fun PlatformCycleConfigCard(
                                                 unfocusedContainerColor = Color.Transparent
                                             )
                                         )
-                                        Text("dias depois", fontSize = 11.sp, color = Color(0xFF64748B))
+                                        Text("dias depois", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
                             }

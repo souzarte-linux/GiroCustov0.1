@@ -128,7 +128,7 @@ internal fun ActivePlatformsCard(
                                     },
                                     colors = CheckboxDefaults.colors(
                                         checkedColor = ColorBrandEmerald,
-                                        uncheckedColor = Color(0xFF64748B),
+                                        uncheckedColor = MaterialTheme.colorScheme.outline,
                                         checkmarkColor = ColorEmeraldDark
                                     ),
                                     modifier = Modifier

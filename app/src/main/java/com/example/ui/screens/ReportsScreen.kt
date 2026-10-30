@@ -120,7 +120,7 @@ fun ReportsScreen(
                     text = periodLabel,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color(0xFF10B981)
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
 
@@ -213,7 +213,7 @@ fun ReportsScreen(
                     Icon(
                         imageVector = if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
                         contentDescription = stringResource(R.string.reports_cd_toggle_theme),
-                        tint = if (isDark) Color(0xFFF59E0B) else Color(0xFF64748B),
+                        tint = if (isDark) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -271,22 +271,22 @@ fun ReportsScreen(
             // 1. GRAFICO DE EVOLUÇÃO DO LUCRO LÍQUIDO
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color(0xFF2D2D34)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 elevation = CardDefaults.cardElevation(0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = stringResource(R.string.reports_chart_profit_title),
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 14.sp
                     )
                     Text(
                         text = stringResource(R.string.reports_chart_profit_subtitle),
                         fontSize = 11.sp,
-                        color = Color(0xFF94A3B8)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -315,7 +315,7 @@ fun ReportsScreen(
                                     text = displayFormat.format(cal.time),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF94A3B8)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -329,7 +329,7 @@ fun ReportsScreen(
                             Text(
                                 text = stringResource(R.string.reports_chart_profit_empty),
                                 fontSize = 12.sp,
-                                color = Color(0xFF94A3B8)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -342,22 +342,22 @@ fun ReportsScreen(
             // 3. COMPARATIVO DE PRODUTIVIDADE (Faturamento Bruto vs Lucro Líquido Real)
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color(0xFF2D2D34)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 elevation = CardDefaults.cardElevation(0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = stringResource(R.string.reports_chart_productivity_title),
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 14.sp
                     )
                     Text(
                         text = stringResource(R.string.reports_chart_productivity_subtitle),
                         fontSize = 11.sp,
-                        color = Color(0xFF94A3B8)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -378,19 +378,19 @@ fun ReportsScreen(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(modifier = Modifier.size(10.dp).background(Color(0xFF00B0FF)))
+                            Box(modifier = Modifier.size(10.dp).background(MaterialTheme.colorScheme.secondary))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringResource(R.string.reports_legend_gross), fontSize = 11.sp, color = Color(0xFF94A3B8))
+                            Text(stringResource(R.string.reports_legend_gross), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.width(16.dp))
-                            Box(modifier = Modifier.size(10.dp).background(Color(0xFF10B981)))
+                            Box(modifier = Modifier.size(10.dp).background(MaterialTheme.colorScheme.primary))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringResource(R.string.reports_legend_net), fontSize = 11.sp, color = Color(0xFF94A3B8))
+                            Text(stringResource(R.string.reports_legend_net), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     } else {
                         Text(
                             text = stringResource(R.string.reports_chart_productivity_empty),
                             fontSize = 12.sp,
-                            color = Color(0xFF94A3B8),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.fillMaxWidth(),
                             textAlign = TextAlign.Center
                         )

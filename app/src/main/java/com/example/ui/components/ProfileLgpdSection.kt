@@ -25,16 +25,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 
-// Design Tokens Locais para o Componente de Privacidade
-private val ColorSurfaceCard = Color(0xFF1E1E22)
-private val ColorSurfaceElevated = Color(0xFF24242A)
-private val ColorSurfaceInput = Color(0xFF2A2A30)
-private val ColorBorder = Color(0xFF2D2D34)
-private val ColorBrandEmerald = Color(0xFF10B981)
-private val ColorRose = Color(0xFFF43F5E)
-private val ColorTextPrimary = Color(0xFFF1F5F9)
-private val ColorTextSecondary = Color(0xFFCBD5E1)
-private val ColorTextMuted = Color(0xFF94A3B8)
+// Design Tokens Dinâmicos para o Componente de Privacidade
+private val ColorSurfaceCard: Color
+    @Composable get() = MaterialTheme.colorScheme.surface
+private val ColorSurfaceElevated: Color
+    @Composable get() = MaterialTheme.colorScheme.surfaceVariant
+private val ColorSurfaceInput: Color
+    @Composable get() = MaterialTheme.colorScheme.surfaceVariant
+private val ColorBorder: Color
+    @Composable get() = MaterialTheme.colorScheme.outline
+private val ColorBrandEmerald: Color
+    @Composable get() = MaterialTheme.colorScheme.primary
+private val ColorRose: Color
+    @Composable get() = MaterialTheme.colorScheme.error
+private val ColorTextPrimary: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurface
+private val ColorTextSecondary: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+private val ColorTextMuted: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
 
 /**
  * Seção de Privacidade e Gerenciamento de Dados (LGPD - T-10 [SEC-06]).

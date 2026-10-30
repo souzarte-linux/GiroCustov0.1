@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.MaterialTheme
 import com.example.data.DailyRecord
 import com.example.util.CurrencyUtils
 
@@ -24,7 +25,9 @@ fun NetProfitCurveChart(records: List<DailyRecord>) {
     val minProfit = (records.minOfOrNull { CurrencyUtils.centsToDouble(it.netProfit) } ?: 0.0).coerceAtMost(0.0)
     val profitRange = (maxProfit - minProfit).coerceAtLeast(10.0)
 
-    val emerald = Color(0xFF10B981) // Emerald accent green
+    val emerald = MaterialTheme.colorScheme.primary
+    val outlineColor = MaterialTheme.colorScheme.outline
+    val pointBorderColor = MaterialTheme.colorScheme.surface
 
     Canvas(
         modifier = Modifier.fillMaxSize()
@@ -34,12 +37,12 @@ fun NetProfitCurveChart(records: List<DailyRecord>) {
 
         if (width <= 0f || height <= 0f) return@Canvas
 
-        // Desenhar grades horizontais simples (dark charcoal line for dark mode grid)
+        // Desenhar grades horizontais simples
         val gridLines = 3
         for (i in 0..gridLines) {
             val yGrid = height * i / gridLines
             drawLine(
-                color = Color(0xFF2D2D34),
+                color = outlineColor,
                 start = Offset(0f, yGrid),
                 end = Offset(width, yGrid),
                 strokeWidth = 1f
@@ -76,7 +79,7 @@ fun NetProfitCurveChart(records: List<DailyRecord>) {
             // Ponto central em destaque
             val centerOffset = Offset(width / 2f, y)
             drawCircle(
-                color = Color.White,
+                color = pointBorderColor,
                 radius = 6.dp.toPx(),
                 center = centerOffset
             )
@@ -143,10 +146,10 @@ fun NetProfitCurveChart(records: List<DailyRecord>) {
                 style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
             )
 
-            // Desenhar pontos de destaque (Dots com borda branca e centro verde)
+            // Desenhar pontos de destaque (Dots com borda da superfície e centro primário)
             points.forEachIndexed { _, point ->
                 drawCircle(
-                    color = Color.White,
+                    color = pointBorderColor,
                     radius = 6.dp.toPx(),
                     center = point
                 )
@@ -170,8 +173,8 @@ fun ProductivityComparisonChart(records: List<DailyRecord>) {
     } ?: 100.0
     val maxScale = (maxVal * 1.15).coerceAtLeast(10.0)
 
-    val colorGross = Color(0xFF00B0FF)
-    val colorNet = Color(0xFF10B981) // Emerald accent green
+    val colorGross = MaterialTheme.colorScheme.secondary
+    val colorNet = MaterialTheme.colorScheme.primary
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val width = size.width

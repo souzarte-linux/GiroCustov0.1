@@ -46,7 +46,7 @@ fun ExpenseLegendItem(label: String, color: Color, pct: Float, value: Double) {
             Text(
                 text = label, 
                 fontSize = 12.sp, 
-                color = Color(0xFF94A3B8), // slate-400 for dark mode
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
@@ -61,7 +61,7 @@ fun ExpenseLegendItem(label: String, color: Color, pct: Float, value: Double) {
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.Monospace,
-            color = Color.White,
+            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             softWrap = false
         )
@@ -72,22 +72,22 @@ fun ExpenseLegendItem(label: String, color: Color, pct: Float, value: Double) {
 fun ReportsExpenseDistributionCard(metrics: ReportMetricsState) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color(0xFF2D2D34)), // dark charcoal border
+        border = BorderStroke(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.outline),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = stringResource(R.string.reports_expense_distribution_title),
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                 fontSize = 14.sp
             )
             Text(
                 text = stringResource(R.string.reports_expense_distribution_subtitle),
                 fontSize = 11.sp,
-                color = Color(0xFF94A3B8)
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -128,7 +128,7 @@ fun ReportsExpenseDistributionCard(metrics: ReportMetricsState) {
                 Text(
                     text = stringResource(R.string.reports_expense_empty),
                     fontSize = 12.sp,
-                    color = Color(0xFF94A3B8),
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )

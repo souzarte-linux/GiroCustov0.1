@@ -128,7 +128,7 @@ fun DashboardScreen(
                             text = (vehicle?.model ?: stringResource(R.string.dashboard_no_vehicle_registered)).uppercase(),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF10B981), // Emerald accent color
+                            color = MaterialTheme.colorScheme.primary,
                             letterSpacing = 1.5.sp
                         )
                     }
@@ -146,7 +146,7 @@ fun DashboardScreen(
                         Icon(
                             imageVector = if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
                             contentDescription = stringResource(R.string.cd_theme_toggle),
-                            tint = if (isDark) Color(0xFFF59E0B) else Color(0xFF64748B),
+                            tint = if (isDark) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -356,7 +356,7 @@ fun DashboardScreen(
                         text = stringResource(R.string.dashboard_goals_section_title),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF10B981), // Emerald accent
+                        color = MaterialTheme.colorScheme.primary,
                         letterSpacing = 1.sp
                     )
                 }
@@ -418,8 +418,8 @@ fun DashboardScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .defaultMinSize(minHeight = 48.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF10B981)),
-                    border = BorderStroke(1.2.dp, Color(0xFF10B981)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                    border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))

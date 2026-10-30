@@ -84,14 +84,14 @@ fun LaunchScreen(
 
     val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
 
-    val inputCardContainerColor = if (isDark) Color(0xFF1E1E22) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-    val inputCardBorderColor = if (isDark) Color(0xFF2D2D34) else MaterialTheme.colorScheme.outlineVariant
-    val inputFieldContainerColor = if (isDark) Color(0xFF2A2A30) else Color(0xFFF1F5F9)
-    val inputFieldTextColor = if (isDark) Color.White else Color(0xFF0F172A)
-    val inputFieldLabelColor = if (isDark) Color(0xFF94A3B8) else Color(0xFF475569)
-    val dropdownMenuBgColor = if (isDark) Color(0xFF1E1E22) else Color(0xFFF1F5F9)
-    val dropdownMenuBorderColor = if (isDark) Color(0xFF2D2D34) else MaterialTheme.colorScheme.outlineVariant
-    val dropdownMenuItemTextColor = if (isDark) Color.White else Color(0xFF0F172A)
+    val inputCardContainerColor = MaterialTheme.colorScheme.surface
+    val inputCardBorderColor = MaterialTheme.colorScheme.outline
+    val inputFieldContainerColor = MaterialTheme.colorScheme.surfaceVariant
+    val inputFieldTextColor = MaterialTheme.colorScheme.onSurface
+    val inputFieldLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val dropdownMenuBgColor = MaterialTheme.colorScheme.surface
+    val dropdownMenuBorderColor = MaterialTheme.colorScheme.outline
+    val dropdownMenuItemTextColor = MaterialTheme.colorScheme.onSurface
 
     Column(
         modifier = Modifier
@@ -120,7 +120,7 @@ fun LaunchScreen(
                 Icon(
                     imageVector = if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
                     contentDescription = stringResource(R.string.cd_theme_toggle),
-                    tint = if (isDark) Color(0xFFF59E0B) else Color(0xFF64748B),
+                    tint = if (isDark) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -493,19 +493,19 @@ fun LaunchScreen(
                 .height(54.dp)
                 .testTag("submit_button"),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF10B981),
-                contentColor = Color(0xFF064E3B)
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ),
             shape = RoundedCornerShape(12.dp),
             enabled = !isSaving
         ) {
-            Icon(Icons.Filled.Save, stringResource(R.string.cd_save), tint = Color(0xFF064E3B))
+            Icon(Icons.Filled.Save, stringResource(R.string.cd_save), tint = MaterialTheme.colorScheme.onPrimary)
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = stringResource(R.string.launch_button_save),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF064E3B)
+                color = MaterialTheme.colorScheme.onPrimary
             )
         }
 

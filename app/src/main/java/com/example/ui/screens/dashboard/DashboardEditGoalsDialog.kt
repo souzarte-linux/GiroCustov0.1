@@ -89,9 +89,9 @@ fun EditGoalsDialog(
                 .heightIn(max = 600.dp)
                 .padding(16.dp)
                 .imePadding(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)), // Charcoal background
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RoundedCornerShape(20.dp),
-            border = BorderStroke(1.dp, Color(0xFF2D2D34)) // Dark border
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
             Column(
                 modifier = Modifier
@@ -103,9 +103,9 @@ fun EditGoalsDialog(
                     stringResource(R.string.goals_dialog_title),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                HorizontalDivider(color = Color(0xFF2D2D34))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 
                 // Diária
                 Text(
@@ -242,7 +242,7 @@ fun EditGoalsDialog(
                         onClick = onDismiss,
                         modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
                     ) {
-                        Text(stringResource(R.string.goals_btn_cancel), color = Color(0xFF94A3B8))
+                        Text(stringResource(R.string.goals_btn_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -266,11 +266,11 @@ fun EditGoalsDialog(
                         },
                         modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF10B981),
-                            contentColor = Color(0xFF064E3B)
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
-                        Text(stringResource(R.string.goals_btn_save), fontWeight = FontWeight.Bold, color = Color(0xFF064E3B))
+                        Text(stringResource(R.string.goals_btn_save), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
                     }
                 }
             }

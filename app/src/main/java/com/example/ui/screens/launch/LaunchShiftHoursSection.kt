@@ -222,9 +222,9 @@ fun LaunchShiftHoursSection(
 
         if (shiftSummary != null) {
             Surface(
-                color = Color(0xFF064E3B).copy(alpha = 0.4f),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
                 shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.4f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -232,8 +232,8 @@ fun LaunchShiftHoursSection(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Icons.Filled.Schedule, contentDescription = null, tint = Color(0xFF34D399), modifier = Modifier.size(16.dp))
-                    Text(text = shiftSummary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF34D399))
+                    Icon(Icons.Filled.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                    Text(text = shiftSummary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
             }
         }

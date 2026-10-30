@@ -38,11 +38,11 @@ fun LaunchFuelEstimationCard(
             .testTag("fuel_cost_estimation_info_card"),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isDark) Color(0xFF1E1E22) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         border = BorderStroke(
             1.dp,
-            if (fuelEstimationInfo.isUsingRealConsumption) Color(0xFF10B981).copy(alpha = 0.5f) else Color(0xFF3B82F6).copy(alpha = 0.4f)
+            if (fuelEstimationInfo.isUsingRealConsumption) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
         ),
         elevation = CardDefaults.cardElevation(1.dp)
     ) {
@@ -65,7 +65,7 @@ fun LaunchFuelEstimationCard(
                     Icon(
                         imageVector = Icons.Filled.LocalGasStation,
                         contentDescription = null,
-                        tint = if (fuelEstimationInfo.isUsingRealConsumption) Color(0xFF10B981) else Color(0xFF3B82F6),
+                        tint = if (fuelEstimationInfo.isUsingRealConsumption) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
@@ -77,11 +77,11 @@ fun LaunchFuelEstimationCard(
                 }
 
                 Surface(
-                    color = if (fuelEstimationInfo.isUsingRealConsumption) Color(0xFF064E3B) else Color(0xFF1E3A8A),
+                    color = if (fuelEstimationInfo.isUsingRealConsumption) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer,
                     shape = RoundedCornerShape(8.dp),
                     border = BorderStroke(
                         1.dp,
-                        if (fuelEstimationInfo.isUsingRealConsumption) Color(0xFF10B981) else Color(0xFF60A5FA)
+                        if (fuelEstimationInfo.isUsingRealConsumption) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary
                     ),
                     modifier = Modifier.testTag("consumption_basis_badge")
                 ) {
@@ -93,7 +93,7 @@ fun LaunchFuelEstimationCard(
                         Icon(
                             imageVector = if (fuelEstimationInfo.isUsingRealConsumption) Icons.Filled.CheckCircle else Icons.Filled.Info,
                             contentDescription = null,
-                            tint = if (fuelEstimationInfo.isUsingRealConsumption) Color(0xFF34D399) else Color(0xFF93C5FD),
+                            tint = if (fuelEstimationInfo.isUsingRealConsumption) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
                             modifier = Modifier.size(13.dp)
                         )
                         Text(
@@ -104,7 +104,7 @@ fun LaunchFuelEstimationCard(
                             },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (fuelEstimationInfo.isUsingRealConsumption) Color(0xFF34D399) else Color(0xFF93C5FD)
+                            color = if (fuelEstimationInfo.isUsingRealConsumption) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
                 }
@@ -137,7 +137,7 @@ fun LaunchFuelEstimationCard(
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
-                    color = if (fuelEstimationInfo.isUsingRealConsumption) Color(0xFF10B981) else Color(0xFFFBBF24),
+                    color = if (fuelEstimationInfo.isUsingRealConsumption) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.testTag("fuel_cost_estimation_value")
                 )
             }
@@ -152,9 +152,9 @@ fun LaunchRealTimeEstimationCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.3f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(
@@ -171,13 +171,13 @@ fun LaunchRealTimeEstimationCard(
                     text = stringResource(R.string.launch_realtime_estimator_title),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF10B981),
+                    color = MaterialTheme.colorScheme.primary,
                     letterSpacing = 1.sp
                 )
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFF064E3B))
+                        .background(MaterialTheme.colorScheme.primaryContainer)
                         .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
                     Text(
@@ -185,27 +185,27 @@ fun LaunchRealTimeEstimationCard(
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
-                        color = Color(0xFF34D399)
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            Text(stringResource(R.string.launch_projected_net_profit), fontSize = 11.sp, color = Color(0xFF94A3B8))
+            Text(stringResource(R.string.launch_projected_net_profit), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
                 text = String.format(Locale.GERMAN, "R$ %.2f", estimate.netProfit),
                 fontSize = 30.sp,
                 fontWeight = FontWeight.Black,
                 fontFamily = FontFamily.Monospace,
-                color = if (estimate.netProfit >= 0) Color(0xFF10B981) else Color(0xFFF43F5E)
+                color = if (estimate.netProfit >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
             )
 
             Spacer(modifier = Modifier.height(14.dp))
-            HorizontalDivider(color = Color(0xFF2D2D34))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             Spacer(modifier = Modifier.height(14.dp))
 
-            Text(stringResource(R.string.launch_operational_cost_details), fontSize = 11.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.launch_operational_cost_details), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
 
             EstimationRow(
@@ -226,7 +226,7 @@ fun LaunchRealTimeEstimationCard(
             EstimationRow(label = stringResource(R.string.launch_cost_food), value = estimate.foodCost)
 
             Spacer(modifier = Modifier.height(10.dp))
-            HorizontalDivider(color = Color(0xFF2D2D34))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             Spacer(modifier = Modifier.height(10.dp))
 
             Row(
@@ -234,13 +234,13 @@ fun LaunchRealTimeEstimationCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(stringResource(R.string.launch_total_daily_expenses), fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.launch_total_daily_expenses), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                 Text(
                     text = String.format(Locale.GERMAN, "R$ %.2f", estimate.totalExpenses),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
-                    color = Color(0xFFFBBF24)
+                    color = MaterialTheme.colorScheme.secondary
                 )
             }
         }
@@ -256,12 +256,12 @@ fun EstimationRow(label: String, value: Double, tooltip: String? = null) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFF10B981)))
+                Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = label,
                     fontSize = 11.sp,
-                    color = Color(0xFF94A3B8),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -271,12 +271,12 @@ fun EstimationRow(label: String, value: Double, tooltip: String? = null) {
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(start = 8.dp)
             )
         }
         if (tooltip != null) {
-            Text(tooltip, fontSize = 9.sp, color = Color(0xFF64748B), modifier = Modifier.padding(start = 12.dp))
+            Text(tooltip, fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), modifier = Modifier.padding(start = 12.dp))
         }
     }
 }

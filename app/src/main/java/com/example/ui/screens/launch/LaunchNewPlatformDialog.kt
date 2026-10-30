@@ -60,8 +60,10 @@ fun LaunchNewPlatformDialog(
                     singleLine = true,
                     shape = RoundedCornerShape(8.dp),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF2D2D34),
-                        unfocusedContainerColor = Color(0xFF2D2D34),
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent
@@ -70,12 +72,12 @@ fun LaunchNewPlatformDialog(
 
                 // SEGMENT SELECTOR
                 Column {
-                    Text(stringResource(R.string.launch_dialog_segment), fontSize = 12.sp, color = Color(0xFF94A3B8))
+                    Text(stringResource(R.string.launch_dialog_segment), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Box(modifier = Modifier.fillMaxWidth()) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color(0xFF2D2D34), RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
                                 .clickable { segmentExpanded = true }
                                 .padding(horizontal = 12.dp, vertical = 14.dp)
                                 .testTag("new_platform_segment_selector"),
@@ -88,8 +90,8 @@ fun LaunchNewPlatformDialog(
                                 "misto" -> stringResource(R.string.launch_segment_mixed)
                                 else -> stringResource(R.string.launch_segment_other)
                             }
-                            Text(segmentLabel, color = Color.White, fontSize = 14.sp)
-                            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = Color.White)
+                            Text(segmentLabel, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
+                            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         DropdownMenu(
                             expanded = segmentExpanded,
@@ -116,12 +118,12 @@ fun LaunchNewPlatformDialog(
 
                 // PAYMENT MODEL SELECTOR
                 Column {
-                    Text(stringResource(R.string.launch_dialog_payment_model), fontSize = 12.sp, color = Color(0xFF94A3B8))
+                    Text(stringResource(R.string.launch_dialog_payment_model), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Box(modifier = Modifier.fillMaxWidth()) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color(0xFF2D2D34), RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
                                 .clickable { paymentExpanded = true }
                                 .padding(horizontal = 12.dp, vertical = 14.dp)
                                 .testTag("new_platform_payment_selector"),
@@ -133,8 +135,8 @@ fun LaunchNewPlatformDialog(
                                 "fixo" -> stringResource(R.string.launch_payment_fixed)
                                 else -> stringResource(R.string.launch_payment_mixed)
                             }
-                            Text(modelLabel, color = Color.White, fontSize = 14.sp)
-                            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = Color.White)
+                            Text(modelLabel, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
+                            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         DropdownMenu(
                             expanded = paymentExpanded,
@@ -160,12 +162,12 @@ fun LaunchNewPlatformDialog(
 
                 // CYCLE SELECTOR
                 Column {
-                    Text(stringResource(R.string.launch_dialog_payment_cycle), fontSize = 12.sp, color = Color(0xFF94A3B8))
+                    Text(stringResource(R.string.launch_dialog_payment_cycle), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Box(modifier = Modifier.fillMaxWidth()) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color(0xFF2D2D34), RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
                                 .clickable { cycleExpanded = true }
                                 .padding(horizontal = 12.dp, vertical = 14.dp)
                                 .testTag("new_platform_cycle_selector"),
@@ -179,8 +181,8 @@ fun LaunchNewPlatformDialog(
                                 "mensal" -> stringResource(R.string.launch_cycle_monthly)
                                 else -> stringResource(R.string.launch_cycle_variable)
                             }
-                            Text(cycleLabel, color = Color.White, fontSize = 14.sp)
-                            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = Color.White)
+                            Text(cycleLabel, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
+                            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         DropdownMenu(
                             expanded = cycleExpanded,
@@ -231,9 +233,9 @@ fun LaunchNewPlatformDialog(
                 onClick = onDismiss,
                 modifier = Modifier.testTag("cancel_new_platform_btn")
             ) {
-                Text(stringResource(R.string.btn_cancel), color = Color(0xFF94A3B8))
+                Text(stringResource(R.string.btn_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
-        containerColor = Color(0xFF1E1E22)
+        containerColor = MaterialTheme.colorScheme.surface
     )
 }

@@ -61,8 +61,8 @@ fun RefillsListSection(
                     onClick = onAddClick,
                     modifier = Modifier.testTag("add_refill_btn"),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF10B981),
-                        contentColor = Color(0xFF064E3B)
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {

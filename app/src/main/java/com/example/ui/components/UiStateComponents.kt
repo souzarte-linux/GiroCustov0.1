@@ -146,10 +146,10 @@ fun OfflineNoticeBanner(
             .fillMaxWidth()
             .testTag("offline_notice_banner"),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF59E0B).copy(alpha = 0.12f)
+            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
         ),
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.35f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f))
     ) {
         Row(
             modifier = Modifier
@@ -162,13 +162,13 @@ fun OfflineNoticeBanner(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFF59E0B).copy(alpha = 0.2f)),
+                    .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.CloudOff,
                     contentDescription = stringResource(R.string.cd_offline_icon),
-                    tint = Color(0xFFF59E0B),
+                    tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -203,10 +203,10 @@ fun ErrorNotificationCard(
             .fillMaxWidth()
             .testTag("error_notification_card"),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF43F5E).copy(alpha = 0.12f)
+            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
         ),
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, Color(0xFFF43F5E).copy(alpha = 0.35f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.35f))
     ) {
         Column(
             modifier = Modifier
@@ -227,7 +227,7 @@ fun ErrorNotificationCard(
                     Icon(
                         imageVector = Icons.Default.ErrorOutline,
                         contentDescription = stringResource(R.string.cd_error_icon),
-                        tint = Color(0xFFF43F5E),
+                        tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
@@ -274,8 +274,8 @@ fun ErrorNotificationCard(
                     .defaultMinSize(minHeight = 48.dp)
                     .testTag("retry_sync_btn"),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFF43F5E),
-                    contentColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError
                 ),
                 shape = RoundedCornerShape(8.dp)
             ) {

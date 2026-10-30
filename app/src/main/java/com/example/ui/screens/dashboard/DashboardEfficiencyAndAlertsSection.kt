@@ -37,16 +37,16 @@ fun DashboardEfficiencyAndAlertsSection(
     ) {
         Card(
             modifier = Modifier.weight(1f),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(1.dp, Color(0xFF2D2D34)), // Dark Slate border
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             elevation = CardDefaults.cardElevation(0.dp)
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.LocalGasStation, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
+                    Icon(Icons.Filled.LocalGasStation, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.dashboard_kpi_cost_per_km), fontSize = 11.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.dashboard_kpi_cost_per_km), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -54,7 +54,7 @@ fun DashboardEfficiencyAndAlertsSection(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.ExtraBold,
                     fontFamily = FontFamily.Monospace,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 LinearProgressIndicator(
@@ -63,24 +63,24 @@ fun DashboardEfficiencyAndAlertsSection(
                         .fillMaxWidth()
                         .height(4.dp)
                         .clip(CircleShape),
-                    color = Color(0xFFFBBF24), // amber-400
-                    trackColor = Color(0xFF2D2D34) // dark charcoal track
+                    color = MaterialTheme.colorScheme.secondary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             }
         }
 
         Card(
             modifier = Modifier.weight(1f),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E22)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(1.dp, Color(0xFF2D2D34)), // Dark Slate border
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             elevation = CardDefaults.cardElevation(0.dp)
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(16.dp))
+                    Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.dashboard_kpi_net_profit_per_km), fontSize = 11.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.dashboard_kpi_net_profit_per_km), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -88,7 +88,7 @@ fun DashboardEfficiencyAndAlertsSection(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.ExtraBold,
                     fontFamily = FontFamily.Monospace,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 LinearProgressIndicator(
@@ -97,8 +97,8 @@ fun DashboardEfficiencyAndAlertsSection(
                         .fillMaxWidth()
                         .height(4.dp)
                         .clip(CircleShape),
-                    color = Color(0xFF10B981), // Emerald
-                    trackColor = Color(0xFF2D2D34) // dark charcoal track
+                    color = MaterialTheme.colorScheme.tertiary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             }
         }
@@ -118,16 +118,16 @@ fun DashboardEfficiencyAndAlertsSection(
                 text = stringResource(R.string.dashboard_maintenance_alert_title),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFF43F5E), // rose-500 for high visibility
+                color = MaterialTheme.colorScheme.error,
                 letterSpacing = 1.sp
             )
 
             criticalParts.forEach { part ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2E1018)), // deep ruby/dark charcoal
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
                     shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, Color(0xFFF43F5E).copy(alpha = 0.4f)) // rose glow
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f))
                 ) {
                     Row(
                         modifier = Modifier
@@ -140,7 +140,7 @@ fun DashboardEfficiencyAndAlertsSection(
                             Text(
                                 text = part.name,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
                                 fontSize = 14.sp
                             )
                             Spacer(modifier = Modifier.height(2.dp))
@@ -151,19 +151,22 @@ fun DashboardEfficiencyAndAlertsSection(
                                     part.runKmSinceChange.toInt(),
                                     part.lifespanKm.toInt()
                                 ),
-                                color = Color(0xFFFDA4AF), // rose-300 soft pink
+                                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
                                 fontSize = 11.sp
                             )
                         }
 
                         Button(
                             onClick = { onResetPartWear(part.id) },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF43F5E)), // rose-500
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            ),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                             modifier = Modifier.height(32.dp),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text(stringResource(R.string.dashboard_part_button_replaced), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(stringResource(R.string.dashboard_part_button_replaced), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onError)
                         }
                     }
                 }

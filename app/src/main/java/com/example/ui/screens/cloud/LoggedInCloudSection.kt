@@ -58,9 +58,9 @@ fun LoggedInCloudSection(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isDark) Color(0xFF1E1E22) else Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = BorderStroke(1.dp, if (isDark) Color(0xFF2D2D34) else Color(0xFFE2E8F0)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(
@@ -79,7 +79,7 @@ fun LoggedInCloudSection(
                         .clip(CircleShape)
                         .background(
                             Brush.linearGradient(
-                                colors = listOf(Color(0xFF10B981), Color(0xFF047857))
+                                colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
                             )
                         ),
                     contentAlignment = Alignment.Center
@@ -87,7 +87,7 @@ fun LoggedInCloudSection(
                     val initial = currentUser.userEmail?.take(1)?.uppercase() ?: "U"
                     Text(
                         text = initial,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -97,7 +97,7 @@ fun LoggedInCloudSection(
                     Text(
                         text = "Conectado ao GiroCusto Cloud",
                         fontSize = 12.sp,
-                        color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
@@ -110,7 +110,7 @@ fun LoggedInCloudSection(
             }
 
             HorizontalDivider(
-                color = if (isDark) Color(0xFF2D2D34) else Color(0xFFE2E8F0)
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
             )
 
             // Status Badge
@@ -122,17 +122,17 @@ fun LoggedInCloudSection(
                 Text(
                     text = "Status da Conexão:",
                     fontSize = 13.sp,
-                    color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Surface(
                     shape = RoundedCornerShape(20.dp),
                     color = when (syncState) {
-                        SyncState.SYNCING -> Color(0xFFF59E0B).copy(alpha = 0.15f)
-                        SyncState.SUCCESS -> Color(0xFF10B981).copy(alpha = 0.15f)
+                        SyncState.SYNCING -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                        SyncState.SUCCESS -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                         SyncState.ERROR -> MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
-                        SyncState.OFFLINE -> Color(0xFF64748B).copy(alpha = 0.15f)
-                        SyncState.IDLE -> Color(0xFF10B981).copy(alpha = 0.15f)
+                        SyncState.OFFLINE -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
+                        SyncState.IDLE -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                     }
                 ) {
                     Row(
@@ -145,25 +145,25 @@ fun LoggedInCloudSection(
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(12.dp),
                                     strokeWidth = 2.dp,
-                                    color = Color(0xFFF59E0B)
+                                    color = MaterialTheme.colorScheme.tertiary
                                 )
-                                Text("Sincronizando...", fontSize = 12.sp, color = Color(0xFFF59E0B), fontWeight = FontWeight.Bold)
+                                Text("Sincronizando...", fontSize = 12.sp, color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.Bold)
                             }
                             SyncState.SUCCESS -> {
-                                Icon(Icons.Filled.CloudDone, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(14.dp))
-                                Text("Sincronizado", fontSize = 12.sp, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
+                                Icon(Icons.Filled.CloudDone, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+                                Text("Sincronizado", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                             }
                             SyncState.ERROR -> {
                                 Icon(Icons.Filled.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(14.dp))
                                 Text("Erro ao Sincronizar", fontSize = 12.sp, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                             }
                             SyncState.OFFLINE -> {
-                                Icon(Icons.Filled.CloudOff, contentDescription = null, tint = Color(0xFF64748B), modifier = Modifier.size(14.dp))
-                                Text("Offline", fontSize = 12.sp, color = Color(0xFF64748B), fontWeight = FontWeight.Bold)
+                                Icon(Icons.Filled.CloudOff, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+                                Text("Offline", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                             }
                             SyncState.IDLE -> {
-                                Icon(Icons.Filled.CloudDone, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(14.dp))
-                                Text("Conectado", fontSize = 12.sp, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
+                                Icon(Icons.Filled.CloudDone, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+                                Text("Conectado", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -179,7 +179,7 @@ fun LoggedInCloudSection(
                 Text(
                     text = "Última sincronização:",
                     fontSize = 13.sp,
-                    color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Text(
@@ -213,9 +213,9 @@ fun LoggedInCloudSection(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isDark) Color(0xFF1E1E22) else Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = BorderStroke(1.dp, if (isDark) Color(0xFF2D2D34) else Color(0xFFE2E8F0)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(
@@ -240,7 +240,7 @@ fun LoggedInCloudSection(
 
             if (!vehicleModel.isNullOrBlank()) {
                 Surface(
-                    color = if (isDark) Color(0xFF2D2D34).copy(alpha = 0.5f) else Color(0xFFF1F5F9),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -252,7 +252,7 @@ fun LoggedInCloudSection(
                         Icon(
                             imageVector = Icons.Filled.TwoWheeler,
                             contentDescription = null,
-                            tint = Color(0xFF10B981),
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
@@ -276,8 +276,8 @@ fun LoggedInCloudSection(
             .testTag("btn_sync_now"),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF10B981),
-            contentColor = Color.White
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
         )
     ) {
         Icon(
@@ -303,9 +303,9 @@ fun LoggedInCloudSection(
             .height(48.dp)
             .testTag("btn_logout_supabase"),
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, if (isDark) Color(0xFF3F3F46) else Color(0xFFCBD5E1)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
         colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = if (isDark) Color(0xFFF87171) else Color(0xFFEF4444)
+            contentColor = MaterialTheme.colorScheme.error
         )
     ) {
         Icon(
@@ -325,9 +325,9 @@ fun LoggedInCloudSection(
 @Composable
 fun SummaryStatItem(label: String, value: String, isDark: Boolean) {
     Surface(
-        color = if (isDark) Color(0xFF2D2D34).copy(alpha = 0.5f) else Color(0xFFF8FAFC),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, if (isDark) Color(0xFF3F3F46).copy(alpha = 0.5f) else Color(0xFFE2E8F0))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
@@ -337,12 +337,12 @@ fun SummaryStatItem(label: String, value: String, isDark: Boolean) {
                 text = value,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF10B981)
+                color = MaterialTheme.colorScheme.primary
             )
             Text(
                 text = label,
                 fontSize = 11.sp,
-                color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

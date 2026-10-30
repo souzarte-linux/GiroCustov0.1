@@ -1,23 +1,49 @@
 package com.example.ui.screens.onboarding
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// Design Tokens Dark Theme Pro para a tela de Primeiro Cadastro (Onboarding)
-internal val ColorDarkBg = Color(0xFF121214)
-internal val ColorSurfaceCard = Color(0xFF1E1E22)
-internal val ColorSurfaceElevated = Color(0xFF24242A)
-internal val ColorSurfaceInput = Color(0xFF2A2A30)
-internal val ColorBorder = Color(0xFF2D2D34)
-internal val ColorBrandEmerald = Color(0xFF10B981)
-internal val ColorEmeraldBadgeBg = Color(0xFF064E3B)
-internal val ColorEmeraldBadgeText = Color(0xFF34D399)
-internal val ColorOnPrimary = Color(0xFF064E3B)
-internal val ColorTextPrimary = Color(0xFFF1F5F9)
-internal val ColorTextMuted = Color(0xFF94A3B8)
-internal val ColorError = Color(0xFFF43F5E)
-internal val ColorErrorBg = Color(0xFF4C1D24)
+// Design Tokens dinâmicos baseados no MaterialTheme.colorScheme para a tela de Primeiro Cadastro (Onboarding)
+internal val ColorDarkBg: Color
+    @Composable get() = MaterialTheme.colorScheme.background
+
+internal val ColorSurfaceCard: Color
+    @Composable get() = MaterialTheme.colorScheme.surface
+
+internal val ColorSurfaceElevated: Color
+    @Composable get() = MaterialTheme.colorScheme.surfaceVariant
+
+internal val ColorSurfaceInput: Color
+    @Composable get() = MaterialTheme.colorScheme.surfaceVariant
+
+internal val ColorBorder: Color
+    @Composable get() = MaterialTheme.colorScheme.outline
+
+internal val ColorBrandEmerald: Color
+    @Composable get() = MaterialTheme.colorScheme.primary
+
+internal val ColorEmeraldBadgeBg: Color
+    @Composable get() = MaterialTheme.colorScheme.primaryContainer
+
+internal val ColorEmeraldBadgeText: Color
+    @Composable get() = MaterialTheme.colorScheme.onPrimaryContainer
+
+internal val ColorOnPrimary: Color
+    @Composable get() = MaterialTheme.colorScheme.onPrimary
+
+internal val ColorTextPrimary: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurface
+
+internal val ColorTextMuted: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+
+internal val ColorError: Color
+    @Composable get() = MaterialTheme.colorScheme.error
+
+internal val ColorErrorBg: Color
+    @Composable get() = MaterialTheme.colorScheme.errorContainer
 
 @Composable
 internal fun onboardingTextFieldColors() = OutlinedTextFieldDefaults.colors(

@@ -136,7 +136,7 @@ fun HistoryRecordCard(
                         Icon(
                             imageVector = Icons.Filled.Edit,
                             contentDescription = stringResource(R.string.cd_edit_record),
-                            tint = Color(0xFF38BDF8),
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -147,7 +147,7 @@ fun HistoryRecordCard(
                         Icon(
                             imageVector = Icons.Filled.Delete,
                             contentDescription = stringResource(R.string.cd_delete_record),
-                            tint = Color(0xFFF43F5E),
+                            tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -189,7 +189,7 @@ fun HistoryRecordCard(
                             text = record.formattedWorkDuration,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF10B981)
+                            color = MaterialTheme.colorScheme.tertiary
                         )
                     }
                 }
@@ -304,7 +304,7 @@ fun HistoryRecordCard(
                     text = String.format(Locale.GERMAN, "R$ %.2f", CurrencyUtils.centsToDouble(record.netProfit)),
                     fontWeight = FontWeight.Black,
                     fontSize = 16.sp,
-                    color = if (record.netProfit >= 0) Color(0xFF10B981) else Color(0xFFF43F5E)
+                    color = if (record.netProfit >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
                 )
             }
         }
