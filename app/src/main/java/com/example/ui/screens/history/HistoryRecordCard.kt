@@ -48,6 +48,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -111,7 +112,7 @@ fun HistoryRecordCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 14.dp, end = 12.dp, top = 12.dp, bottom = 10.dp),
+                    .padding(start = 14.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Top Row: Plataforma + Data + Entregas + Ações Editar/Excluir
@@ -186,8 +187,15 @@ fun HistoryRecordCard(
                         )
                     }
 
-                    // Botões de Ação: Editar e Excluir com hit-target >= 48dp
+                    // Botões de Ação: Editar e Excluir com hit-target >= 48dp mantendo fluxo vertical compacto
                     Row(
+                        modifier = Modifier.layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            val compactHeight = 28.dp.roundToPx()
+                            layout(placeable.width, compactHeight) {
+                                placeable.placeRelative(0, (compactHeight - placeable.height) / 2)
+                            }
+                        },
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
