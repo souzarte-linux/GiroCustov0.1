@@ -106,9 +106,9 @@ fun getWeekSubdivisionBoundaries(recordTimestamp: Long, year: Int, month: Int): 
     }
 
     val startOfMonth = Calendar.getInstance().apply {
+        set(Calendar.DAY_OF_MONTH, 1)
         set(Calendar.YEAR, year)
         set(Calendar.MONTH, month)
-        set(Calendar.DAY_OF_MONTH, 1)
         set(Calendar.HOUR_OF_DAY, 0)
         set(Calendar.MINUTE, 0)
         set(Calendar.SECOND, 0)
@@ -116,6 +116,7 @@ fun getWeekSubdivisionBoundaries(recordTimestamp: Long, year: Int, month: Int): 
     }
 
     val endOfMonth = Calendar.getInstance().apply {
+        set(Calendar.DAY_OF_MONTH, 1)
         set(Calendar.YEAR, year)
         set(Calendar.MONTH, month)
         set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))

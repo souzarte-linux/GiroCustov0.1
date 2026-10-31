@@ -52,6 +52,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
@@ -136,7 +137,10 @@ fun HistoryRecordCard(
                             text = record.platform,
                             fontWeight = FontWeight.Bold,
                             color = brandColor,
-                            fontSize = 13.sp
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
 
                         Text(
@@ -163,7 +167,8 @@ fun HistoryRecordCard(
                             text = formattedDateShort,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            maxLines = 1
                         )
 
                         Text(
@@ -183,19 +188,13 @@ fun HistoryRecordCard(
                             text = "${record.deliveriesCount} Entreg.",
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            maxLines = 1
                         )
                     }
 
-                    // Botões de Ação: Editar e Excluir com hit-target >= 48dp mantendo fluxo vertical compacto
+                    // Botões de Ação: Editar e Excluir com hit-target >= 48dp
                     Row(
-                        modifier = Modifier.layout { measurable, constraints ->
-                            val placeable = measurable.measure(constraints)
-                            val compactHeight = 28.dp.roundToPx()
-                            layout(placeable.width, compactHeight) {
-                                placeable.placeRelative(0, (compactHeight - placeable.height) / 2)
-                            }
-                        },
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {

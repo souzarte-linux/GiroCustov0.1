@@ -328,4 +328,34 @@ class HistoryRefactorTest {
             composeTestRule.onNodeWithTag("theme_container_${theme.name}_$mode", useUnmergedTree = true).assertExists()
         }
     }
+
+    @Test
+    fun testHistoryRecordCard_withLongPlatformName_doesNotBreakOrExpand() {
+        val recordUber = createDummyRecord(99L, "Uber", 120.00, 95.50)
+        val recordGmail = createDummyRecord(3L, "Plataforma Gmail", 158.98, 147.08)
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                androidx.compose.foundation.layout.Column {
+                    HistoryRecordCard(
+                        record = recordUber,
+                        onEditClick = {},
+                        onDeleteClick = {}
+                    )
+                    HistoryRecordCard(
+                        record = recordGmail,
+                        onEditClick = {},
+                        onDeleteClick = {}
+                    )
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+        val nodeUber = composeTestRule.onNodeWithTag("history_item_99").fetchSemanticsNode()
+        val nodeGmail = composeTestRule.onNodeWithTag("history_item_3").fetchSemanticsNode()
+
+        // Garante que o card com nome longo de plataforma mantém a mesma altura compacta do card padrão
+        assertEquals(nodeUber.size.height, nodeGmail.size.height)
+        composeTestRule.onNodeWithTag("edit_record_btn_3").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("delete_record_btn_3").assertIsDisplayed()
+    }
 }
