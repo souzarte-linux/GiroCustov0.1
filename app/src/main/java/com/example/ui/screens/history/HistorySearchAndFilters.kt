@@ -45,62 +45,250 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.ui.Period
 
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.InputChip
+import androidx.compose.material3.InputChipDefaults
+import androidx.compose.ui.platform.testTag
+import java.util.Date
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistorySearchBar(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    filterState: HistoryFilterState = HistoryFilterState(),
+    onOpenFilterSheet: () -> Unit = {}
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.history_search_placeholder),
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    softWrap = false
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(
+                        onClick = { onSearchQueryChange("") },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Clear,
+                            contentDescription = "Limpar busca",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            },
+            singleLine = true,
+            maxLines = 1,
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+            ),
+            modifier = Modifier
+                .weight(1f)
+                .defaultMinSize(minHeight = 48.dp)
+        )
+
+        // Botão de Filtro à direita com BadgedBox (48dp x 48dp)
+        IconButton(
+            onClick = onOpenFilterSheet,
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                    if (filterState.hasActiveFilters) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    }
+                )
+                .border(
+                    BorderStroke(
+                        1.dp,
+                        if (filterState.hasActiveFilters) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.outline
+                        }
+                    ),
+                    RoundedCornerShape(12.dp)
+                )
+                .testTag("history_filter_button")
+        ) {
+            BadgedBox(
+                badge = {
+                    if (filterState.hasActiveFilters) {
+                        Badge(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ) {
+                            Text(
+                                text = filterState.activeFilterCount.toString(),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            ) {
+                val filterCd = if (filterState.hasActiveFilters) {
+                    stringResource(R.string.history_cd_filters_badge, filterState.activeFilterCount)
+                } else {
+                    stringResource(R.string.history_cd_filters_button)
+                }
+                Icon(
+                    imageVector = Icons.Filled.Tune,
+                    contentDescription = filterCd,
+                    tint = if (filterState.hasActiveFilters) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HistoryActiveFilterChips(
+    filterState: HistoryFilterState,
+    onRemovePeriod: () -> Unit,
+    onRemoveDeliveryType: () -> Unit,
+    onRemovePlatform: () -> Unit,
+    onRemoveSort: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    OutlinedTextField(
-        value = searchQuery,
-        onValueChange = onSearchQueryChange,
-        placeholder = {
-            Text(
-                text = stringResource(R.string.history_search_placeholder),
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                softWrap = false
+    if (!filterState.hasActiveFilters) return
+
+    val dateFormat = remember { java.text.SimpleDateFormat("dd/MM", java.util.Locale.getDefault()) }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Chip 1: Período
+        if (filterState.period != Period.SEMANA) {
+            val periodLabel = when (filterState.period) {
+                Period.QUINZENA -> stringResource(R.string.period_fortnight)
+                Period.MENSAL -> stringResource(R.string.period_month)
+                Period.ULTIMOS_30_DIAS -> stringResource(R.string.history_period_30_days_short)
+                Period.ANUAL -> stringResource(R.string.period_year)
+                Period.PERSONALIZADO -> "${dateFormat.format(Date(filterState.customStartDate))} - ${dateFormat.format(Date(filterState.customEndDate))}"
+                Period.SEMANA -> ""
+            }
+            ActiveFilterChipItem(
+                label = periodLabel,
+                onRemove = onRemovePeriod,
+                testTag = "active_chip_period"
             )
-        },
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Filled.Search,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
+        }
+
+        // Chip 2: Tipo de Entrega
+        if (filterState.deliveryType != DeliveryTypeFilter.TODOS) {
+            val typeLabel = when (filterState.deliveryType) {
+                DeliveryTypeFilter.LOGISTICA -> stringResource(R.string.history_filter_type_logistics)
+                DeliveryTypeFilter.DELIVERY -> stringResource(R.string.history_filter_type_delivery)
+                DeliveryTypeFilter.TODOS -> ""
+            }
+            ActiveFilterChipItem(
+                label = typeLabel,
+                onRemove = onRemoveDeliveryType,
+                testTag = "active_chip_delivery_type"
+            )
+        }
+
+        // Chip 3: Plataforma
+        if (!filterState.selectedPlatform.isNullOrBlank()) {
+            ActiveFilterChipItem(
+                label = filterState.selectedPlatform,
+                onRemove = onRemovePlatform,
+                testTag = "active_chip_platform"
+            )
+        }
+
+        // Chip 4: Ordenação
+        if (filterState.sortOption != HistorySortOption.DATA_DECRESCENTE) {
+            val sortLabel = stringResource(filterState.sortOption.labelResId)
+            ActiveFilterChipItem(
+                label = sortLabel,
+                onRemove = onRemoveSort,
+                testTag = "active_chip_sort"
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ActiveFilterChipItem(
+    label: String,
+    onRemove: () -> Unit,
+    testTag: String
+) {
+    InputChip(
+        selected = true,
+        onClick = onRemove,
+        label = {
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
             )
         },
         trailingIcon = {
-            if (searchQuery.isNotEmpty()) {
-                IconButton(
-                    onClick = { onSearchQueryChange("") },
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Clear,
-                        contentDescription = "Limpar busca",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = stringResource(R.string.history_cd_remove_filter, label),
+                modifier = Modifier.size(16.dp)
+            )
         },
-        singleLine = true,
-        maxLines = 1,
-        shape = RoundedCornerShape(12.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+        colors = InputChipDefaults.inputChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            selectedTrailingIconColor = MaterialTheme.colorScheme.primary
         ),
-        modifier = modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = 48.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+        modifier = Modifier
+            .defaultMinSize(minHeight = 40.dp)
+            .testTag(testTag)
     )
 }
 
@@ -253,6 +441,7 @@ fun HistoryFilterDropdowns(
                     Period.QUINZENA -> stringResource(R.string.period_fortnight)
                     Period.MENSAL -> stringResource(R.string.period_month)
                     Period.ULTIMOS_30_DIAS -> stringResource(R.string.history_period_30_days_short)
+                    Period.ANUAL -> stringResource(R.string.period_year)
                     Period.PERSONALIZADO -> stringResource(R.string.history_period_custom_short)
                 }
                 Text(
@@ -300,6 +489,13 @@ fun HistoryFilterDropdowns(
                     text = { Text(stringResource(R.string.period_last_30_days), fontSize = 13.sp) },
                     onClick = {
                         onPeriodSelected(Period.ULTIMOS_30_DIAS)
+                        periodExpanded = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.period_year), fontSize = 13.sp) },
+                    onClick = {
+                        onPeriodSelected(Period.ANUAL)
                         periodExpanded = false
                     }
                 )

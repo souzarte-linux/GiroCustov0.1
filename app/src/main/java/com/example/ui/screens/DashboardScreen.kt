@@ -170,6 +170,7 @@ fun DashboardScreen(
                                 Period.QUINZENA -> stringResource(R.string.period_fortnight)
                                 Period.MENSAL -> stringResource(R.string.period_month)
                                 Period.ULTIMOS_30_DIAS -> stringResource(R.string.period_last_30_days)
+                                Period.ANUAL -> stringResource(R.string.period_year)
                                 Period.PERSONALIZADO -> stringResource(R.string.period_custom)
                             }
                             Text(
@@ -216,6 +217,13 @@ fun DashboardScreen(
                                 text = { Text(stringResource(R.string.period_last_30_days), fontSize = 14.sp) },
                                 onClick = {
                                     viewModel.setPeriod(Period.ULTIMOS_30_DIAS)
+                                    dropdownExpanded = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.period_year), fontSize = 14.sp) },
+                                onClick = {
+                                    viewModel.setPeriod(Period.ANUAL)
                                     dropdownExpanded = false
                                 }
                             )

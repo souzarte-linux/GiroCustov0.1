@@ -259,14 +259,22 @@ class HistoryRefactorTest {
         privacyBtn.performClick()
         composeTestRule.waitForIdle()
 
-        // Verifica chips de filtro rápido
-        composeTestRule.onNodeWithText("Todos").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Logística (ML/Shopee)").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Delivery/Apps (iFood/Uber)").assertIsDisplayed()
-
-        // Clica no chip Logística
-        composeTestRule.onNodeWithText("Logística (ML/Shopee)").performClick()
+        // Abre a modal de filtros pelo botão de filtro da barra de pesquisa
+        composeTestRule.onNodeWithTag("history_filter_button").performClick()
         composeTestRule.waitForIdle()
+
+        // Verifica chips de tipo de entrega dentro do modal
+        composeTestRule.onNodeWithTag("delivery_type_chip_TODOS").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("delivery_type_chip_LOGISTICA").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("delivery_type_chip_DELIVERY").assertIsDisplayed()
+
+        // Seleciona Logística e clica em Aplicar Filtros
+        composeTestRule.onNodeWithTag("delivery_type_chip_LOGISTICA").performClick()
+        composeTestRule.onNodeWithTag("filter_sheet_apply_btn").performClick()
+        composeTestRule.waitForIdle()
+
+        // Chip ativo de Logística deve estar visível na tela principal
+        composeTestRule.onNodeWithTag("active_chip_delivery_type").assertIsDisplayed()
 
         // Lançamento Mercado Livre deve estar presente
         composeTestRule.onNodeWithTag("history_list")

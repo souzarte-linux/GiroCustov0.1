@@ -109,6 +109,7 @@ fun ReportsScreen(
                     Period.QUINZENA -> stringResource(R.string.reports_period_prefix_fortnight)
                     Period.MENSAL -> stringResource(R.string.reports_period_prefix_month)
                     Period.ULTIMOS_30_DIAS -> stringResource(R.string.reports_period_prefix_last_30_days)
+                    Period.ANUAL -> stringResource(R.string.reports_period_prefix_year)
                     Period.PERSONALIZADO -> stringResource(
                         R.string.reports_period_custom_range,
                         displayFormat.format(Date(customStart)),
@@ -145,6 +146,7 @@ fun ReportsScreen(
                             Period.QUINZENA -> stringResource(R.string.reports_period_fortnight)
                             Period.MENSAL -> stringResource(R.string.reports_period_month)
                             Period.ULTIMOS_30_DIAS -> stringResource(R.string.reports_period_last_30_days)
+                            Period.ANUAL -> stringResource(R.string.reports_period_year)
                             Period.PERSONALIZADO -> stringResource(R.string.reports_period_custom)
                         }
                         Text(
@@ -191,6 +193,13 @@ fun ReportsScreen(
                             text = { Text(stringResource(R.string.reports_period_last_30_days), fontSize = 14.sp) },
                             onClick = {
                                 viewModel.setReportsPeriod(Period.ULTIMOS_30_DIAS)
+                                dropdownExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.reports_period_year), fontSize = 14.sp) },
+                            onClick = {
+                                viewModel.setReportsPeriod(Period.ANUAL)
                                 dropdownExpanded = false
                             }
                         )

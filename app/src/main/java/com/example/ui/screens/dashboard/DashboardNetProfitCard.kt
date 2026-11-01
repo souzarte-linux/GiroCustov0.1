@@ -58,6 +58,7 @@ fun DashboardNetProfitCard(
                     Period.QUINZENA -> stringResource(R.string.dashboard_net_profit_fortnight)
                     Period.MENSAL -> stringResource(R.string.dashboard_net_profit_month)
                     Period.ULTIMOS_30_DIAS -> stringResource(R.string.dashboard_net_profit_30_days)
+                    Period.ANUAL -> stringResource(R.string.dashboard_net_profit_year)
                     Period.PERSONALIZADO -> {
                         val startStr = displayFormat.format(Date(customStart))
                         val endStr = displayFormat.format(Date(customEnd))

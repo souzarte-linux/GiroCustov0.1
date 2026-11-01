@@ -128,10 +128,24 @@ class AccessibilityContentDescriptionsTest {
         assertTrue("Largura do botão de tema em histórico deve ser >= 48dp (obtido: ${bounds.width})", bounds.width >= 47.9.dp)
         assertTrue("Altura do botão de tema em histórico deve ser >= 48dp (obtido: ${bounds.height})", bounds.height >= 47.9.dp)
 
-        // Valida os contentDescriptions dos dropdowns
-        composeTestRule.onNodeWithContentDescription(app.getString(R.string.cd_select_period)).assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription(app.getString(R.string.cd_filter_platform)).assertIsDisplayed()
-        composeTestRule.onNodeWithContentDescription(app.getString(R.string.cd_sort_by)).assertIsDisplayed()
+        // Valida botão de filtro da barra de busca, seu contentDescription e bounds >= 48dp
+        val filterButton = composeTestRule.onNodeWithTag("history_filter_button")
+        filterButton.assertIsDisplayed()
+        val expectedFilterCd = app.getString(R.string.history_cd_filters_button)
+        composeTestRule.onNodeWithContentDescription(expectedFilterCd).assertIsDisplayed()
+
+        val filterBounds = filterButton.getUnclippedBoundsInRoot()
+        assertTrue("Largura do botão de filtros deve ser >= 48dp (obtido: ${filterBounds.width})", filterBounds.width >= 47.9.dp)
+        assertTrue("Altura do botão de filtros deve ser >= 48dp (obtido: ${filterBounds.height})", filterBounds.height >= 47.9.dp)
+
+        // Abre a modal de filtros e valida acessibilidade dos botões do bottom sheet
+        filterButton.performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("history_filter_bottom_sheet").assertIsDisplayed()
+        composeTestRule.onNodeWithText(app.getString(R.string.history_filter_sheet_title)).assertIsDisplayed()
+        composeTestRule.onNodeWithTag("filter_sheet_apply_btn").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("filter_sheet_cancel_btn").assertIsDisplayed()
     }
 
     @Test

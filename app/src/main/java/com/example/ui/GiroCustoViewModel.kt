@@ -22,6 +22,7 @@ enum class Period {
     QUINZENA,
     MENSAL,
     ULTIMOS_30_DIAS,
+    ANUAL,
     PERSONALIZADO
 }
 

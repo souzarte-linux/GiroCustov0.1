@@ -41,22 +41,6 @@ import java.util.Date
 import java.util.Locale
 
 
-enum class HistorySortOption(val labelResId: Int) {
-    DATA_DECRESCENTE(R.string.history_sort_date_desc),
-    DATA_CRESCENTE(R.string.history_sort_date_asc),
-    LUCRO_MAIOR(R.string.history_sort_profit_desc),
-    LUCRO_MENOR(R.string.history_sort_profit_asc),
-    KM_MAIOR(R.string.history_sort_km_desc),
-    KM_MENOR(R.string.history_sort_km_asc),
-    ENTREGAS(R.string.history_sort_deliveries_desc)
-}
-
-enum class QuickFilterOption {
-    TODOS,
-    LOGISTICA,
-    DELIVERY
-}
-
 @Composable
 fun HistoryScreen(
     viewModel: GiroCustoViewModel,
@@ -77,29 +61,15 @@ fun HistoryScreen(
     // Busca Textual
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
-    // Filtro Rápido (Chips)
-    var selectedQuickFilter by rememberSaveable { mutableStateOf(QuickFilterOption.TODOS) }
-
-    // Filtros de Período
-    var historyPeriod by remember { mutableStateOf(Period.SEMANA) }
-    var historyCustomStart by remember { mutableStateOf(System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000) }
-    var historyCustomEnd by remember { mutableStateOf(System.currentTimeMillis()) }
+    // Estado dos Filtros Avançados e Modal BottomSheet
+    var filterState by remember { mutableStateOf(HistoryFilterState()) }
+    var showFilterBottomSheet by remember { mutableStateOf(false) }
     var showHistoryCustomPeriodDialog by remember { mutableStateOf(false) }
 
-    // Dropdown Plataformas
-    val allPlatformsLabel = stringResource(R.string.history_filter_all_platforms)
-    val platformsList = remember(records, allPlatformsLabel) {
-        listOf(allPlatformsLabel) + records.map { it.platform }.distinct().filter { it.isNotBlank() }
+    // Lista de plataformas únicas dos lançamentos
+    val platformsList = remember(records) {
+        records.map { it.platform }.distinct().filter { it.isNotBlank() }
     }
-    var selectedPlatformFilter by remember { mutableStateOf(allPlatformsLabel) }
-
-    LaunchedEffect(platformsList, allPlatformsLabel) {
-        if (selectedPlatformFilter !in platformsList) {
-            selectedPlatformFilter = allPlatformsLabel
-        }
-    }
-
-    var selectedSortOption by remember { mutableStateOf(HistorySortOption.DATA_DECRESCENTE) }
 
     // Estado do Acordeão de Meses Expandidos (o mais recente expandido por padrão)
     var expandedMonths by remember(records) {
@@ -127,67 +97,9 @@ fun HistoryScreen(
         mutableStateOf(initial)
     }
 
-    // Filtragem combinada: Período + Quick Filter + Plataforma Dropdown + Busca Textual + Ordenação
-    val filteredAndSortedRecords = remember(
-        records,
-        historyPeriod,
-        historyCustomStart,
-        historyCustomEnd,
-        selectedQuickFilter,
-        selectedPlatformFilter,
-        searchQuery,
-        selectedSortOption,
-        allPlatformsLabel
-    ) {
-        // 1. Filtrar por Período
-        val dateFiltered = filterByPeriod(records, historyPeriod, historyCustomStart, historyCustomEnd) { it.dateTimestamp }
-
-        // 2. Filtrar por Quick Filter
-        val quickFiltered = when (selectedQuickFilter) {
-            QuickFilterOption.TODOS -> dateFiltered
-            QuickFilterOption.LOGISTICA -> dateFiltered.filter {
-                val p = it.platform.lowercase(Locale.ROOT)
-                p.contains("mercado") || p.contains("livre") || p.contains("meli") ||
-                    p.contains("shopee") || p.contains("loggi") || p.contains("lalamove")
-            }
-            QuickFilterOption.DELIVERY -> dateFiltered.filter {
-                val p = it.platform.lowercase(Locale.ROOT)
-                p.contains("ifood") || p.contains("uber") || p.contains("99") ||
-                    p.contains("rappi") || p.contains("aiqfome") || p.contains("ze")
-            }
-        }
-
-        // 3. Filtrar por Plataforma Dropdown
-        val platformFiltered = if (selectedPlatformFilter == allPlatformsLabel) {
-            quickFiltered
-        } else {
-            quickFiltered.filter { it.platform.equals(selectedPlatformFilter, ignoreCase = true) }
-        }
-
-        // 4. Filtrar por Busca Textual
-        val searchFiltered = if (searchQuery.isBlank()) {
-            platformFiltered
-        } else {
-            val q = searchQuery.trim().lowercase(Locale.ROOT)
-            platformFiltered.filter { rec ->
-                rec.platform.lowercase(Locale.ROOT).contains(q) ||
-                    rec.dateString.lowercase(Locale.ROOT).contains(q) ||
-                    try {
-                        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(rec.dateTimestamp)).contains(q)
-                    } catch (e: Exception) { false }
-            }
-        }
-
-        // 5. Ordenar
-        when (selectedSortOption) {
-            HistorySortOption.DATA_DECRESCENTE -> searchFiltered.sortedByDescending { it.dateTimestamp }
-            HistorySortOption.DATA_CRESCENTE -> searchFiltered.sortedBy { it.dateTimestamp }
-            HistorySortOption.LUCRO_MAIOR -> searchFiltered.sortedByDescending { it.netProfit }
-            HistorySortOption.LUCRO_MENOR -> searchFiltered.sortedBy { it.netProfit }
-            HistorySortOption.KM_MAIOR -> searchFiltered.sortedByDescending { it.kmRodados }
-            HistorySortOption.KM_MENOR -> searchFiltered.sortedBy { it.kmRodados }
-            HistorySortOption.ENTREGAS -> searchFiltered.sortedByDescending { it.deliveriesCount }
-        }
+    // Filtragem combinada pura: Período + Tipo de Entrega + Plataforma + Busca Textual + Ordenação
+    val filteredAndSortedRecords = remember(records, filterState, searchQuery) {
+        filterAndSortHistoryRecords(records, filterState, searchQuery)
     }
 
     Column(
@@ -264,72 +176,24 @@ fun HistoryScreen(
             )
         }
 
-        // Barra de Busca Textual
+        // Barra de Busca Textual integrada com botão de filtro (BadgedBox, min 48dp)
         HistorySearchBar(
             searchQuery = searchQuery,
-            onSearchQueryChange = { searchQuery = it }
+            onSearchQueryChange = { searchQuery = it },
+            filterState = filterState,
+            onOpenFilterSheet = { showFilterBottomSheet = true }
         )
 
-        // Chips de Filtro Rápido
-        HistoryQuickFilterChips(
-            selectedQuickFilter = selectedQuickFilter,
-            onSelectQuickFilter = { selectedQuickFilter = it }
+        // Chips horizontais de filtros ativos com remoção em 1 toque
+        HistoryActiveFilterChips(
+            filterState = filterState,
+            onRemovePeriod = { filterState = filterState.copy(period = Period.SEMANA) },
+            onRemoveDeliveryType = {
+                filterState = filterState.withDeliveryType(DeliveryTypeFilter.TODOS, platformsList)
+            },
+            onRemovePlatform = { filterState = filterState.copy(selectedPlatform = null) },
+            onRemoveSort = { filterState = filterState.copy(sortOption = HistorySortOption.DATA_DECRESCENTE) }
         )
-
-        // Dropdowns de Filtros (Período, Plataforma, Ordenação)
-        HistoryFilterDropdowns(
-            historyPeriod = historyPeriod,
-            onPeriodSelected = { historyPeriod = it },
-            onOpenCustomPeriodDialog = { showHistoryCustomPeriodDialog = true },
-            selectedPlatformFilter = selectedPlatformFilter,
-            platformsList = platformsList,
-            onPlatformSelected = { selectedPlatformFilter = it },
-            selectedSortOption = selectedSortOption,
-            onSortSelected = { selectedSortOption = it }
-        )
-
-        if (historyPeriod == Period.PERSONALIZADO) {
-            val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .defaultMinSize(minHeight = 48.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
-                    .clickable { showHistoryCustomPeriodDialog = true }
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.DateRange,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.history_custom_period_filter,
-                            dateFormat.format(Date(historyCustomStart)),
-                            dateFormat.format(Date(historyCustomEnd))
-                        ),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-                Icon(
-                    imageVector = Icons.Filled.Edit,
-                    contentDescription = stringResource(R.string.cd_change_custom_period),
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-        }
 
         if (filteredAndSortedRecords.isEmpty()) {
             Box(
@@ -357,8 +221,8 @@ fun HistoryScreen(
                 }
             }
         } else {
-            val isDateSort = selectedSortOption == HistorySortOption.DATA_DECRESCENTE || selectedSortOption == HistorySortOption.DATA_CRESCENTE
-            val isAsc = selectedSortOption == HistorySortOption.DATA_CRESCENTE
+            val isDateSort = filterState.sortOption == HistorySortOption.DATA_DECRESCENTE || filterState.sortOption == HistorySortOption.DATA_CRESCENTE
+            val isAsc = filterState.sortOption == HistorySortOption.DATA_CRESCENTE
             val groupedList = remember(filteredAndSortedRecords, isAsc, isDateSort) {
                 if (isDateSort) groupRecordsHierarchically(filteredAndSortedRecords, isAsc) else emptyList()
             }
@@ -555,31 +419,47 @@ fun HistoryScreen(
         }
     }
 
+    if (showFilterBottomSheet) {
+        HistoryFilterBottomSheet(
+            initialFilters = filterState,
+            allAvailablePlatforms = platformsList,
+            onApplyFilters = { newFilters ->
+                filterState = newFilters
+            },
+            onDismiss = { showFilterBottomSheet = false },
+            onOpenCustomPeriodDialog = { showHistoryCustomPeriodDialog = true }
+        )
+    }
+
     if (showHistoryCustomPeriodDialog) {
         CustomPeriodDialog(
-            initialStart = historyCustomStart,
-            initialEnd = historyCustomEnd,
+            initialStart = filterState.customStartDate,
+            initialEnd = filterState.customEndDate,
             onDismiss = { showHistoryCustomPeriodDialog = false },
             onConfirm = { start, end ->
-                historyCustomStart = start
-                historyCustomEnd = end
+                filterState = filterState.copy(
+                    period = Period.PERSONALIZADO,
+                    customStartDate = start,
+                    customEndDate = end
+                )
                 showHistoryCustomPeriodDialog = false
             }
         )
     }
 
-    if (showEditDialog && recordToEdit != null) {
+    val currentRecordToEdit = recordToEdit
+    if (showEditDialog && currentRecordToEdit != null) {
         EditRecordDialog(
-            record = recordToEdit!!,
+            record = currentRecordToEdit,
             onDismiss = {
                 showEditDialog = false
                 recordToEdit = null
             },
             onSave = { platform, startOdo, endOdo, gross, deliveries, fuelPrice, foodExpense, sTime, eTime, pDuration ->
                 viewModel.updateDailyRecord(
-                    recordId = recordToEdit!!.id,
-                    dateString = recordToEdit!!.dateString,
-                    dateTimestamp = recordToEdit!!.dateTimestamp,
+                    recordId = currentRecordToEdit.id,
+                    dateString = currentRecordToEdit.dateString,
+                    dateTimestamp = currentRecordToEdit.dateTimestamp,
                     platform = platform,
                     grossEarnings = gross,
                     deliveriesCount = deliveries,
