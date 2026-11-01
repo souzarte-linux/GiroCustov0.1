@@ -235,6 +235,7 @@ data class UserGoalsDto(
     @Json(name = "monthly_goal_net") val monthlyGoalNet: Double,
     @Json(name = "monthly_goal_km") val monthlyGoalKm: Double,
     @Json(name = "monthly_goal_deliveries") val monthlyGoalDeliveries: Int,
+    @Json(name = "annual_goal_net") val annualGoalNet: Double = 0.0,
     @Json(name = "created_at") val createdAt: String? = null,
     @Json(name = "updated_at") val updatedAt: String? = null,
     @Json(name = "deleted_at") val deletedAt: String? = null

@@ -52,6 +52,7 @@ fun HistoryScreen(
     val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
     val syncErrorMessage by viewModel.syncErrorMessage.collectAsStateWithLifecycle()
+    val annualGoalNet by viewModel.annualGoalNet.collectAsStateWithLifecycle()
 
     var isPrivacyEnabled by rememberSaveable { mutableStateOf(false) }
 
@@ -302,6 +303,8 @@ fun HistoryScreen(
                                     totalDeliveries = item.totalDeliveries,
                                     dailyAverage = item.dailyAverage,
                                     growthPercentage = item.growthPercentage,
+                                    netGrowthPercentage = item.netGrowthPercentage,
+                                    annualGoalNet = annualGoalNet,
                                     isPrivacyEnabled = isPrivacyEnabled
                                 )
                             }

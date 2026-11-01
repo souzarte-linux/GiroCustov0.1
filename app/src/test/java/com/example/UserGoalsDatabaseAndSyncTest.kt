@@ -163,9 +163,9 @@ class UserGoalsDatabaseAndSyncTest {
 
         dbV14.close()
 
-        // 7. Confirmação de abertura do Room na versão 15 com DAOs
+        // 7. Confirmação de abertura do Room na versão 16 com DAOs
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15)
+            .addMigrations(GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15, GiroCustoDatabase.MIGRATION_15_16)
             .allowMainThreadQueries()
             .build()
 

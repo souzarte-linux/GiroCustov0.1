@@ -212,6 +212,7 @@ class GiroCustoViewModel @JvmOverloads constructor(
     val monthlyGoalNet: MutableStateFlow<Double> get() = goalsCoordinator.monthlyGoalNet
     val monthlyGoalKm: MutableStateFlow<Double> get() = goalsCoordinator.monthlyGoalKm
     val monthlyGoalDeliveries: MutableStateFlow<Int> get() = goalsCoordinator.monthlyGoalDeliveries
+    val annualGoalNet: MutableStateFlow<Double> get() = goalsCoordinator.annualGoalNet
 
     val isDarkTheme: MutableStateFlow<Boolean> get() = goalsCoordinator.isDarkTheme
     val currentTheme: StateFlow<AppTheme> get() = goalsCoordinator.currentTheme
@@ -221,8 +222,9 @@ class GiroCustoViewModel @JvmOverloads constructor(
     fun updateGoals(
         dailyG: Double, dailyN: Double, dailyK: Double, dailyD: Int,
         weeklyG: Double, weeklyN: Double, weeklyK: Double, weeklyD: Int,
-        monthlyG: Double, monthlyN: Double, monthlyK: Double, monthlyD: Int
-    ) = goalsCoordinator.updateGoals(dailyG, dailyN, dailyK, dailyD, weeklyG, weeklyN, weeklyK, weeklyD, monthlyG, monthlyN, monthlyK, monthlyD)
+        monthlyG: Double, monthlyN: Double, monthlyK: Double, monthlyD: Int,
+        annualN: Double = annualGoalNet.value
+    ) = goalsCoordinator.updateGoals(dailyG, dailyN, dailyK, dailyD, weeklyG, weeklyN, weeklyK, weeklyD, monthlyG, monthlyN, monthlyK, monthlyD, annualN)
 
     // Flows do Banco de Dados
     val vehicle: StateFlow<Vehicle?> = repository.vehicleFlow

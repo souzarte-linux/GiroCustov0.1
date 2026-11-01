@@ -392,9 +392,9 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // Abre agora com Room versão 15 executando as migrações até 15
+        // Abre agora com Room versão 16 executando as migrações até 16
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_9_10, GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15)
+            .addMigrations(GiroCustoDatabase.MIGRATION_9_10, GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15, GiroCustoDatabase.MIGRATION_15_16)
             .allowMainThreadQueries()
             .build()
 
@@ -611,9 +611,9 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // Abre agora com Room versão 15 executando as migrações até 15
+        // Abre agora com Room versão 16 executando as migrações até 16
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15)
+            .addMigrations(GiroCustoDatabase.MIGRATION_10_11, GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15, GiroCustoDatabase.MIGRATION_15_16)
             .allowMainThreadQueries()
             .build()
 
@@ -867,9 +867,9 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // Abre agora com Room versão 15 executando as migrações até 15
+        // Abre agora com Room versão 16 executando as migrações até 16
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15)
+            .addMigrations(GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15, GiroCustoDatabase.MIGRATION_15_16)
             .allowMainThreadQueries()
             .build()
 
@@ -1169,9 +1169,9 @@ class SupabaseSyncAndMigrationTest {
 
         dbV13.close()
 
-        // 6. Confirmação de abertura e consultas do Room em versão 15 com DAOs
+        // 6. Confirmação de abertura e consultas do Room em versão 16 com DAOs
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15)
+            .addMigrations(GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15, GiroCustoDatabase.MIGRATION_15_16)
             .allowMainThreadQueries()
             .build()
 
@@ -1341,7 +1341,7 @@ class SupabaseSyncAndMigrationTest {
         rawDb.close()
         helper.close()
 
-        // 2. Abre com Room v15 aplicando cadeia completa 9->10->11->12->13->14->15
+        // 2. Abre com Room v16 aplicando cadeia completa 9->10->11->12->13->14->15->16
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
             .addMigrations(
                 GiroCustoDatabase.MIGRATION_9_10,
@@ -1349,7 +1349,8 @@ class SupabaseSyncAndMigrationTest {
                 GiroCustoDatabase.MIGRATION_11_12,
                 GiroCustoDatabase.MIGRATION_12_13,
                 GiroCustoDatabase.MIGRATION_13_14,
-                GiroCustoDatabase.MIGRATION_14_15
+                GiroCustoDatabase.MIGRATION_14_15,
+                GiroCustoDatabase.MIGRATION_15_16
             )
             .allowMainThreadQueries()
             .build()

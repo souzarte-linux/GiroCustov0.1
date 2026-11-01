@@ -22,7 +22,8 @@ sealed class HistoryListItem {
         val totalKm: Double = 0.0,
         val activeDays: Int = 0,
         val dailyAverage: Double = 0.0,
-        val growthPercentage: Double? = null
+        val growthPercentage: Double? = null,
+        val netGrowthPercentage: Double? = null
     ) : HistoryListItem()
 
     data class MonthHeader(
@@ -193,6 +194,24 @@ fun groupRecordsHierarchically(records: List<DailyRecord>, isAscending: Boolean)
 
     val resultList = mutableListOf<HistoryListItem>()
 
+    // Pré-calcula faturamento bruto e lucro líquido de cada ano para comparação percentual (+X% vs ano anterior)
+    val yearTotalsMap = mutableMapOf<Int, Pair<Double, Double>>()
+    for ((y, monthsMap) in yearToMonths) {
+        var g = 0.0
+        var n = 0.0
+        for ((_, weeksMap) in monthsMap) {
+            for ((_, daysMap) in weeksMap) {
+                for ((_, dayRecords) in daysMap) {
+                    for (rec in dayRecords) {
+                        g += CurrencyUtils.centsToDouble(rec.grossEarnings)
+                        n += CurrencyUtils.centsToDouble(rec.netProfit)
+                    }
+                }
+            }
+        }
+        yearTotalsMap[y] = Pair(g, n)
+    }
+
     for ((y, monthsMap) in yearToMonths) {
         var yearGross = 0.0
         var yearNet = 0.0
@@ -316,6 +335,14 @@ fun groupRecordsHierarchically(records: List<DailyRecord>, isAscending: Boolean)
         val activeDays = yearDaysSet.size
         val dailyAvg = if (activeDays > 0) yearGross / activeDays else 0.0
 
+        val prevTotals = yearTotalsMap[y - 1]
+        val grossGrowth = if (prevTotals != null && prevTotals.first > 0.0) {
+            ((yearGross - prevTotals.first) / prevTotals.first) * 100.0
+        } else null
+        val netGrowth = if (prevTotals != null && prevTotals.second > 0.0) {
+            ((yearNet - prevTotals.second) / prevTotals.second) * 100.0
+        } else null
+
         resultList.add(
             HistoryListItem.YearHeader(
                 year = y,
@@ -325,7 +352,8 @@ fun groupRecordsHierarchically(records: List<DailyRecord>, isAscending: Boolean)
                 totalKm = yearKm,
                 activeDays = activeDays,
                 dailyAverage = dailyAvg,
-                growthPercentage = null
+                growthPercentage = grossGrowth,
+                netGrowthPercentage = netGrowth
             )
         )
         resultList.addAll(yearItems)

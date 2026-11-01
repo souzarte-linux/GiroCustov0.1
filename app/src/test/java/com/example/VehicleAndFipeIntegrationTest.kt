@@ -1196,9 +1196,9 @@ class VehicleAndFipeIntegrationTest {
         rawDb.close()
         helper.close()
 
-        // 2. Abrir o banco com Room versão 15 executando as migrações até a versão 15
+        // 2. Abrir o banco com Room versão 16 executando as migrações até a versão 16
         val roomDb = Room.databaseBuilder(context, GiroCustoDatabase::class.java, dbName)
-            .addMigrations(GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15)
+            .addMigrations(GiroCustoDatabase.MIGRATION_11_12, GiroCustoDatabase.MIGRATION_12_13, GiroCustoDatabase.MIGRATION_13_14, GiroCustoDatabase.MIGRATION_14_15, GiroCustoDatabase.MIGRATION_15_16)
             .allowMainThreadQueries()
             .build()
 

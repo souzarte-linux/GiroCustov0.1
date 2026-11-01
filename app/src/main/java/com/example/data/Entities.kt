@@ -486,6 +486,10 @@ data class UserGoals(
     val monthlyGoalKm: Double = 2500.0,
     val monthlyGoalDeliveries: Int = 400,
 
+    // Meta Anual
+    @ColumnInfo(defaultValue = "0")
+    val annualGoalNet: Long = 0L,
+
     // Campos de Sincronização e Resolução de Conflitos
     @ColumnInfo(defaultValue = "")
     val remoteId: String = "",
@@ -510,6 +514,7 @@ data class UserGoals(
         monthlyGoalNet: Double = 3200.0,
         monthlyGoalKm: Double = 2500.0,
         monthlyGoalDeliveries: Int = 400,
+        annualGoalNet: Double = 0.0,
         id: Int = 1,
         remoteId: String = "",
         syncStatus: String = SyncStatus.SYNCED,
@@ -529,6 +534,7 @@ data class UserGoals(
         monthlyGoalNet = CurrencyUtils.toCents(monthlyGoalNet),
         monthlyGoalKm = monthlyGoalKm,
         monthlyGoalDeliveries = monthlyGoalDeliveries,
+        annualGoalNet = CurrencyUtils.toCents(annualGoalNet),
         remoteId = remoteId,
         syncStatus = syncStatus,
         updatedAt = updatedAt,

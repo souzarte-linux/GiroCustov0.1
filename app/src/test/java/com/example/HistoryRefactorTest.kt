@@ -71,6 +71,8 @@ class HistoryRefactorTest {
                     totalDeliveries = 1840,
                     dailyAverage = 195.40,
                     growthPercentage = 18.4,
+                    netGrowthPercentage = 12.8,
+                    annualGoalNet = 68000.0,
                     isPrivacyEnabled = isPrivacy
                 )
             }
@@ -78,22 +80,30 @@ class HistoryRefactorTest {
 
         // Test tag de nível 0
         composeTestRule.onNodeWithTag("year_header_2026").assertIsDisplayed()
-        composeTestRule.onNodeWithText("RESUMO CONSOLIDADO 2026").assertIsDisplayed()
-        composeTestRule.onNodeWithText("+18,4% vs 2025").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Consolidado Anual").assertIsDisplayed()
+        composeTestRule.onNodeWithText("↑ +18,4%").assertIsDisplayed()
 
         // Sem máscara: exibe valor real e métricas consolidadas
-        composeTestRule.onNodeWithText("FATURAMENTO TOTAL").assertIsDisplayed()
+        composeTestRule.onNodeWithText("TOTAL BRUTO ANUAL").assertIsDisplayed()
         composeTestRule.onNodeWithText("R$ 42.850,20").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Faturamento bruto anual apurado").assertIsDisplayed()
+        composeTestRule.onNodeWithText("LUCRO LÍQUIDO ANUAL").assertIsDisplayed()
+        composeTestRule.onNodeWithText("R$ 28.400,00").assertIsDisplayed()
         composeTestRule.onNodeWithText("Entregas").assertIsDisplayed()
         composeTestRule.onNodeWithText("1.840").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Média / Dia").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Média").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Dia").assertIsDisplayed()
         composeTestRule.onNodeWithText("R$ 195,40").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Meta Anual Atingida").assertIsDisplayed()
 
         // Ativa privacidade: exibe valor mascarado
         isPrivacy = true
         composeTestRule.waitForIdle()
         composeTestRule.onAllNodesWithText("R$ ••••••").onFirst().assertIsDisplayed()
+
+        // Testa alternância de recolhimento
+        composeTestRule.onNodeWithTag("btn_toggle_annual_consolidation").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Ganhos Bruto: R$ ••••••").assertIsDisplayed()
     }
 
     @Test

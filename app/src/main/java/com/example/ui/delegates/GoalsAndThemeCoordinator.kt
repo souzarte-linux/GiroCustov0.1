@@ -35,6 +35,8 @@ class GoalsAndThemeCoordinator(
     val monthlyGoalKm = MutableStateFlow(2500.0)
     val monthlyGoalDeliveries = MutableStateFlow(400)
 
+    val annualGoalNet = MutableStateFlow(0.0)
+
     private fun getInitialThemePreference(): Boolean {
         if (appPrefs.contains("is_dark_theme")) {
             return appPrefs.getBoolean("is_dark_theme", true)
@@ -99,6 +101,7 @@ class GoalsAndThemeCoordinator(
                     monthlyGoalNet.value = CurrencyUtils.centsToDouble(goals.monthlyGoalNet)
                     monthlyGoalKm.value = goals.monthlyGoalKm
                     monthlyGoalDeliveries.value = goals.monthlyGoalDeliveries
+                    annualGoalNet.value = CurrencyUtils.centsToDouble(goals.annualGoalNet)
                 } else {
                     dailyGoalGross.value = 200.0
                     dailyGoalNet.value = 130.0
@@ -114,6 +117,7 @@ class GoalsAndThemeCoordinator(
                     monthlyGoalNet.value = 3200.0
                     monthlyGoalKm.value = 2500.0
                     monthlyGoalDeliveries.value = 400
+                    annualGoalNet.value = 0.0
                 }
             }
         }
@@ -122,7 +126,8 @@ class GoalsAndThemeCoordinator(
     fun updateGoals(
         dailyG: Double, dailyN: Double, dailyK: Double, dailyD: Int,
         weeklyG: Double, weeklyN: Double, weeklyK: Double, weeklyD: Int,
-        monthlyG: Double, monthlyN: Double, monthlyK: Double, monthlyD: Int
+        monthlyG: Double, monthlyN: Double, monthlyK: Double, monthlyD: Int,
+        annualN: Double = annualGoalNet.value
     ) {
         dailyGoalGross.value = dailyG
         dailyGoalNet.value = dailyN
@@ -138,6 +143,7 @@ class GoalsAndThemeCoordinator(
         monthlyGoalNet.value = monthlyN
         monthlyGoalKm.value = monthlyK
         monthlyGoalDeliveries.value = monthlyD
+        annualGoalNet.value = annualN
 
         scope.launch {
             val userGoals = UserGoals(
@@ -153,7 +159,8 @@ class GoalsAndThemeCoordinator(
                 monthlyGoalGross = CurrencyUtils.toCents(monthlyG),
                 monthlyGoalNet = CurrencyUtils.toCents(monthlyN),
                 monthlyGoalKm = monthlyK,
-                monthlyGoalDeliveries = monthlyD
+                monthlyGoalDeliveries = monthlyD,
+                annualGoalNet = CurrencyUtils.toCents(annualN)
             )
             repository.updateUserGoals(userGoals)
             if (supabaseClient.isAuthenticated) {

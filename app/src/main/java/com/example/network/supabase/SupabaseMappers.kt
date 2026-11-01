@@ -376,6 +376,7 @@ fun UserGoals.toDto(userId: String): UserGoalsDto {
         monthlyGoalNet = CurrencyUtils.centsToDouble(monthlyGoalNet),
         monthlyGoalKm = monthlyGoalKm,
         monthlyGoalDeliveries = monthlyGoalDeliveries,
+        annualGoalNet = CurrencyUtils.centsToDouble(annualGoalNet),
         updatedAt = SupabaseMappers.toIsoString(if (updatedAt > 0) updatedAt else System.currentTimeMillis()),
         deletedAt = if (isDeleted) SupabaseMappers.toIsoString(updatedAt) else null
     )
@@ -396,6 +397,7 @@ fun UserGoalsDto.toEntity(existingId: Int = 1): UserGoals {
         monthlyGoalNet = CurrencyUtils.toCents(monthlyGoalNet),
         monthlyGoalKm = monthlyGoalKm,
         monthlyGoalDeliveries = monthlyGoalDeliveries,
+        annualGoalNet = CurrencyUtils.toCents(annualGoalNet),
         remoteId = id,
         syncStatus = SyncStatus.SYNCED,
         updatedAt = SupabaseMappers.parseIsoTimestamp(updatedAt),

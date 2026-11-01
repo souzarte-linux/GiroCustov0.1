@@ -160,4 +160,62 @@ class HistoryGroupingTest {
         assertEquals(firstChar.uppercase(Locale.forLanguageTag("pt-BR")), firstChar)
         assertTrue(label.contains("Quinta-feira") || label.contains("Quinta"))
     }
+
+    @Test
+    fun testAnnualConsolidation_growthPercentagesWithPreviousYear() {
+        // 2025: Gross = 5000.0, Net = 3000.0
+        val rec2025 = createMockRecord(1, 2025, Calendar.DECEMBER, 15, 5000.0, 3000.0)
+        // 2026: Gross = 6000.0, Net = 3600.0
+        val rec2026 = createMockRecord(2, 2026, Calendar.JUNE, 10, 6000.0, 3600.0)
+
+        val result = groupRecordsHierarchically(listOf(rec2025, rec2026), isAscending = false)
+        val yearHeaders = result.filterIsInstance<HistoryListItem.YearHeader>()
+
+        assertEquals(2, yearHeaders.size)
+
+        val header2026 = yearHeaders.first { it.year == 2026 }
+        assertEquals(6000.0, header2026.totalGross, 0.001)
+        assertEquals(3600.0, header2026.totalNet, 0.001)
+        assertEquals(20.0, header2026.growthPercentage!!, 0.001)
+        assertEquals(20.0, header2026.netGrowthPercentage!!, 0.001)
+
+        val header2025 = yearHeaders.first { it.year == 2025 }
+        assertEquals(5000.0, header2025.totalGross, 0.001)
+        assertEquals(3000.0, header2025.totalNet, 0.001)
+        org.junit.Assert.assertNull(header2025.growthPercentage)
+        org.junit.Assert.assertNull(header2025.netGrowthPercentage)
+    }
+
+    @Test
+    fun testAnnualConsolidation_negativeGrowthAndZeroDivisionProtection() {
+        // 2025: Gross = 10000.0, Net = 5000.0
+        val rec2025 = createMockRecord(1, 2025, Calendar.OCTOBER, 1, 10000.0, 5000.0)
+        // 2026: Gross = 8000.0, Net = 3500.0
+        val rec2026 = createMockRecord(2, 2026, Calendar.NOVEMBER, 1, 8000.0, 3500.0)
+
+        val result = groupRecordsHierarchically(listOf(rec2025, rec2026), isAscending = false)
+        val header2026 = result.filterIsInstance<HistoryListItem.YearHeader>().first { it.year == 2026 }
+
+        // (8000 - 10000) / 10000 * 100 = -20.0%
+        assertEquals(-20.0, header2026.growthPercentage!!, 0.001)
+        // (3500 - 5000) / 5000 * 100 = -30.0%
+        assertEquals(-30.0, header2026.netGrowthPercentage!!, 0.001)
+    }
+
+    @Test
+    fun testAnnualConsolidation_singleYearHasNullGrowthPercentagesAndAccurateDailyAverage() {
+        val rec1 = createMockRecord(1, 2026, Calendar.MARCH, 10, 300.0, 200.0)
+        val rec2 = createMockRecord(2, 2026, Calendar.MARCH, 11, 200.0, 150.0)
+
+        val result = groupRecordsHierarchically(listOf(rec1, rec2), isAscending = false)
+        val header2026 = result.filterIsInstance<HistoryListItem.YearHeader>().first()
+
+        assertEquals(500.0, header2026.totalGross, 0.001)
+        assertEquals(350.0, header2026.totalNet, 0.001)
+        assertEquals(2, header2026.activeDays)
+        // Média Dia = 500 / 2 = 250.0
+        assertEquals(250.0, header2026.dailyAverage, 0.001)
+        org.junit.Assert.assertNull(header2026.growthPercentage)
+        org.junit.Assert.assertNull(header2026.netGrowthPercentage)
+    }
 }
