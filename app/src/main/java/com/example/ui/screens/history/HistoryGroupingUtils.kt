@@ -50,6 +50,7 @@ sealed class HistoryListItem {
         val dateTimestamp: Long,
         val label: String,
         val totalGross: Double = 0.0,
+        val totalNet: Double = 0.0,
         val totalDeliveries: Int = 0,
         val totalWorkMinutes: Long = 0L,
         val platformCount: Int = 0
@@ -224,6 +225,7 @@ fun groupRecordsHierarchically(records: List<DailyRecord>, isAscending: Boolean)
                     val dayLabel = formatDayLabel(representativeTimestamp)
 
                     var dayGross = 0.0
+                    var dayNet = 0.0
                     var dayDeliveries = 0
                     var dayKm = 0.0
                     var dayWorkMinutes = 0L
@@ -233,6 +235,7 @@ fun groupRecordsHierarchically(records: List<DailyRecord>, isAscending: Boolean)
                         val g = CurrencyUtils.centsToDouble(rec.grossEarnings)
                         val n = CurrencyUtils.centsToDouble(rec.netProfit)
                         dayGross += g
+                        dayNet += n
                         dayDeliveries += rec.deliveriesCount
                         dayKm += rec.kmRodados
                         dayWorkMinutes += rec.totalWorkMinutes
@@ -251,6 +254,7 @@ fun groupRecordsHierarchically(records: List<DailyRecord>, isAscending: Boolean)
                             dateTimestamp = representativeTimestamp,
                             label = dayLabel,
                             totalGross = dayGross,
+                            totalNet = dayNet,
                             totalDeliveries = dayDeliveries,
                             totalWorkMinutes = dayWorkMinutes,
                             platformCount = platforms.size

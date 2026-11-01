@@ -160,7 +160,8 @@ class AccessibilityContentDescriptionsTest {
                 HistoryRecordCard(
                     record = dummyRecord,
                     onEditClick = {},
-                    onDeleteClick = {}
+                    onDeleteClick = {},
+                    initiallyExpanded = true
                 )
             }
         }

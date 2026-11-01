@@ -58,7 +58,10 @@ fun HistorySearchBar(
             Text(
                 text = stringResource(R.string.history_search_placeholder),
                 fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                softWrap = false
             )
         },
         leadingIcon = {
@@ -85,6 +88,7 @@ fun HistorySearchBar(
             }
         },
         singleLine = true,
+        maxLines = 1,
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = MaterialTheme.colorScheme.surface,

@@ -110,6 +110,23 @@ fun HistoryScreen(
         mutableStateOf(initial)
     }
 
+    // Gerenciamento de Semanas e Dias Expandidos
+    var expandedWeeks by remember(records) {
+        val grouped = groupRecordsHierarchically(records, false)
+        val initial = grouped.filterIsInstance<HistoryListItem.WeekHeader>().map {
+            getHistoryListItemKey(it)
+        }.toSet()
+        mutableStateOf(initial)
+    }
+
+    var expandedDays by remember(records) {
+        val grouped = groupRecordsHierarchically(records, false)
+        val initial = grouped.filterIsInstance<HistoryListItem.DayHeader>().map {
+            getHistoryListItemKey(it)
+        }.toSet()
+        mutableStateOf(initial)
+    }
+
     // Filtragem combinada: Período + Quick Filter + Plataforma Dropdown + Busca Textual + Ordenação
     val filteredAndSortedRecords = remember(
         records,
@@ -340,6 +357,65 @@ fun HistoryScreen(
                 }
             }
         } else {
+            val isDateSort = selectedSortOption == HistorySortOption.DATA_DECRESCENTE || selectedSortOption == HistorySortOption.DATA_CRESCENTE
+            val isAsc = selectedSortOption == HistorySortOption.DATA_CRESCENTE
+            val groupedList = remember(filteredAndSortedRecords, isAsc, isDateSort) {
+                if (isDateSort) groupRecordsHierarchically(filteredAndSortedRecords, isAsc) else emptyList()
+            }
+
+            // Mapeamento de índices para alternância de cores dos nós do dia
+            val dayIndexMap = remember(groupedList) {
+                val map = mutableMapOf<String, Int>()
+                var idx = 0
+                for (item in groupedList) {
+                    if (item is HistoryListItem.DayHeader) {
+                        map[getHistoryListItemKey(item)] = idx++
+                    }
+                }
+                map
+            }
+
+            // Filtragem visual baseada no acordeão de meses, semanas e dias
+            val visibleGroupedItems = remember(groupedList, expandedMonths, expandedWeeks, expandedDays) {
+                var currentMonthKey = ""
+                var currentWeekKey = ""
+                var currentDayKey = ""
+                val visibleItems = mutableListOf<HistoryListItem>()
+                for (item in groupedList) {
+                    when (item) {
+                        is HistoryListItem.YearHeader -> visibleItems.add(item)
+                        is HistoryListItem.MonthHeader -> {
+                            currentMonthKey = "${item.year}_${item.month}"
+                            visibleItems.add(item)
+                        }
+                        is HistoryListItem.WeekHeader -> {
+                            currentWeekKey = getHistoryListItemKey(item)
+                            val monthExpanded = currentMonthKey.isEmpty() || expandedMonths.contains(currentMonthKey)
+                            if (monthExpanded) {
+                                visibleItems.add(item)
+                            }
+                        }
+                        is HistoryListItem.DayHeader -> {
+                            currentDayKey = getHistoryListItemKey(item)
+                            val monthExpanded = currentMonthKey.isEmpty() || expandedMonths.contains(currentMonthKey)
+                            val weekExpanded = expandedWeeks.contains(currentWeekKey)
+                            if (monthExpanded && weekExpanded) {
+                                visibleItems.add(item)
+                            }
+                        }
+                        is HistoryListItem.RecordRow -> {
+                            val monthExpanded = currentMonthKey.isEmpty() || expandedMonths.contains(currentMonthKey)
+                            val weekExpanded = expandedWeeks.contains(currentWeekKey)
+                            val dayExpanded = expandedDays.contains(currentDayKey)
+                            if (monthExpanded && weekExpanded && dayExpanded) {
+                                visibleItems.add(item)
+                            }
+                        }
+                    }
+                }
+                visibleItems
+            }
+
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -347,31 +423,10 @@ fun HistoryScreen(
                     .testTag("history_list"),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Se a ordenação for por data, usamos agrupamento hierárquico com suporte ao acordeão de meses
-                if (selectedSortOption == HistorySortOption.DATA_DECRESCENTE || selectedSortOption == HistorySortOption.DATA_CRESCENTE) {
-                    val isAsc = selectedSortOption == HistorySortOption.DATA_CRESCENTE
-                    val groupedList = groupRecordsHierarchically(filteredAndSortedRecords, isAsc)
-
-                    // Filtragem visual baseada no acordeão de meses
-                    var currentMonthKey = ""
-                    val visibleItems = mutableListOf<HistoryListItem>()
-                    for (item in groupedList) {
-                        when (item) {
-                            is HistoryListItem.YearHeader -> visibleItems.add(item)
-                            is HistoryListItem.MonthHeader -> {
-                                currentMonthKey = "${item.year}_${item.month}"
-                                visibleItems.add(item)
-                            }
-                            else -> {
-                                if (currentMonthKey.isEmpty() || expandedMonths.contains(currentMonthKey)) {
-                                    visibleItems.add(item)
-                                }
-                            }
-                        }
-                    }
-
+                // Se a ordenação for por data, usamos agrupamento hierárquico com suporte ao acordeão de meses, semanas e dias
+                if (isDateSort) {
                     items(
-                        items = visibleItems,
+                        items = visibleGroupedItems,
                         key = { getHistoryListItemKey(it) }
                     ) { item ->
                         when (item) {
@@ -413,6 +468,8 @@ fun HistoryScreen(
                                 val startStr = sdfWeek.format(Date(item.weekStartMillis))
                                 val endStr = sdfWeek.format(Date(item.weekEndMillis))
                                 val weekLabel = stringResource(R.string.history_week_header, startStr, endStr)
+                                val weekKey = getHistoryListItemKey(item)
+                                val isExpanded = expandedWeeks.contains(weekKey)
                                 WeekHeaderCard(
                                     weekLabel = weekLabel,
                                     totalGross = item.totalGross,
@@ -420,17 +477,42 @@ fun HistoryScreen(
                                     totalDeliveries = item.totalDeliveries,
                                     totalWorkMinutes = item.totalWorkMinutes,
                                     hourlyRate = item.hourlyRate,
-                                    isPrivacyEnabled = isPrivacyEnabled
+                                    isPrivacyEnabled = isPrivacyEnabled,
+                                    isExpanded = isExpanded,
+                                    onToggleExpand = {
+                                        expandedWeeks = if (isExpanded) {
+                                            expandedWeeks - weekKey
+                                        } else {
+                                            expandedWeeks + weekKey
+                                        }
+                                    }
                                 )
                             }
                             is HistoryListItem.DayHeader -> {
+                                val dayKey = getHistoryListItemKey(item)
+                                val isExpanded = expandedDays.contains(dayKey)
+                                val dayIdx = dayIndexMap[dayKey] ?: 0
+                                val nodeColor = if (dayIdx % 2 == 0) Color(0xFF38BDF8) else Color(0xFF818CF8)
+
                                 DayHeaderView(
                                     label = item.label,
                                     totalGross = item.totalGross,
+                                    totalNet = item.totalNet,
                                     totalDeliveries = item.totalDeliveries,
                                     totalWorkMinutes = item.totalWorkMinutes,
                                     platformCount = item.platformCount,
-                                    isPrivacyEnabled = isPrivacyEnabled
+                                    isPrivacyEnabled = isPrivacyEnabled,
+                                    isExpanded = isExpanded,
+                                    onToggleExpand = {
+                                        expandedDays = if (isExpanded) {
+                                            expandedDays - dayKey
+                                        } else {
+                                            expandedDays + dayKey
+                                        }
+                                    },
+                                    showTopLine = dayIdx > 0,
+                                    showBottomLine = true,
+                                    nodeColor = nodeColor
                                 )
                             }
                             is HistoryListItem.RecordRow -> {
@@ -444,7 +526,8 @@ fun HistoryScreen(
                                         viewModel.deleteDailyRecord(item.record)
                                         Toast.makeText(context, context.getString(R.string.history_toast_record_deleted), Toast.LENGTH_SHORT).show()
                                     },
-                                    isPrivacyEnabled = isPrivacyEnabled
+                                    isPrivacyEnabled = isPrivacyEnabled,
+                                    isInTimeline = true
                                 )
                             }
                         }

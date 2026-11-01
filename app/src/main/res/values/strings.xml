@@ -305,7 +305,7 @@
     <string name="history_card_km_traveled">Km Rodados</string>
     <string name="history_card_deliveries">Entregas</string>
     <string name="history_card_deliveries_abbrev">%1$d ent.</string>
-    <string name="history_card_fuel_cost">Custo Combustível</string>
+    <string name="history_card_fuel_cost">Custo Comb.</string>
     <string name="history_card_wear_cost">Desgaste/Peças</string>
     <string name="history_card_food_expense">Alimentação</string>
     <string name="history_card_net_profit">LUCRO LÍQUIDO</string>
@@ -328,7 +328,7 @@
     <!-- Strings da Aba Histórico (T-HIST-01) -->
     <string name="cd_privacy_toggle_hide">Ocultar valores monetários</string>
     <string name="cd_privacy_toggle_show">Exibir valores monetários</string>
-    <string name="history_search_placeholder">Buscar por data, rota ou plataforma...</string>
+    <string name="history_search_placeholder">Buscar data ou plataforma...</string>
     <string name="history_filter_quick_all">Todos</string>
     <string name="history_filter_quick_logistics">Logística (ML/Shopee)</string>
     <string name="history_filter_quick_delivery">Delivery/Apps (iFood/Uber)</string>

@@ -7,8 +7,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -18,10 +20,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Schedule
@@ -44,6 +49,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
@@ -517,7 +523,7 @@ fun MonthHeaderCard(
 }
 
 /**
- * NÍVEL 2: Card de Semana (Tarja vertical secondary, Lucro Líquido e Faixa de Resumo)
+ * NÍVEL 2: Card de Semana (Shape 16dp, Pílula branca, Total Bruto verde e 3 chips horizontais)
  */
 @Composable
 fun WeekHeaderCard(
@@ -527,23 +533,27 @@ fun WeekHeaderCard(
     totalDeliveries: Int = 0,
     totalWorkMinutes: Long = 0L,
     hourlyRate: Double = 0.0,
-    isPrivacyEnabled: Boolean = false
+    isPrivacyEnabled: Boolean = false,
+    isExpanded: Boolean = true,
+    onToggleExpand: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .testTag("week_header_$weekLabel"),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+            .testTag("week_header_$weekLabel")
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onToggleExpand),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Linha Principal: Tarja + Label + Lucro Líquido
+            // Linha 1: Pílula branca + Título + Valor bruto verde + Chevron
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -551,91 +561,131 @@ fun WeekHeaderCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f, fill = false)
                 ) {
                     Box(
                         modifier = Modifier
-                            .width(4.dp)
+                            .width(5.dp)
                             .height(18.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.secondary)
+                            .clip(RoundedCornerShape(2.5.dp))
+                            .background(Color.White)
                     )
                     Text(
                         text = weekLabel,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                Text(
-                    text = formatHistoryCurrency(totalNet, isPrivacyEnabled),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (totalNet >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
-                )
-            }
-
-            // Faixa de Resumo da Semana (Entregas, Horas Online, Média R$/h)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = formatHistoryCurrency(totalGross, isPrivacyEnabled),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF34D399)
+                    )
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        contentDescription = stringResource(if (isExpanded) R.string.cd_collapse else R.string.cd_expand),
+                        tint = Color(0xFF34D399),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            // Linha 2: 3 botões / chips compactos horizontais com cantos arredondados (8.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Chip 1: Entregas (azul piscina / primary)
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
                         imageVector = Icons.Filled.LocalShipping,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(15.dp)
+                        tint = Color(0xFF38BDF8),
+                        modifier = Modifier.size(14.dp)
                     )
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "$totalDeliveries entregas",
                         fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
+                // Chip 2: Horas online (ciano / tertiary)
                 Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Schedule,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.size(15.dp)
+                        tint = Color(0xFF34D399),
+                        modifier = Modifier.size(14.dp)
                     )
+                    Spacer(modifier = Modifier.width(4.dp))
                     val onlineHours = totalWorkMinutes / 60
                     Text(
-                        text = stringResource(R.string.history_week_online_hours, onlineHours),
+                        text = "${onlineHours}h Online",
                         fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
+                // Chip 3: Média R$/h (lilás / secondary)
                 Row(
+                    modifier = Modifier
+                        .weight(1.2f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Payments,
+                        imageVector = Icons.Filled.Speed,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(15.dp)
+                        tint = Color(0xFF818CF8),
+                        modifier = Modifier.size(14.dp)
                     )
+                    Spacer(modifier = Modifier.width(4.dp))
                     val rateStr = if (isPrivacyEnabled) "••••" else String.format(Locale.GERMAN, "R$ %.2f", hourlyRate)
                     Text(
-                        text = stringResource(R.string.history_week_hourly_rate, rateStr),
+                        text = "Média: $rateStr/h",
                         fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -644,121 +694,201 @@ fun WeekHeaderCard(
 }
 
 /**
- * NÍVEL 3: DayHeaderView (Ponto indicador ciano, dia por extenso, linha divisora, Faturamento e Mini-card)
+ * NÍVEL 3: DayHeaderView (Linha do Tempo e Nós Luminosos no Dia da Semana)
  */
 @Composable
 fun DayHeaderView(
     label: String,
     totalGross: Double = 0.0,
+    totalNet: Double = 0.0,
     totalDeliveries: Int = 0,
     totalWorkMinutes: Long = 0L,
     platformCount: Int = 0,
-    isPrivacyEnabled: Boolean = false
+    isPrivacyEnabled: Boolean = false,
+    isExpanded: Boolean = true,
+    onToggleExpand: () -> Unit = {},
+    showTopLine: Boolean = false,
+    showBottomLine: Boolean = true,
+    nodeColor: Color = Color(0xFF38BDF8)
 ) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 4.dp)
+            .height(IntrinsicSize.Min)
+            .clickable(onClick = onToggleExpand)
             .testTag("day_header_$label"),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Linha 1: Ponto Ciano + Nome do Dia + Linha Divisora + Faturamento
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        // Coluna da Timeline à esquerda (largura 32.dp, alinhamento central)
+        Column(
+            modifier = Modifier
+                .width(32.dp)
+                .fillMaxHeight(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary)
-            )
-
-            Text(
-                text = label,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            HorizontalDivider(
-                modifier = Modifier.weight(1f),
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-            )
-
-            if (totalGross > 0.0) {
-                Text(
-                    text = formatHistoryCurrency(totalGross, isPrivacyEnabled),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+            if (showTopLine) {
+                Box(
+                    modifier = Modifier
+                        .width(2.dp)
+                        .height(8.dp)
+                        .background(Color(0xFF334155))
                 )
+            } else {
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // Nó luminoso circular (altura e largura 20.dp)
+            Box(
+                modifier = Modifier.size(20.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                // Halo externo com glow
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(nodeColor.copy(alpha = 0.25f))
+                )
+                // Halo médio
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(nodeColor.copy(alpha = 0.6f))
+                )
+                // Centro
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(Color.White)
+                )
+            }
+
+            if (showBottomLine) {
+                Box(
+                    modifier = Modifier
+                        .width(2.dp)
+                        .weight(1f)
+                        .background(Color(0xFF334155))
+                )
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
             }
         }
 
-        // Linha 2: Mini-card de Relance do Dia
-        if (totalDeliveries > 0 || totalWorkMinutes > 0 || platformCount > 0) {
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Coluna de Informações do Dia
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Linha 1: Nome da data + Total bruto diário + Seta
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                Text(
+                    text = label,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f, fill = false),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (totalGross > 0.0) {
+                        Text(
+                            text = formatHistoryCurrency(totalGross, isPrivacyEnabled),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Filled.KeyboardArrowDown else Icons.Filled.KeyboardArrowRight,
+                        contentDescription = stringResource(if (isExpanded) R.string.cd_collapse else R.string.cd_expand),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            // Linha 2: Indicadores compactos
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Item 1: Entregas (com ícone check)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.DoneAll,
+                        imageVector = Icons.Filled.Check,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = Color(0xFF38BDF8),
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
-                        text = stringResource(R.string.history_day_glance_deliveries, totalDeliveries),
+                        text = "$totalDeliveries entregas",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
+                // Item 2: Tempo Online (com ícone relógio amarelo)
                 val h = totalWorkMinutes / 60
                 val m = totalWorkMinutes % 60
-                val durationStr = if (h > 0) "${h}h ${m}m" else "${m}m"
+                val durationStr = if (h > 0) "${h}h ${m}m Online" else "${m}m Online"
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Timer,
+                        imageVector = Icons.Filled.Schedule,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = Color(0xFFFBBF24),
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
-                        text = stringResource(R.string.history_day_glance_online, durationStr),
+                        text = durationStr,
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
+                // Item 3: Lucro Líquido ou Plataformas
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.TrendingUp,
+                        imageVector = Icons.Filled.Payments,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.tertiary,
+                        tint = if (totalNet > 0) Color(0xFF34D399) else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(14.dp)
                     )
+                    val profitOrPlatforms = if (totalNet > 0) {
+                        "Lucro " + if (isPrivacyEnabled) "R$ ••••" else String.format(Locale.GERMAN, "R$ %,.0f", totalNet)
+                    } else {
+                        "$platformCount plataformas"
+                    }
                     Text(
-                        text = stringResource(R.string.history_day_glance_platforms, platformCount.coerceAtLeast(1)),
+                        text = profitOrPlatforms,
                         fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontWeight = if (totalNet > 0) FontWeight.Bold else FontWeight.Normal,
+                        color = if (totalNet > 0) Color(0xFF34D399) else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

@@ -195,15 +195,29 @@ class HistoryRefactorTest {
         val cardNode = composeTestRule.onNodeWithTag("history_item_42")
         cardNode.assertIsDisplayed()
 
-        // Top row
+        // Área colapsada: plataforma, entregas e valor bruto
         composeTestRule.onNodeWithText("Mercado Livre").assertIsDisplayed()
-        composeTestRule.onNodeWithText("12 Entreg.").assertIsDisplayed()
+        composeTestRule.onNodeWithText("12 entregas", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("R$ 160,00").assertIsDisplayed()
+
+        // Clica no card para expandir a seção de detalhes
+        cardNode.performClick()
+        composeTestRule.waitForIdle()
 
         // Faixa de horários
         composeTestRule.onNodeWithText("08:00 - 13:10").assertIsDisplayed()
         composeTestRule.onNodeWithText("32,4 km").assertIsDisplayed()
 
-        // Botões de ação com alvos de toque >= 48dp
+        // Grade 2x3 de custos
+        composeTestRule.onNodeWithText("Ganhos Brutos").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Custo Comb.").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Desgaste/Peças").assertIsDisplayed()
+
+        // Lucro Líquido no rodapé
+        composeTestRule.onNodeWithText("LUCRO LÍQUIDO").assertIsDisplayed()
+        composeTestRule.onNodeWithText("R$ 147,08").assertIsDisplayed()
+
+        // Botões de ação com alvos de toque >= 48dp no rodapé
         val editBtn = composeTestRule.onNodeWithTag("edit_record_btn_42")
         editBtn.assertIsDisplayed()
         val editBounds = editBtn.getUnclippedBoundsInRoot()
@@ -215,18 +229,6 @@ class HistoryRefactorTest {
         val deleteBounds = deleteBtn.getUnclippedBoundsInRoot()
         assertTrue("Largura do botão excluir deve ser >= 48dp", deleteBounds.width >= 47.9.dp)
         assertTrue("Altura do botão excluir deve ser >= 48dp", deleteBounds.height >= 47.9.dp)
-
-        // Lucro Líquido no rodapé
-        composeTestRule.onNodeWithText("LUCRO LÍQUIDO").assertIsDisplayed()
-        composeTestRule.onNodeWithText("R$ 147,08").assertIsDisplayed()
-
-        // Clica no card para expandir a grade 2x3
-        cardNode.performClick()
-        composeTestRule.waitForIdle()
-
-        composeTestRule.onNodeWithText("Ganhos Brutos").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Custo Combustível").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Desgaste/Peças").assertIsDisplayed()
     }
 
     @Test
@@ -361,7 +363,161 @@ class HistoryRefactorTest {
 
         // Garante que o card com nome longo de plataforma mantém a mesma altura compacta do card padrão
         assertEquals(nodeUber.size.height, nodeGmail.size.height)
+
+        // Clica para expandir e verificar botões de ação no rodapé
+        composeTestRule.onNodeWithTag("history_item_3").performClick()
+        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("edit_record_btn_3").assertIsDisplayed()
         composeTestRule.onNodeWithTag("delete_record_btn_3").assertIsDisplayed()
+    }
+
+    @Test
+    fun testDayHeaderView_togglesExpansionAndDisplaysProfitWhenPositive() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        var expanded by mutableStateOf(false)
+        var toggleClicked = false
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                DayHeaderView(
+                    label = "Terça-feira, 22 de Outubro",
+                    totalGross = 250.00,
+                    totalNet = 190.00,
+                    totalDeliveries = 14,
+                    totalWorkMinutes = 6L * 60L + 15L,
+                    platformCount = 2,
+                    isPrivacyEnabled = false,
+                    isExpanded = expanded,
+                    onToggleExpand = {
+                        toggleClicked = true
+                        expanded = !expanded
+                    }
+                )
+            }
+        }
+
+        // Header exibido com valor bruto e lucro líquido
+        composeTestRule.onNodeWithTag("day_header_Terça-feira, 22 de Outubro").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Terça-feira, 22 de Outubro").assertIsDisplayed()
+        composeTestRule.onNodeWithText("R$ 250,00").assertIsDisplayed()
+        composeTestRule.onNodeWithText("14 entregas").assertIsDisplayed()
+        composeTestRule.onNodeWithText("6h 15m Online").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Lucro R$ 190").assertIsDisplayed()
+
+        // Ícone recolhido (expandir)
+        val expandCd = app.getString(R.string.cd_expand)
+        val collapseCd = app.getString(R.string.cd_collapse)
+        composeTestRule.onNodeWithContentDescription(expandCd).assertIsDisplayed()
+
+        // Clica para expandir
+        composeTestRule.onNodeWithTag("day_header_Terça-feira, 22 de Outubro").performClick()
+        assertTrue("onToggleExpand deve ter sido acionado", toggleClicked)
+
+        composeTestRule.waitForIdle()
+        // Agora expandido: ícone é cd_collapse
+        composeTestRule.onNodeWithContentDescription(collapseCd).assertIsDisplayed()
+    }
+
+    @Test
+    fun testWeekHeaderCard_togglesExpansionAndDisplaysGreenGrossValue() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        var expanded by mutableStateOf(true)
+        var toggleClicked = false
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                WeekHeaderCard(
+                    weekLabel = "Semana 42 (14 a 20 Out)",
+                    totalGross = 1850.50,
+                    totalNet = 1420.00,
+                    totalDeliveries = 62,
+                    totalWorkMinutes = 35L * 60L,
+                    hourlyRate = 52.87,
+                    isPrivacyEnabled = false,
+                    isExpanded = expanded,
+                    onToggleExpand = {
+                        toggleClicked = true
+                        expanded = !expanded
+                    }
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("week_header_Semana 42 (14 a 20 Out)").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Semana 42 (14 a 20 Out)").assertIsDisplayed()
+        composeTestRule.onNodeWithText("R$ 1.850,50").assertIsDisplayed()
+        composeTestRule.onNodeWithText("62 entregas").assertIsDisplayed()
+        composeTestRule.onNodeWithText("35h Online").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Média: R$ 52,87/h").assertIsDisplayed()
+
+        // Estado inicial expandido: ícone cd_collapse
+        val expandCd = app.getString(R.string.cd_expand)
+        val collapseCd = app.getString(R.string.cd_collapse)
+        composeTestRule.onNodeWithContentDescription(collapseCd).assertIsDisplayed()
+
+        // Clica para recolher
+        composeTestRule.onNodeWithTag("week_header_Semana 42 (14 a 20 Out)").performClick()
+        assertTrue("onToggleExpand deve ser disparado", toggleClicked)
+
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription(expandCd).assertIsDisplayed()
+    }
+
+    @Test
+    fun testPlatformBrandBadges_variousPlatformsProduceCorrectLinesAndColors() {
+        val uberBadge = getPlatformBrandBadge("Uber Moto")
+        assertEquals("UBER", uberBadge.line1)
+        assertEquals("MOTO", uberBadge.line2)
+
+        val mlBadge = getPlatformBrandBadge("Mercado Livre")
+        assertEquals("ML", mlBadge.line1)
+        assertEquals("ENVIOS", mlBadge.line2)
+
+        val ifoodBadge = getPlatformBrandBadge("iFood")
+        assertEquals("IFOOD", ifoodBadge.line1)
+        assertEquals("DELIVERY", ifoodBadge.line2)
+
+        val shopeeBadge = getPlatformBrandBadge("Shopee Xpress")
+        assertEquals("SHOPEE", shopeeBadge.line1)
+        assertEquals("ENTREGA", shopeeBadge.line2)
+
+        val loggiBadge = getPlatformBrandBadge("Loggi")
+        assertEquals("LOGGI", loggiBadge.line1)
+        assertEquals("ENVIO", loggiBadge.line2)
+
+        val noventaENoveBadge = getPlatformBrandBadge("99 Pop")
+        assertEquals("99", noventaENoveBadge.line1)
+        assertEquals("ENTREGA", noventaENoveBadge.line2)
+    }
+
+    @Test
+    fun testHistorySearchBar_singleLineAndConcisePlaceholder() {
+        var query by mutableStateOf("")
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                HistorySearchBar(
+                    searchQuery = query,
+                    onSearchQueryChange = { query = it }
+                )
+            }
+        }
+
+        // Placeholder conciso
+        composeTestRule.onNodeWithText("Buscar data ou plataforma...").assertIsDisplayed()
+
+        // Digita na barra de pesquisa
+        query = "Mercado Livre"
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Mercado Livre").assertIsDisplayed()
+
+        // Botão de limpar busca
+        composeTestRule.onNodeWithContentDescription("Limpar busca").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Limpar busca").performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals("", query)
+        composeTestRule.onNodeWithText("Buscar data ou plataforma...").assertIsDisplayed()
     }
 }
