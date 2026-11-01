@@ -90,8 +90,7 @@ class HistoryRefactorTest {
         composeTestRule.onNodeWithText("R$ 28.400,00").assertIsDisplayed()
         composeTestRule.onNodeWithText("Entregas").assertIsDisplayed()
         composeTestRule.onNodeWithText("1.840").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Média").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Dia").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Média Dia").assertIsDisplayed()
         composeTestRule.onNodeWithText("R$ 195,40").assertIsDisplayed()
         composeTestRule.onNodeWithText("Meta Anual Atingida").assertIsDisplayed()
 
@@ -104,6 +103,42 @@ class HistoryRefactorTest {
         composeTestRule.onNodeWithTag("btn_toggle_annual_consolidation").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Ganhos Bruto: R$ ••••••").assertIsDisplayed()
+    }
+
+    @Test
+    fun testYearHeaderCard_dailyAverageStatCard_hasSymmetricHeightAndUnifiedLabel() {
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                YearHeaderCard(
+                    year = 2026,
+                    totalGross = 659.46,
+                    totalNet = 578.08,
+                    totalDeliveries = 23,
+                    dailyAverage = 219.82,
+                    growthPercentage = null,
+                    netGrowthPercentage = null,
+                    annualGoalNet = 0.0,
+                    isPrivacyEnabled = false
+                )
+            }
+        }
+
+        // Verifica que o rótulo unificado "Média Dia" está presente (sem quebra em partes separadas)
+        composeTestRule.onNodeWithText("Média Dia").assertIsDisplayed()
+        composeTestRule.onNodeWithText("R$ 219,82").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Entregas").assertIsDisplayed()
+        composeTestRule.onNodeWithText("23").assertIsDisplayed()
+
+        // Mede os limites dos dois blocos irmãos
+        val deliveriesBounds = composeTestRule.onNodeWithTag("stat_card_deliveries").getUnclippedBoundsInRoot()
+        val dailyAvgBounds = composeTestRule.onNodeWithTag("stat_card_daily_avg").getUnclippedBoundsInRoot()
+
+        // Altura dos dois cartões deve ser simétrica (diferença menor que 2dp)
+        val heightDiff = Math.abs(deliveriesBounds.height.value - dailyAvgBounds.height.value)
+        assertTrue(
+            "O card de Média Dia (${dailyAvgBounds.height}) deve ter altura simétrica ao de Entregas (${deliveriesBounds.height}), diferença: $heightDiff dp",
+            heightDiff <= 2.0f
+        )
     }
 
     @Test

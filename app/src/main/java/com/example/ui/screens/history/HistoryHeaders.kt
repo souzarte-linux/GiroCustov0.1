@@ -299,13 +299,17 @@ fun YearHeaderCard(
 
                     // C) Dois retângulos de mesmo tamanho, lado a lado
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Min),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         // Retângulo Esquerdo: Entregas
                         Box(
                             modifier = Modifier
                                 .weight(1f)
+                                .fillMaxHeight()
+                                .testTag("stat_card_deliveries")
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(subCardBg)
                                 .border(subCardBorder, RoundedCornerShape(10.dp))
@@ -334,22 +338,30 @@ fun YearHeaderCard(
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = stringResource(R.string.annual_stat_deliveries),
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.weight(1f))
-                                Text(
-                                    text = if (totalDeliveries > 0) {
-                                        NumberFormat.getIntegerInstance(Locale.forLanguageTag("pt-BR")).format(totalDeliveries)
-                                    } else {
-                                        "0"
-                                    },
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.annual_stat_deliveries),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = if (totalDeliveries > 0) {
+                                            NumberFormat.getIntegerInstance(Locale.forLanguageTag("pt-BR")).format(totalDeliveries)
+                                        } else {
+                                            "0"
+                                        },
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                         }
 
@@ -357,6 +369,8 @@ fun YearHeaderCard(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
+                                .fillMaxHeight()
+                                .testTag("stat_card_daily_avg")
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(subCardBg)
                                 .border(subCardBorder, RoundedCornerShape(10.dp))
@@ -385,27 +399,26 @@ fun YearHeaderCard(
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Column(modifier = Modifier.weight(1f, fill = false)) {
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.Center
+                                ) {
                                     Text(
-                                        text = stringResource(R.string.annual_stat_daily_avg_part1),
+                                        text = stringResource(R.string.annual_stat_daily_avg),
                                         fontSize = 11.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        lineHeight = 12.sp
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
-                                        text = stringResource(R.string.annual_stat_daily_avg_part2),
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        lineHeight = 12.sp
+                                        text = formatHistoryCurrency(dailyAverage, isPrivacyEnabled),
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
-                                Spacer(modifier = Modifier.weight(1f))
-                                Text(
-                                    text = formatHistoryCurrency(dailyAverage, isPrivacyEnabled),
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
                             }
                         }
                     }
