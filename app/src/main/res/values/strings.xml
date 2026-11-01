@@ -334,6 +334,7 @@
     <string name="history_filter_quick_delivery">Delivery/Apps (iFood/Uber)</string>
     <string name="history_annual_consolidated_title">RESUMO CONSOLIDADO %1$d</string>
     <string name="history_annual_consolidated_subtitle">Faturamento bruto anual apurado</string>
+    <string name="history_stat_total_gross_label">FATURAMENTO TOTAL</string>
     <string name="history_stat_deliveries">Entregas</string>
     <string name="history_stat_daily_avg">Média / Dia</string>
     <string name="history_month_active_days">%1$d dias em rota ativa</string>
