@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.width
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.DailyRecord
 import com.example.ui.GiroCustoViewModel
+import com.example.ui.Period
 import com.example.ui.screens.*
 import com.example.ui.theme.AppTheme
 import com.example.ui.theme.MyApplicationTheme
@@ -756,7 +757,12 @@ class HistoryRefactorTest {
                 HistoryScreen(
                     viewModel = viewModel,
                     vehicle = null,
-                    records = records
+                    records = records,
+                    initialFilterState = HistoryFilterState(
+                        period = Period.PERSONALIZADO,
+                        customStartDate = rec1.dateTimestamp - 86400000L,
+                        customEndDate = rec8.dateTimestamp + 86400000L
+                    )
                 )
             }
         }

@@ -47,6 +47,7 @@ fun HistoryScreen(
     viewModel: GiroCustoViewModel,
     vehicle: com.example.data.Vehicle?,
     records: List<DailyRecord>,
+    initialFilterState: HistoryFilterState = HistoryFilterState(),
     onNavigateToLaunch: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -69,7 +70,7 @@ fun HistoryScreen(
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
     // Estado dos Filtros Avançados e Modal BottomSheet
-    var filterState by remember { mutableStateOf(HistoryFilterState()) }
+    var filterState by remember { mutableStateOf(initialFilterState) }
     var showFilterBottomSheet by remember { mutableStateOf(false) }
     var showHistoryCustomPeriodDialog by remember { mutableStateOf(false) }
 
