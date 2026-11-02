@@ -396,6 +396,7 @@ class GiroCustoViewModel @JvmOverloads constructor(
     suspend fun prefillLaunchFields() = launchCoordinator.prefillLaunchFields()
     fun saveDailyRecord(onSuccess: () -> Unit, onError: (String) -> Unit) = launchCoordinator.saveDailyRecord(onSuccess, onError)
     fun deleteDailyRecord(record: DailyRecord) = launchCoordinator.deleteDailyRecord(record)
+    fun restoreDailyRecord(record: DailyRecord) = launchCoordinator.restoreDailyRecord(record)
 
     fun updateDailyRecord(
         recordId: Long,

@@ -330,6 +330,7 @@
     <string name="history_header_gross_short">Fat.</string>
     <string name="history_header_net_profit_short">Lucro</string>
     <string name="history_edit_dialog_title">Editar Lançamento</string>
+    <string name="history_edit_date_label">Data</string>
     <string name="history_edit_platform_label">Plataforma</string>
     <string name="history_edit_start_odo_label">Hodôm. Inicial</string>
     <string name="history_edit_end_odo_label">Hodôm. Final</string>
@@ -340,6 +341,10 @@
     <string name="history_edit_start_time_label">Hora Início</string>
     <string name="history_edit_end_time_label">Hora Final</string>
     <string name="history_edit_pause_duration_label">Total Tempo Pause</string>
+    <string name="history_dialog_delete_record_title">Excluir lançamento?</string>
+    <string name="history_dialog_delete_record_message">Tem certeza de que deseja excluir o lançamento de %1$s? Esta ação pode ser desfeita nos próximos segundos.</string>
+    <string name="history_snackbar_record_deleted">Lançamento de %1$s excluído.</string>
+    <string name="history_toast_record_restored">Lançamento restaurado com sucesso!</string>
 
     <!-- Strings da Aba Histórico (T-HIST-01) -->
     <string name="cd_privacy_toggle_hide">Ocultar valores monetários</string>

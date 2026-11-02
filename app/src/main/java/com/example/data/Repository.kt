@@ -300,6 +300,38 @@ class GiroCustoRepository(
         }
     }
 
+    suspend fun restoreRecord(record: DailyRecord) {
+        db.withTransaction {
+            val kmRodados = (record.endOdometer - record.startOdometer).coerceAtLeast(0.0)
+
+            // Re-aplica desgaste de peças do veículo ativo
+            val vehicle = vehicleDao.getActiveVehicle() ?: Vehicle()
+            val parts = partDao.getPartsForVehicle(vehicle.id)
+            for (part in parts) {
+                val newRunKm = part.runKmSinceChange + kmRodados
+                val pStatus = if (part.syncStatus == SyncStatus.PENDING_INSERT) SyncStatus.PENDING_INSERT else SyncStatus.PENDING_UPDATE
+                partDao.updatePart(
+                    part.copy(
+                        runKmSinceChange = newRunKm,
+                        syncStatus = pStatus,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                )
+            }
+
+            // Restaura o registro
+            val toRestore = record.copy(
+                isDeleted = false,
+                syncStatus = if (record.remoteId.isNotBlank()) SyncStatus.PENDING_UPDATE else SyncStatus.PENDING_INSERT,
+                updatedAt = System.currentTimeMillis()
+            )
+            recordDao.updateRecord(toRestore)
+
+            // Recalcula hodômetro do veículo
+            recalculateVehicleOdometer()
+        }
+    }
+
     suspend fun insertDailyRecord(
         dateString: String,
         dateTimestamp: Long,

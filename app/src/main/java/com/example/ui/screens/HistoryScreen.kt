@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import android.widget.Toast
 import androidx.compose.animation.*
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -56,6 +57,11 @@ fun HistoryScreen(
 
     var isPrivacyEnabled by rememberSaveable { mutableStateOf(false) }
 
+    val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var recordToDelete by remember { mutableStateOf<DailyRecord?>(null) }
+    val registeredPlatforms by viewModel.allPlatforms.collectAsStateWithLifecycle()
+
     var showEditDialog by remember { mutableStateOf(false) }
     var recordToEdit by remember { mutableStateOf<DailyRecord?>(null) }
 
@@ -70,6 +76,14 @@ fun HistoryScreen(
     // Lista de plataformas únicas dos lançamentos
     val platformsList = remember(records) {
         records.map { it.platform }.distinct().filter { it.isNotBlank() }
+    }
+
+    // Lista combinada de plataformas cadastradas e já lançadas para a combobox
+    val allAvailablePlatforms = remember(registeredPlatforms, records) {
+        val set = linkedSetOf<String>()
+        registeredPlatforms.map { it.name.trim() }.filter { it.isNotBlank() }.forEach { set.add(it) }
+        records.map { it.platform.trim() }.filter { it.isNotBlank() }.forEach { set.add(it) }
+        set.toList()
     }
 
     // Estado do Acordeão de Meses Expandidos (o mais recente expandido por padrão)
@@ -103,12 +117,13 @@ fun HistoryScreen(
         filterAndSortHistoryRecords(records, filterState, searchQuery)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
         // TopBar: Título + Botão de Privacidade + Botão de Tema
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -391,8 +406,7 @@ fun HistoryScreen(
                                         showEditDialog = true
                                     },
                                     onDeleteClick = {
-                                        viewModel.deleteDailyRecord(item.record)
-                                        Toast.makeText(context, context.getString(R.string.history_toast_record_deleted), Toast.LENGTH_SHORT).show()
+                                        recordToDelete = item.record
                                     },
                                     isPrivacyEnabled = isPrivacyEnabled,
                                     isInTimeline = true
@@ -412,8 +426,7 @@ fun HistoryScreen(
                                 showEditDialog = true
                             },
                             onDeleteClick = {
-                                viewModel.deleteDailyRecord(record)
-                                Toast.makeText(context, context.getString(R.string.history_toast_record_deleted), Toast.LENGTH_SHORT).show()
+                                recordToDelete = record
                             },
                             isPrivacyEnabled = isPrivacyEnabled
                         )
@@ -422,6 +435,15 @@ fun HistoryScreen(
             }
         }
     }
+
+    SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(16.dp)
+            .testTag("history_snackbar_host")
+    )
+}
 
     if (showFilterBottomSheet) {
         HistoryFilterBottomSheet(
@@ -451,19 +473,79 @@ fun HistoryScreen(
         )
     }
 
+    // Diálogo de confirmação de exclusão do registro (Trava 1.3.a)
+    recordToDelete?.let { toDelete ->
+        AlertDialog(
+            onDismissRequest = { recordToDelete = null },
+            modifier = Modifier.testTag("delete_record_confirm_dialog"),
+            title = {
+                Text(
+                    text = stringResource(R.string.history_dialog_delete_record_title),
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.history_dialog_delete_record_message, toDelete.platform),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val target = toDelete
+                        recordToDelete = null
+                        viewModel.deleteDailyRecord(target)
+                        coroutineScope.launch {
+                            val result = snackbarHostState.showSnackbar(
+                                message = context.getString(R.string.history_snackbar_record_deleted, target.platform),
+                                actionLabel = context.getString(R.string.snackbar_action_undo),
+                                duration = SnackbarDuration.Short
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                viewModel.restoreDailyRecord(target)
+                                Toast.makeText(context, context.getString(R.string.history_toast_record_restored), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.testTag("btn_confirm_delete_record")
+                ) {
+                    Text(stringResource(R.string.btn_delete_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { recordToDelete = null },
+                    modifier = Modifier.testTag("btn_cancel_delete_record")
+                ) {
+                    Text(stringResource(R.string.btn_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
     val currentRecordToEdit = recordToEdit
     if (showEditDialog && currentRecordToEdit != null) {
         EditRecordDialog(
             record = currentRecordToEdit,
+            availablePlatforms = allAvailablePlatforms,
             onDismiss = {
                 showEditDialog = false
                 recordToEdit = null
             },
-            onSave = { platform, startOdo, endOdo, gross, deliveries, fuelPrice, foodExpense, sTime, eTime, pDuration ->
+            onSave = { newDateStr, newDateTimestamp, platform, startOdo, endOdo, gross, deliveries, fuelPrice, foodExpense, sTime, eTime, pDuration ->
                 viewModel.updateDailyRecord(
                     recordId = currentRecordToEdit.id,
-                    dateString = currentRecordToEdit.dateString,
-                    dateTimestamp = currentRecordToEdit.dateTimestamp,
+                    dateString = newDateStr,
+                    dateTimestamp = newDateTimestamp,
                     platform = platform,
                     grossEarnings = gross,
                     deliveriesCount = deliveries,

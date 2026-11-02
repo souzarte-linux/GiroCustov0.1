@@ -1436,4 +1436,46 @@ class RepositoryAndEstimationTest {
         viewModelStore.clear()
         advanceUntilIdle()
     }
+
+    @Test
+    fun testRepository_deleteAndRestoreDailyRecord_restoresDataAndWearCorrectly() = runTest {
+        // Cria veículo e peça
+        val vehicle = Vehicle(id = 1L, model = "Mobi", active = true, currentOdometer = 1000.0)
+        db.vehicleDao().insertVehicle(vehicle)
+        val part = VehiclePart(id = 1L, vehicleId = 1L, name = "Óleo", price = 50.0, lifespanKm = 1000.0, runKmSinceChange = 100.0)
+        db.vehiclePartDao().insertPart(part)
+
+        // Insere registro de 50km
+        repository.insertDailyRecord(
+            dateString = "2026-11-02",
+            dateTimestamp = System.currentTimeMillis(),
+            platform = "iFood",
+            grossEarnings = 15000L,
+            deliveriesCount = 8,
+            startOdometer = 1000.0,
+            endOdometer = 1050.0,
+            fuelPrice = 5800L,
+            foodExpense = 2000L
+        )
+
+        val inserted = repository.allRecordsFlow.first().first()
+        assertEquals("iFood", inserted.platform)
+        assertEquals(1050.0, inserted.endOdometer, 0.01)
+
+        // Exclui registro
+        repository.deleteRecord(inserted)
+        val afterDelete = db.dailyRecordDao().getRecordById(inserted.id)
+        assertNotNull(afterDelete)
+        assertTrue(afterDelete?.isDeleted == true)
+        assertEquals(SyncStatus.PENDING_DELETE, afterDelete?.syncStatus)
+
+        // Restaura registro (Desfazer)
+        repository.restoreRecord(afterDelete!!)
+        val afterRestore = db.dailyRecordDao().getRecordById(inserted.id)
+        assertNotNull(afterRestore)
+        assertFalse(afterRestore?.isDeleted ?: true)
+        val visibleRecords = repository.allRecordsFlow.first()
+        assertEquals(1, visibleRecords.size)
+        assertEquals(inserted.id, visibleRecords.first().id)
+    }
 }

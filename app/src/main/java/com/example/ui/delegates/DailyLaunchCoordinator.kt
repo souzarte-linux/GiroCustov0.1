@@ -268,6 +268,12 @@ class DailyLaunchCoordinator(
         }
     }
 
+    fun restoreDailyRecord(record: DailyRecord) {
+        scope.launch {
+            repository.restoreRecord(record)
+        }
+    }
+
     fun updateDailyRecord(
         recordId: Long,
         dateString: String,

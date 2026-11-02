@@ -707,37 +707,133 @@ fun MonthHeaderCard(
             val metricCardBorder = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
             val netColor = if (totalNet >= 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
 
-            // Faixa de Sub-métricas: Coluna Esquerda (Pacotes e KM empilhados), Coluna Central (Bruto) e Coluna Direita (Líquido)
-            Row(
+            // Faixa de Sub-métricas: Grid 2x2 - Linha Superior (Dois maiores: Bruto e Líquido), Linha Inferior (Dois menores: Pacotes e KM)
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(IntrinsicSize.Min)
                     .padding(top = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // 1. Coluna Esquerda (Pacotes e KM empilhados)
-                Column(
-                    modifier = Modifier
-                        .weight(0.72f)
-                        .fillMaxHeight(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                // Linha 1: Os dois maiores (Bruto e Líquido)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Subcard Pacotes (topo)
+                    // Subcard Bruto (Esquerda)
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .fillMaxWidth()
+                            .defaultMinSize(minHeight = 52.dp)
+                            .testTag("month_metric_gross")
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(metricCardBg)
+                            .border(metricCardBorder, RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.AccountBalanceWallet,
+                                    contentDescription = stringResource(R.string.cd_history_metric_gross),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = stringResource(R.string.history_month_metric_gross),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = formatHistoryCurrency(totalGross, isPrivacyEnabled),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    // Subcard Líquido (Direita)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .defaultMinSize(minHeight = 52.dp)
+                            .testTag("month_metric_net")
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(metricCardBg)
+                            .border(metricCardBorder, RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Savings,
+                                    contentDescription = stringResource(R.string.cd_history_metric_net),
+                                    tint = netColor,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = stringResource(R.string.history_month_metric_net),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = netColor,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = formatHistoryCurrency(totalNet, isPrivacyEnabled),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = netColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+
+                // Linha 2: Os dois menores (Pacotes e KM)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Subcard Pacotes (Esquerda)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
                             .testTag("month_metric_packages")
                             .clip(RoundedCornerShape(8.dp))
                             .background(metricCardBg)
                             .border(metricCardBorder, RoundedCornerShape(8.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
                         contentAlignment = Alignment.CenterStart
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Inventory2,
@@ -747,7 +843,7 @@ fun MonthHeaderCard(
                             )
                             Text(
                                 text = stringResource(R.string.history_month_metric_packages),
-                                fontSize = 10.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
@@ -760,7 +856,7 @@ fun MonthHeaderCard(
                                 } else {
                                     totalDeliveries.toString()
                                 },
-                                fontSize = 11.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
@@ -769,22 +865,21 @@ fun MonthHeaderCard(
                         }
                     }
 
-                    // Subcard KM (embaixo)
+                    // Subcard KM (Direita)
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .fillMaxWidth()
                             .testTag("month_metric_km")
                             .clip(RoundedCornerShape(8.dp))
                             .background(metricCardBg)
                             .border(metricCardBorder, RoundedCornerShape(8.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
                         contentAlignment = Alignment.CenterStart
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.LocationOn,
@@ -794,7 +889,7 @@ fun MonthHeaderCard(
                             )
                             Text(
                                 text = stringResource(R.string.history_month_metric_km),
-                                fontSize = 10.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
@@ -803,109 +898,13 @@ fun MonthHeaderCard(
                             )
                             Text(
                                 text = String.format(Locale.GERMAN, "%,.0f km", totalKm),
-                                fontSize = 11.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                    }
-                }
-
-                // 2. Coluna Central (Bruto)
-                Box(
-                    modifier = Modifier
-                        .weight(1.14f)
-                        .fillMaxHeight()
-                        .defaultMinSize(minHeight = 52.dp)
-                        .testTag("month_metric_gross")
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(metricCardBg)
-                        .border(metricCardBorder, RoundedCornerShape(8.dp))
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.AccountBalanceWallet,
-                                contentDescription = stringResource(R.string.cd_history_metric_gross),
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = stringResource(R.string.history_month_metric_gross),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.primary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = formatHistoryCurrency(totalGross, isPrivacyEnabled),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                // 3. Coluna Direita (Líquido)
-                Box(
-                    modifier = Modifier
-                        .weight(1.14f)
-                        .fillMaxHeight()
-                        .defaultMinSize(minHeight = 52.dp)
-                        .testTag("month_metric_net")
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(metricCardBg)
-                        .border(metricCardBorder, RoundedCornerShape(8.dp))
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Savings,
-                                contentDescription = stringResource(R.string.cd_history_metric_net),
-                                tint = netColor,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = stringResource(R.string.history_month_metric_net),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = netColor,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = formatHistoryCurrency(totalNet, isPrivacyEnabled),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = netColor,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
                     }
                 }
             }

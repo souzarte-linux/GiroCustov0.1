@@ -287,6 +287,19 @@ class HistoryRefactorTest {
             "Bloco Líquido deve respeitar minHeight de 52dp (altura atual: ${netBounds.height})",
             netBounds.height.value >= 52.0f
         )
+        // Validação da disposição 2x2: os dois maiores em cima (Bruto e Líquido) e os dois menores abaixo (Pacotes e KM)
+        assertTrue(
+            "Bloco Bruto deve estar posicionado na linha superior acima do bloco Pacotes (gross.top: ${grossBounds.top}, packages.top: ${packagesBounds.top})",
+            grossBounds.top < packagesBounds.top
+        )
+        assertTrue(
+            "Bloco Líquido deve estar posicionado na linha superior acima do bloco KM (net.top: ${netBounds.top}, km.top: ${kmBounds.top})",
+            netBounds.top < kmBounds.top
+        )
+        assertTrue(
+            "Blocos Bruto e Líquido (maiores) devem ter altura superior aos blocos inferiores Pacotes e KM",
+            grossBounds.height > packagesBounds.height && netBounds.height > kmBounds.height
+        )
     }
 
     @Test
@@ -884,5 +897,156 @@ class HistoryRefactorTest {
         assertEquals("No tema escuro, a cor do texto bruto deve ser onSurface", currentOnSurface, currentResolvedColor)
         assertTrue("A cor onSurface do tema escuro deve ser diferente de Color.Black", currentOnSurface != Color.Black)
         composeTestRule.onNodeWithText("R$ 160,00").assertIsDisplayed()
+    }
+
+    @Test
+    fun testHistoryRecordCard_expandAndShowEditAndDeleteButtons() {
+        val record = createDummyRecord(88L, "Shopee", 180.00, 150.00)
+        var editClicked = false
+        var deleteClicked = false
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                HistoryRecordCard(
+                    record = record,
+                    onEditClick = { editClicked = true },
+                    onDeleteClick = { deleteClicked = true }
+                )
+            }
+        }
+
+        // Inicialmente contraído: botões de editar e excluir não estão visíveis
+        composeTestRule.onNodeWithTag("edit_record_btn_${record.id}").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("delete_record_btn_${record.id}").assertDoesNotExist()
+
+        // Clica no card para expandir
+        composeTestRule.onNodeWithTag("history_item_${record.id}").performClick()
+        composeTestRule.waitForIdle()
+
+        // Agora os botões Editar e Excluir devem estar visíveis e clicáveis
+        composeTestRule.onNodeWithTag("edit_record_btn_${record.id}").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("delete_record_btn_${record.id}").assertIsDisplayed()
+
+        composeTestRule.onNodeWithTag("edit_record_btn_${record.id}").performClick()
+        assertTrue("Clique em editar deve ter sido disparado", editClicked)
+
+        composeTestRule.onNodeWithTag("delete_record_btn_${record.id}").performClick()
+        assertTrue("Clique em excluir deve ter sido disparado", deleteClicked)
+    }
+
+    @Test
+    fun testEditRecordDialog_displaysDateAndPlatformCombobox_andSavesCorrectly() {
+        val record = createDummyRecord(99L, "iFood", 200.0, 150.0).copy(
+            dateString = "2026-11-02",
+            dateTimestamp = 1793635200000L
+        )
+        val registered = listOf("iFood", "Uber Flash", "Shopee", "Mercado Livre")
+        var savedPlatform = ""
+        var savedDateStr = ""
+        var savedDateTimestamp = 0L
+        var savedGross = 0.0
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                EditRecordDialogContent(
+                    record = record,
+                    availablePlatforms = registered,
+                    onDismiss = {},
+                    onSave = { dateStr, timestamp, platform, _, _, gross, _, _, _, _, _, _ ->
+                        savedDateStr = dateStr
+                        savedDateTimestamp = timestamp
+                        savedPlatform = platform
+                        savedGross = gross
+                    }
+                )
+            }
+        }
+
+        // 1. Verifica campo Data presente com formato amigável
+        composeTestRule.onNodeWithTag("edit_date").assertIsDisplayed()
+        composeTestRule.onNodeWithText("02/11/2026").assertIsDisplayed()
+
+        // 2. Verifica campo Plataforma combobox
+        composeTestRule.onNodeWithTag("edit_platform").assertIsDisplayed()
+        composeTestRule.onNodeWithText("iFood").assertIsDisplayed()
+
+        // 3. Abre o dropdown clicando no botão da combobox
+        composeTestRule.onNodeWithTag("edit_platform_dropdown_btn").performClick()
+        composeTestRule.waitForIdle()
+
+        // Opções de plataforma devem aparecer
+        composeTestRule.onNodeWithTag("edit_platform_option_Shopee").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("edit_platform_option_Shopee").performClick()
+        composeTestRule.waitForIdle()
+
+        // Agora o campo deve exibir "Shopee"
+        composeTestRule.onNodeWithText("Shopee").assertIsDisplayed()
+
+        // 4. Clica em Salvar
+        composeTestRule.onNodeWithText("Salvar").performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals("Shopee", savedPlatform)
+        assertEquals("2026-11-02", savedDateStr)
+        assertEquals(1793635200000L, savedDateTimestamp)
+        assertEquals(200.0, savedGross, 0.01)
+    }
+
+    @Test
+    fun testHistoryScreen_deleteRecord_showsConfirmationDialogAndCancelsOrConfirms() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val viewModel = GiroCustoViewModel(app)
+        val rec = createDummyRecord(42L, "iFood", 120.0, 95.0)
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                HistoryScreen(
+                    viewModel = viewModel,
+                    vehicle = null,
+                    records = listOf(rec)
+                )
+            }
+        }
+
+        // Rola até o card do item para garantir que o LazyColumn o componha
+        composeTestRule.onNodeWithTag("history_list")
+            .performScrollToNode(hasTestTag("history_item_${rec.id}"))
+
+        // Clica no card para expandir
+        composeTestRule.onNodeWithTag("history_item_${rec.id}").performClick()
+        composeTestRule.waitForIdle()
+
+        // Rola até o botão de excluir
+        composeTestRule.onNodeWithTag("history_list")
+            .performScrollToNode(hasTestTag("delete_record_btn_${rec.id}"))
+
+        // Clica no botão de excluir (lixeira)
+        composeTestRule.onNodeWithTag("delete_record_btn_${rec.id}").performClick()
+        composeTestRule.waitForIdle()
+
+        // 1. Trava 1.3.a: Diálogo de confirmação deve aparecer
+        composeTestRule.onNodeWithTag("delete_record_confirm_dialog").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Excluir lançamento?").assertIsDisplayed()
+
+        // Clica em cancelar
+        composeTestRule.onNodeWithTag("btn_cancel_delete_record").performClick()
+        composeTestRule.waitForIdle()
+
+        // O diálogo desaparece
+        composeTestRule.onNodeWithTag("delete_record_confirm_dialog").assertDoesNotExist()
+
+        // Clica novamente na lixeira
+        composeTestRule.onNodeWithTag("history_list")
+            .performScrollToNode(hasTestTag("delete_record_btn_${rec.id}"))
+        composeTestRule.onNodeWithTag("delete_record_btn_${rec.id}").performClick()
+        composeTestRule.waitForIdle()
+
+        // 2. Confirma a exclusão
+        composeTestRule.onNodeWithTag("btn_confirm_delete_record").performClick()
+        composeTestRule.waitForIdle()
+
+        // Diálogo fecha e Trava 1.3.b (Snackbar com "Desfazer") surge na parte inferior
+        composeTestRule.onNodeWithTag("delete_record_confirm_dialog").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Desfazer").assertIsDisplayed()
     }
 }
