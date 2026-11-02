@@ -180,6 +180,15 @@ class GiroCustoRepository(
         platformDao.updatePlatform(toDelete)
     }
 
+    suspend fun restorePlatform(platform: Platform) {
+        val toRestore = platform.copy(
+            isDeleted = false,
+            syncStatus = SyncStatus.PENDING_UPDATE,
+            updatedAt = System.currentTimeMillis()
+        )
+        platformDao.updatePlatform(toRestore)
+    }
+
     suspend fun savePart(part: VehiclePart) {
         val isNew = part.id == 0L
         val activeVehicleId = if (part.vehicleId == 0L) {

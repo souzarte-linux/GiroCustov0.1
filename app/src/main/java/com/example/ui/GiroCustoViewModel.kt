@@ -733,13 +733,9 @@ class GiroCustoViewModel @JvmOverloads constructor(
     }
 
     // Plataforma
-    fun savePlatform(platform: Platform) {
-        viewModelScope.launch { repository.savePlatform(platform) }
-    }
-
-    fun deletePlatform(platform: Platform) {
-        viewModelScope.launch { repository.deletePlatform(platform) }
-    }
+    fun savePlatform(platform: Platform) = viewModelScope.launch { repository.savePlatform(platform) }
+    fun deletePlatform(platform: Platform) = viewModelScope.launch { repository.deletePlatform(platform) }
+    fun restorePlatform(platform: Platform) = viewModelScope.launch { repository.restorePlatform(platform) }
 
     // Peças de Desgaste
     fun addPart(name: String, price: Double, lifespan: Double, vehicleId: Long? = null) {
@@ -758,17 +754,9 @@ class GiroCustoViewModel @JvmOverloads constructor(
         }
     }
 
-    fun deletePart(part: VehiclePart) {
-        viewModelScope.launch { repository.deletePart(part) }
-    }
-
-    fun restorePart(part: VehiclePart) {
-        viewModelScope.launch { repository.restorePart(part) }
-    }
-
-    fun resetPartWear(partId: Long) {
-        viewModelScope.launch { repository.resetPartWear(partId) }
-    }
+    fun deletePart(part: VehiclePart) = viewModelScope.launch { repository.deletePart(part) }
+    fun restorePart(part: VehiclePart) = viewModelScope.launch { repository.restorePart(part) }
+    fun resetPartWear(partId: Long) = viewModelScope.launch { repository.resetPartWear(partId) }
 
     // Demonstração / Reset
     fun seedJune2026Data(onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {

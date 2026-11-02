@@ -264,11 +264,12 @@
     <string name="cd_launch_select_end_time">Selecionar Hora Final</string>
     <string name="cd_launch_select_pause_time">Selecionar Tempo de Pausa</string>
 
-    <!-- Plataformas (T-25) -->
+    <!-- Plataformas (T-25 / T-02) -->
     <string name="platforms_title">Plataformas Ativas</string>
     <string name="platforms_btn_add">Nova</string>
     <string name="platforms_empty_title">Nenhuma plataforma cadastrada</string>
     <string name="platforms_empty_subtitle">Cadastre as plataformas de delivery ou logística que você trabalha.</string>
+    <string name="platforms_form_title_view">Detalhes da Plataforma</string>
     <string name="platforms_form_title_edit">Editar Plataforma</string>
     <string name="platforms_form_title_new">Nova Plataforma</string>
     <string name="platforms_toast_save_success">Plataforma atualizada com sucesso!</string>
@@ -276,6 +277,26 @@
     <string name="platforms_toast_delete_success">Plataforma removida.</string>
     <string name="platforms_btn_save_edit">SALVAR ALTERAÇÕES</string>
     <string name="platforms_btn_save_new">VINCULAR PLATAFORMA</string>
+    <string name="platforms_btn_cancel">Cancelar</string>
+    <string name="cd_platform_switch_active">Desativar plataforma %1$s</string>
+    <string name="cd_platform_switch_inactive">Ativar plataforma %1$s</string>
+    <string name="platform_status_active">Ativa</string>
+    <string name="platform_status_inactive">Inativa</string>
+    <string name="cd_platform_edit_action">Editar dados da plataforma</string>
+    <string name="cd_platform_delete_action">Excluir plataforma</string>
+    <string name="dialog_delete_platform_title">Excluir plataforma?</string>
+    <string name="dialog_delete_platform_message">Tem certeza que deseja excluir a plataforma \"%1$s\"? Ela deixará de aparecer nos seus novos lançamentos.</string>
+    <string name="snackbar_platform_deleted">Plataforma \"%1$s\" excluída.</string>
+    <string name="toast_platform_restored">Plataforma restaurada com sucesso!</string>
+    <string name="platform_section_general">Dados Gerais</string>
+    <string name="platform_section_banking">Dados de Recebimento</string>
+    <string name="platform_section_pix">Chave PIX</string>
+    <string name="cd_section_expanded">Seção %1$s, expandida. Toque duas vezes para recolher.</string>
+    <string name="cd_section_collapsed">Seção %1$s, recolhida. Toque duas vezes para expandir.</string>
+    <string name="platform_model_production_short">Produção (Pac.)</string>
+    <string name="platform_model_daily_short">Diária (Fixo)</string>
+    <string name="platform_segment_logistics">Logística</string>
+    <string name="platform_segment_delivery">Delivery</string>
 
     <!-- Histórico e Subcomponentes (T-25B [ACC-02B-1]) -->
     <string name="history_title">Histórico</string>
@@ -517,6 +538,17 @@
     <string name="profile_cadastral_uf_label">UF</string>
     <string name="profile_cadastral_uf_placeholder">SP</string>
     <string name="profile_cadastral_save_btn">Salvar Dados Cadastrais</string>
+    <string name="profile_cadastral_card_title_editing">EDITANDO DADOS CADASTRAIS</string>
+    <string name="cd_profile_cadastral_edit">Editar dados cadastrais</string>
+    <string name="cd_profile_cadastral_cancel_edit">Cancelar edição de dados cadastrais</string>
+    <string name="profile_cadastral_name_not_set">Nome não informado</string>
+    <string name="profile_cadastral_phone_not_set">Telefone não informado</string>
+    <string name="profile_cadastral_address_not_set">Endereço não cadastrado</string>
+    <string name="profile_cadastral_whatsapp_active">WhatsApp ativo</string>
+    <string name="profile_cadastral_whatsapp_inactive">Somente chamadas</string>
+    <string name="profile_cadastral_biometric_active">Proteção biométrica ativa</string>
+    <string name="profile_cadastral_biometric_inactive">Proteção biométrica desativada</string>
+    <string name="profile_cadastral_btn_cancel">Cancelar</string>
 
     <!-- Plataformas Ativas no Perfil -->
     <string name="profile_platforms_card_title">PLATAFORMAS ATIVAS</string>

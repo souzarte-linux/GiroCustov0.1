@@ -1,8 +1,10 @@
 package com.example.ui.screens.profile
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -42,11 +45,14 @@ import kotlinx.coroutines.delay
 internal fun CadastralDataCard(
     userProfile: UserProfile,
     viaCepState: ViaCepUiState,
-    viewModel: GiroCustoViewModel
+    viewModel: GiroCustoViewModel,
+    initialEditing: Boolean = false
 ) {
     val context = LocalContext.current
     val streetFocusRequester = remember { FocusRequester() }
     val numberFocusRequester = remember { FocusRequester() }
+
+    var isEditing by rememberSaveable { mutableStateOf(initialEditing) }
 
     var isManualCep by remember { mutableStateOf(false) }
     var name by remember(userProfile.name) { mutableStateOf(userProfile.name) }
@@ -58,6 +64,19 @@ internal fun CadastralDataCard(
     var neighborhood by remember(userProfile.neighborhood) { mutableStateOf(userProfile.neighborhood) }
     var city by remember(userProfile.city) { mutableStateOf(userProfile.city) }
     var stateUf by remember(userProfile.stateUf) { mutableStateOf(userProfile.stateUf) }
+
+    val resetFormToProfile = {
+        name = userProfile.name
+        phoneDigits = userProfile.phone.filter { it.isDigit() }
+        isWhatsapp = userProfile.isWhatsapp
+        cepDigits = userProfile.cep.filter { it.isDigit() }
+        street = userProfile.street
+        addressNumber = userProfile.addressNumber
+        neighborhood = userProfile.neighborhood
+        city = userProfile.city
+        stateUf = userProfile.stateUf
+        isEditing = false
+    }
 
     // Dispara busca automática ao preencher 8 dígitos de CEP (caso não esteja em modo manual)
     LaunchedEffect(cepDigits) {
@@ -95,23 +114,81 @@ internal fun CadastralDataCard(
         ) {
             // Header do Card
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Badge,
-                    contentDescription = null,
-                    tint = ColorBrandEmerald,
-                    modifier = Modifier.size(20.dp)
-                )
-                Text(
-                    text = stringResource(R.string.profile_cadastral_card_title),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = ColorBrandEmerald,
-                    letterSpacing = 1.sp
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Badge,
+                        contentDescription = null,
+                        tint = ColorBrandEmerald,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = if (isEditing) {
+                            stringResource(R.string.profile_cadastral_card_title_editing)
+                        } else {
+                            stringResource(R.string.profile_cadastral_card_title)
+                        },
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ColorBrandEmerald,
+                        letterSpacing = 1.sp
+                    )
+                }
+
+                if (!isEditing) {
+                    IconButton(
+                        onClick = { isEditing = true },
+                        modifier = Modifier
+                            .size(48.dp)
+                            .testTag("profile_cadastral_edit_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Edit,
+                            contentDescription = stringResource(R.string.cd_profile_cadastral_edit),
+                            tint = ColorBrandEmerald,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                } else {
+                    IconButton(
+                        onClick = resetFormToProfile,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .testTag("profile_cadastral_cancel_icon_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.cd_profile_cadastral_cancel_edit),
+                            tint = ColorTextMuted,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
+
+            AnimatedContent(
+                targetState = isEditing,
+                transitionSpec = {
+                    (fadeIn() + expandVertically()) togetherWith (fadeOut() + shrinkVertically())
+                },
+                label = "profile_cadastral_mode_transition"
+            ) { editing ->
+                if (!editing) {
+                    CadastralDataViewMode(
+                        userProfile = userProfile,
+                        context = context
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
 
             // Campo Nome Completo
             OutlinedTextField(
@@ -514,12 +591,28 @@ internal fun CadastralDataCard(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Botão de Salvar Perfil
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .semantics { testTag = "profile_save_btn" }
+            // Rodapé do Modo EDIT: Cancelar e Salvar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                OutlinedButton(
+                    onClick = resetFormToProfile,
+                    modifier = Modifier
+                        .weight(0.4f)
+                        .heightIn(min = 48.dp)
+                        .testTag("profile_cadastral_cancel_btn"),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                ) {
+                    Text(
+                        text = stringResource(R.string.profile_cadastral_btn_cancel),
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 14.sp
+                    )
+                }
+
                 Button(
                     onClick = {
                         viewModel.updateUserProfile(
@@ -534,9 +627,11 @@ internal fun CadastralDataCard(
                             stateUf = stateUf.trim().uppercase()
                         )
                         Toast.makeText(context, context.getString(R.string.profile_toast_cadastral_saved), Toast.LENGTH_SHORT).show()
+                        isEditing = false
                     },
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .weight(0.6f)
+                        .heightIn(min = 48.dp)
                         .testTag("profile_save_cadastrais_btn")
                         .semantics { testTag = "profile_save_btn" },
                     shape = RoundedCornerShape(12.dp),
@@ -546,13 +641,16 @@ internal fun CadastralDataCard(
                     )
                 ) {
                     Icon(Icons.Filled.Save, contentDescription = null, tint = ColorEmeraldDark)
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = stringResource(R.string.profile_cadastral_save_btn),
                         fontWeight = FontWeight.Bold,
                         color = ColorEmeraldDark,
                         fontSize = 14.sp
                     )
+                }
+            }
+                    }
                 }
             }
         }

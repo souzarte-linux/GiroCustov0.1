@@ -272,10 +272,11 @@ fun LaunchScreen(
                                 .background(dropdownMenuBgColor)
                                 .border(1.dp, dropdownMenuBorderColor, RoundedCornerShape(8.dp))
                         ) {
+                            val activePlatforms = platformsList.filter { it.active }
                             val filteredPlatforms = if (platformVal.isBlank()) {
-                                platformsList
+                                activePlatforms
                             } else {
-                                platformsList.filter { it.name.contains(platformVal, ignoreCase = true) }
+                                activePlatforms.filter { it.name.contains(platformVal, ignoreCase = true) }
                             }
 
                             if (filteredPlatforms.isNotEmpty()) {

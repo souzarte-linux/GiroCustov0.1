@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -51,18 +52,22 @@ fun PlatformCycleConfigCard(
                         onClick = { onCycleChange(c) },
                         modifier = Modifier
                             .weight(1f)
+                            .heightIn(min = 48.dp)
                             .testTag("cycle_${c}_btn"),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (cycle == c) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                             contentColor = if (cycle == c) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                         ),
                         shape = RoundedCornerShape(6.dp),
-                        contentPadding = PaddingValues(0.dp)
+                        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 0.dp)
                     ) {
                         Text(
                             text = if (c == "misto") "VARIÁVEL" else c.uppercase(),
                             fontWeight = FontWeight.Bold,
-                            fontSize = 10.sp
+                            fontSize = 10.sp,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -82,7 +87,7 @@ fun PlatformCycleConfigCard(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(40.dp)
+                                    .heightIn(min = 48.dp)
                                     .background(
                                         if (paymentDay == d) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                                         RoundedCornerShape(8.dp)
@@ -95,7 +100,10 @@ fun PlatformCycleConfigCard(
                                     text = d,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (paymentDay == d) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = if (paymentDay == d) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }

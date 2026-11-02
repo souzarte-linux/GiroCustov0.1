@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
-import com.example.data.Platform
 import com.example.data.UserProfile
 import com.example.data.Vehicle
 import com.example.data.VehiclePart
@@ -44,13 +43,13 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProfileScreen(
     viewModel: GiroCustoViewModel,
-    onNavigateToPlatforms: () -> Unit = {}
+    onNavigateToPlatforms: () -> Unit = {},
+    initialCadastralEditing: Boolean = false
 ) {
     val allVehicles by viewModel.allVehicles.collectAsStateWithLifecycle()
     val activeVehicle by viewModel.vehicle.collectAsStateWithLifecycle()
     val parts by viewModel.parts.collectAsStateWithLifecycle()
     val userProfileState by viewModel.userProfile.collectAsStateWithLifecycle()
-    val allPlatforms by viewModel.allPlatforms.collectAsStateWithLifecycle()
     val isDark by viewModel.isDarkTheme.collectAsStateWithLifecycle()
     val viaCepState by viewModel.viaCepState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -72,7 +71,6 @@ fun ProfileScreen(
                 ProfileSectionsContent(
                     viewModel = viewModel,
                     userProfile = userProfileState ?: UserProfile(),
-                    allPlatforms = allPlatforms,
                     allVehicles = allVehicles,
                     activeVehicle = activeVehicle,
                     parts = parts,
@@ -82,7 +80,8 @@ fun ProfileScreen(
                     onAddVehicleClick = { editingVehicleId = -1L },
                     onEditVehicleClick = { id -> editingVehicleId = id },
                     onDeleteVehicle = { vehicle -> vehicleToDelete = vehicle },
-                    onDeletePart = { part -> partToDelete = part }
+                    onDeletePart = { part -> partToDelete = part },
+                    initialCadastralEditing = initialCadastralEditing
                 )
             } else {
                 val isEdit = currentVehicleId != -1L
@@ -242,7 +241,6 @@ fun ProfileScreen(
 private fun ProfileSectionsContent(
     viewModel: GiroCustoViewModel,
     userProfile: UserProfile,
-    allPlatforms: List<Platform>,
     allVehicles: List<Vehicle>,
     activeVehicle: Vehicle?,
     parts: List<VehiclePart>,
@@ -252,7 +250,8 @@ private fun ProfileSectionsContent(
     onAddVehicleClick: () -> Unit,
     onEditVehicleClick: (Long) -> Unit,
     onDeleteVehicle: (Vehicle) -> Unit,
-    onDeletePart: (VehiclePart) -> Unit
+    onDeletePart: (VehiclePart) -> Unit,
+    initialCadastralEditing: Boolean = false
 ) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
@@ -334,22 +333,12 @@ private fun ProfileSectionsContent(
         CadastralDataCard(
             userProfile = userProfile,
             viaCepState = viaCepState,
-            viewModel = viewModel
+            viewModel = viewModel,
+            initialEditing = initialCadastralEditing
         )
 
         // =========================================================================
-        // SEÇÃO 2: CARD PLATAFORMAS ATIVAS
-        // =========================================================================
-        ActivePlatformsCard(
-            allPlatforms = allPlatforms,
-            onPlatformCheckChange = { platform, checked ->
-                viewModel.savePlatform(platform.copy(active = checked))
-            },
-            onNavigateToPlatforms = onNavigateToPlatforms
-        )
-
-        // =========================================================================
-        // SEÇÃO 3: MEUS VEÍCULOS
+        // SEÇÃO 2: MEUS VEÍCULOS
         // =========================================================================
         MyVehiclesSection(
             allVehicles = allVehicles,

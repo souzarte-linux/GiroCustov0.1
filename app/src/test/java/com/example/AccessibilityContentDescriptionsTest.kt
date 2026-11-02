@@ -209,7 +209,7 @@ class AccessibilityContentDescriptionsTest {
 
         composeTestRule.setContent {
             MyApplicationTheme {
-                ProfileScreen(viewModel = viewModel)
+                ProfileScreen(viewModel = viewModel, initialCadastralEditing = true)
             }
         }
 
