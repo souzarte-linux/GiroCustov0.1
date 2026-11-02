@@ -459,9 +459,12 @@ fun HistoryScreen(
     }
 
     if (showHistoryCustomPeriodDialog) {
+        val now = System.currentTimeMillis()
+        val initialStart = if (filterState.customStartDate > 0L) filterState.customStartDate else now - 7L * 24 * 60 * 60 * 1000
+        val initialEnd = if (filterState.customEndDate > 0L) filterState.customEndDate else now
         CustomPeriodDialog(
-            initialStart = filterState.customStartDate,
-            initialEnd = filterState.customEndDate,
+            initialStart = initialStart,
+            initialEnd = initialEnd,
             onDismiss = { showHistoryCustomPeriodDialog = false },
             onConfirm = { start, end ->
                 filterState = filterState.copy(

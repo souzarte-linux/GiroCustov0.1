@@ -211,7 +211,13 @@ fun HistoryActiveFilterChips(
                 Period.MENSAL -> stringResource(R.string.period_month)
                 Period.ULTIMOS_30_DIAS -> stringResource(R.string.history_period_30_days_short)
                 Period.ANUAL -> stringResource(R.string.period_year)
-                Period.PERSONALIZADO -> "${dateFormat.format(Date(filterState.customStartDate))} - ${dateFormat.format(Date(filterState.customEndDate))}"
+                Period.PERSONALIZADO -> {
+                    if (filterState.customStartDate > 0L && filterState.customEndDate > 0L) {
+                        "${dateFormat.format(Date(filterState.customStartDate))} - ${dateFormat.format(Date(filterState.customEndDate))}"
+                    } else {
+                        stringResource(R.string.period_custom)
+                    }
+                }
                 Period.SEMANA -> ""
             }
             ActiveFilterChipItem(

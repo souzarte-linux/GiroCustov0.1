@@ -28,8 +28,8 @@ enum class HistorySortOption(val labelResId: Int) {
 
 data class HistoryFilterState(
     val period: Period = Period.SEMANA,
-    val customStartDate: Long = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000,
-    val customEndDate: Long = System.currentTimeMillis(),
+    val customStartDate: Long = 0L,
+    val customEndDate: Long = 0L,
     val deliveryType: DeliveryTypeFilter = DeliveryTypeFilter.TODOS,
     val selectedPlatform: String? = null,
     val sortOption: HistorySortOption = HistorySortOption.DATA_DECRESCENTE
@@ -85,6 +85,13 @@ fun HistoryFilterState.withDeliveryType(
         null
     }
     return copy(deliveryType = newDeliveryType, selectedPlatform = validPlatform)
+}
+
+fun HistoryFilterState.withCustomPeriodDefaults(now: Long = System.currentTimeMillis()): HistoryFilterState {
+    if (customStartDate > 0L && customEndDate > 0L) return this
+    val end = now
+    val start = end - 7L * 24 * 60 * 60 * 1000
+    return copy(customStartDate = start, customEndDate = end)
 }
 
 fun filterAndSortHistoryRecords(

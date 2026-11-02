@@ -169,6 +169,67 @@ class HistoryFilterModelTest {
     }
 
     @Test
+    fun testHistoryFilterState_defaultValuesAreStableAndDeterministic() {
+        val state1 = HistoryFilterState()
+        Thread.sleep(10)
+        val state2 = HistoryFilterState()
+        assertEquals(
+            "HistoryFilterState instances created with default parameters must be identical and deterministic",
+            state1,
+            state2
+        )
+        assertEquals(0L, state1.customStartDate)
+        assertEquals(0L, state1.customEndDate)
+    }
+
+    @Test
+    fun testHistoryFilterState_withCustomPeriodDefaults() {
+        val fixedNow = 1700000000000L
+        val expectedStart = fixedNow - 7L * 24 * 60 * 60 * 1000
+
+        // Estado inicial com datas 0L
+        val defaultState = HistoryFilterState()
+        val populatedState = defaultState.withCustomPeriodDefaults(fixedNow)
+        assertEquals(expectedStart, populatedState.customStartDate)
+        assertEquals(fixedNow, populatedState.customEndDate)
+
+        // Estado já com datas customizadas definidas não deve ser sobrescrito
+        val existingStart = 1690000000000L
+        val existingEnd = 1695000000000L
+        val customizedState = HistoryFilterState(
+            customStartDate = existingStart,
+            customEndDate = existingEnd
+        )
+        val notOverwrittenState = customizedState.withCustomPeriodDefaults(fixedNow)
+        assertEquals(existingStart, notOverwrittenState.customStartDate)
+        assertEquals(existingEnd, notOverwrittenState.customEndDate)
+    }
+
+    @Test
+    fun testFilterAndSortHistoryRecords_customPeriodFilteringWithExplicitDates() {
+        val oneDayMs = 24L * 60 * 60 * 1000
+        val baseDay = 1700000000000L // Dia base
+        val day1 = baseDay
+        val day2 = baseDay + oneDayMs
+        val day3 = baseDay + 2 * oneDayMs
+
+        val rec1 = createRecord(1, "iFood", day1, netProfit = 100.0)
+        val rec2 = createRecord(2, "Uber", day2, netProfit = 120.0)
+        val rec3 = createRecord(3, "99", day3, netProfit = 90.0)
+        val records = listOf(rec1, rec2, rec3)
+
+        // Filtro cobrindo apenas o dia 2
+        val filterCustom = HistoryFilterState(
+            period = Period.PERSONALIZADO,
+            customStartDate = day2,
+            customEndDate = day2
+        )
+        val result = filterAndSortHistoryRecords(records, filterCustom)
+        assertEquals(1, result.size)
+        assertEquals(2L, result[0].id)
+    }
+
+    @Test
     fun testFilterAndSortHistoryRecords_combinedFilteringAndSorting() {
         val (startYear, endYear) = getCurrentYearRange()
         val midYear = (startYear + endYear) / 2

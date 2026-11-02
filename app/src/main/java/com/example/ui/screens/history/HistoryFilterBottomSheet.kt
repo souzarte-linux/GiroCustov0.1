@@ -139,7 +139,7 @@ fun HistoryFilterBottomSheet(
                         selected = isSelected,
                         onClick = {
                             if (period == Period.PERSONALIZADO) {
-                                draftFilters = draftFilters.copy(period = period)
+                                draftFilters = draftFilters.copy(period = period).withCustomPeriodDefaults()
                                 onOpenCustomPeriodDialog()
                             } else {
                                 draftFilters = draftFilters.copy(period = period)
@@ -195,8 +195,13 @@ fun HistoryFilterBottomSheet(
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
+                        val customPeriodText = if (draftFilters.customStartDate > 0L && draftFilters.customEndDate > 0L) {
+                            "${dateFormat.format(Date(draftFilters.customStartDate))} até ${dateFormat.format(Date(draftFilters.customEndDate))}"
+                        } else {
+                            stringResource(R.string.period_custom)
+                        }
                         Text(
-                            text = "${dateFormat.format(Date(draftFilters.customStartDate))} até ${dateFormat.format(Date(draftFilters.customEndDate))}",
+                            text = customPeriodText,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurface
