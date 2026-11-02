@@ -10,10 +10,10 @@
 ### Explicação leiga
 1. **Card da Plataforma na Linha do Tempo (`HistoryRecordCard`)**:
    - Antes, o card exibia o nome da plataforma duas vezes (no quadrado colorido à esquerda e por extenso ao lado).
-   - O nome por extenso foi removido. Em seu lugar, a área central agora traz um resumo operacional direto:
-     - Linha 1: Ícone de pacote com a quantidade de entregas (ex: `5 Ent.`) e ícone de localização com os quilômetros rodados (ex: `34,4 KM`).
+   - Para evitar truncamentos causados pelo espaço limitado em telas de celular, a área central contraída agora exibe **exclusivamente**:
+     - Linha 1: Ícone de localização com os quilômetros rodados (ex: `34,4 KM`).
      - Linha 2: Ícone de relógio com o tempo trabalhado online (ex: `5h 10m Online`).
-   - À direita, o valor bruto faturado ganhou maior destaque visual com fonte maior (`17.sp`), em negrito e cor preta no tema claro (ou cor clara de alto contraste no tema escuro), seguido da seta de expansão.
+   - À direita, alinhado internamente, o valor bruto faturado ganhou destaque com fonte maior (`17.sp`), em negrito e cor preta no tema claro (ou cor de alto contraste no tema escuro): `R$ 189,80`, seguido da seta de expansão. As entregas continuam detalhadas ao expandir o card.
 2. **Acordeão Inicial Inteligente de Semanas e Dias (`HistoryScreen`)**:
    - Para evitar poluição visual e excesso de rolagem quando o usuário tem muitos dias e semanas lançados, todas as semanas anteriores agora iniciam contraídas, mantendo aberta apenas a semana mais recente.
    - Da mesma forma, dentro das semanas, todos os dias anteriores vêm contraídos, permanecendo aberto por padrão apenas o dia mais recente. O usuário pode tocar em qualquer dia ou semana para expandir ou contrair quando desejar.
@@ -134,10 +134,10 @@ O aplicativo já está instalado e atualizado no seu aparelho conectado (`IJA67X
    - No dia aberto, veja o card da corrida/entrega (ex: iFood ou Mercado Livre).
    - Note que o nome por extenso não se repete mais.
    - À esquerda há o badge colorido (ex: vermelho "IFOOD DELIVERY" ou amarelo "ML ENVIOS").
-   - Na área central:
-     - Primeira linha: ícone de pacote com `X Ent.` e ícone de mapa com `X,X KM`.
-     - Segunda linha: ícone de relógio com `Xh Ym Online`.
-   - À direita: o valor faturado (ex: `R$ 189,80`) em fonte maior, em negrito e com leitura imediata.
+   - Na área central contraída (exclusivamente):
+     - Linha 1: ícone de mapa com `X,X KM` (ex: `34,4 KM`).
+     - Linha 2: ícone de relógio com `Xh Ym Online` (ex: `5h 10m Online`).
+   - À direita: o valor faturado (ex: `R$ 189,80`) em fonte maior, em negrito e com leitura imediata, com a seta ao lado. (Ao tocar no card, a seção expandida mostra a quantidade de entregas e os custos detalhados).
 
 ---
 

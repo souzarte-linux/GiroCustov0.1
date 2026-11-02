@@ -358,12 +358,12 @@ class HistoryRefactorTest {
         val cardNode = composeTestRule.onNodeWithTag("history_item_42")
         cardNode.assertIsDisplayed()
 
-        // Área colapsada: badge ML, métricas operacionais (Ent., KM, Online) e valor bruto
+        // Área colapsada: badge ML, métricas operacionais exclusivas (KM, Online), valor bruto e ausência de "12 Ent."
         composeTestRule.onNodeWithText("ML").assertIsDisplayed()
-        composeTestRule.onNodeWithText("12 Ent.").assertIsDisplayed()
         composeTestRule.onNodeWithText("32,4 KM").assertIsDisplayed()
         composeTestRule.onNodeWithText("4h 45m Online").assertIsDisplayed()
         composeTestRule.onNodeWithText("R$ 160,00").assertIsDisplayed()
+        composeTestRule.onNodeWithText("12 Ent.").assertDoesNotExist()
 
         // Clica no card para expandir a seção de detalhes
         cardNode.performClick()

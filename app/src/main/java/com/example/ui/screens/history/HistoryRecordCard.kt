@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Storefront
-import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -223,53 +222,26 @@ fun HistoryRecordCard(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.Center
                     ) {
-                        // Linha 1: [📦] X Ent. e [📍] X,X KM
+                        // Linha 1: [📍] KM rodados: "X,X KM"
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            // 1.2.a. Quantidade Pacotes/Pedidos Entregue: "X Ent."
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Inventory2,
-                                    contentDescription = stringResource(R.string.cd_record_deliveries),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Text(
-                                    text = "${record.deliveriesCount} Ent.",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-
-                            // 1.2.b. Quantos KM rodados: "X,X KM"
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.LocationOn,
-                                    contentDescription = stringResource(R.string.cd_record_km),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                val kmFormatted = String.format(Locale.GERMAN, "%.1f KM", record.kmRodados)
-                                Text(
-                                    text = kmFormatted,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Outlined.LocationOn,
+                                contentDescription = stringResource(R.string.cd_record_km),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            val kmFormatted = String.format(Locale.GERMAN, "%.1f KM", record.kmRodados)
+                            Text(
+                                text = kmFormatted,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
 
                         Spacer(modifier = Modifier.height(3.dp))
