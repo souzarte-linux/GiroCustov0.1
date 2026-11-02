@@ -81,20 +81,20 @@ fun HistoryScreen(
         mutableStateOf(initial)
     }
 
-    // Gerenciamento de Semanas e Dias Expandidos
+    // Gerenciamento de Semanas e Dias Expandidos (apenas a semana e o dia mais recentes expandidos por padrão)
     var expandedWeeks by remember(records) {
         val grouped = groupRecordsHierarchically(records, false)
-        val initial = grouped.filterIsInstance<HistoryListItem.WeekHeader>().map {
-            getHistoryListItemKey(it)
-        }.toSet()
+        val initial = grouped.filterIsInstance<HistoryListItem.WeekHeader>()
+            .maxByOrNull { it.weekStartMillis }
+            ?.let { setOf(getHistoryListItemKey(it)) } ?: emptySet()
         mutableStateOf(initial)
     }
 
     var expandedDays by remember(records) {
         val grouped = groupRecordsHierarchically(records, false)
-        val initial = grouped.filterIsInstance<HistoryListItem.DayHeader>().map {
-            getHistoryListItemKey(it)
-        }.toSet()
+        val initial = grouped.filterIsInstance<HistoryListItem.DayHeader>()
+            .maxByOrNull { it.dateTimestamp }
+            ?.let { setOf(getHistoryListItemKey(it)) } ?: emptySet()
         mutableStateOf(initial)
     }
 
@@ -344,6 +344,7 @@ fun HistoryScreen(
                                     totalDeliveries = item.totalDeliveries,
                                     totalWorkMinutes = item.totalWorkMinutes,
                                     hourlyRate = item.hourlyRate,
+                                    totalKm = item.totalKm,
                                     isPrivacyEnabled = isPrivacyEnabled,
                                     isExpanded = isExpanded,
                                     onToggleExpand = {

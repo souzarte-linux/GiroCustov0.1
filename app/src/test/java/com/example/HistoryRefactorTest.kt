@@ -25,6 +25,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import java.util.Calendar
 
 @RunWith(RobolectricTestRunner::class)
@@ -55,6 +58,48 @@ class HistoryRefactorTest {
             startTime = "08:00",
             endTime = "13:10",
             pauseDuration = "00:25"
+        )
+    }
+
+    private fun createRecordForDate(
+        id: Long,
+        year: Int,
+        month: Int,
+        day: Int,
+        platform: String = "iFood",
+        gross: Double = 100.0,
+        net: Double = 60.0,
+        startTime: String = "08:00",
+        endTime: String = "13:00",
+        pauseDuration: String = "00:00"
+    ): DailyRecord {
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.YEAR, year)
+            set(Calendar.MONTH, month)
+            set(Calendar.DAY_OF_MONTH, day)
+            set(Calendar.HOUR_OF_DAY, 12)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        return DailyRecord(
+            id = id,
+            dateString = "$year-${month + 1}-$day",
+            dateTimestamp = cal.timeInMillis,
+            platform = platform,
+            grossEarnings = gross,
+            deliveriesCount = 5,
+            startOdometer = 100.0,
+            endOdometer = 150.0,
+            fuelPrice = 5.0,
+            foodExpense = 10.0,
+            fuelCost = 20.0,
+            wearCost = 5.0,
+            proportionalFixedCost = 5.0,
+            netProfit = net,
+            startTime = startTime,
+            endTime = endTime,
+            pauseDuration = pauseDuration
         )
     }
 
@@ -255,6 +300,7 @@ class HistoryRefactorTest {
                     totalDeliveries = 54,
                     totalWorkMinutes = 32L * 60L,
                     hourlyRate = 41.87,
+                    totalKm = 120.5,
                     isPrivacyEnabled = false
                 )
             }
@@ -262,9 +308,14 @@ class HistoryRefactorTest {
 
         composeTestRule.onNodeWithTag("week_header_Semana 4 (21 a 27 Out)").assertIsDisplayed()
         composeTestRule.onNodeWithText("Semana 4 (21 a 27 Out)").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("week_metric_deliveries", useUnmergedTree = true).assertExists()
         composeTestRule.onNodeWithText("54 entregas").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("week_metric_time", useUnmergedTree = true).assertExists()
         composeTestRule.onNodeWithText("32h Online").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("week_metric_rate", useUnmergedTree = true).assertExists()
         composeTestRule.onNodeWithText("Média: R$ 41,87/h").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("week_metric_km", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("120,5 km").assertIsDisplayed()
     }
 
     @Test
@@ -307,9 +358,11 @@ class HistoryRefactorTest {
         val cardNode = composeTestRule.onNodeWithTag("history_item_42")
         cardNode.assertIsDisplayed()
 
-        // Área colapsada: plataforma, entregas e valor bruto
-        composeTestRule.onNodeWithText("Mercado Livre").assertIsDisplayed()
-        composeTestRule.onNodeWithText("12 entregas", substring = true).assertIsDisplayed()
+        // Área colapsada: badge ML, métricas operacionais (Ent., KM, Online) e valor bruto
+        composeTestRule.onNodeWithText("ML").assertIsDisplayed()
+        composeTestRule.onNodeWithText("12 Ent.").assertIsDisplayed()
+        composeTestRule.onNodeWithText("32,4 KM").assertIsDisplayed()
+        composeTestRule.onNodeWithText("4h 45m Online").assertIsDisplayed()
         composeTestRule.onNodeWithText("R$ 160,00").assertIsDisplayed()
 
         // Clica no card para expandir a seção de detalhes
@@ -639,5 +692,197 @@ class HistoryRefactorTest {
 
         assertEquals("", query)
         composeTestRule.onNodeWithText("Buscar data ou plataforma...").assertIsDisplayed()
+    }
+
+    @Test
+    fun testTimeline_initialExpansion_onlyMostRecentWeekAndDayExpanded() {
+        // 4 semanas de Outubro de 2026, cada uma com múltiplos dias:
+        // Semana 1: 05 e 06 de Outubro
+        val rec1 = createRecordForDate(101L, 2026, Calendar.OCTOBER, 5)
+        val rec2 = createRecordForDate(102L, 2026, Calendar.OCTOBER, 6)
+
+        // Semana 2: 12 e 13 de Outubro
+        val rec3 = createRecordForDate(201L, 2026, Calendar.OCTOBER, 12)
+        val rec4 = createRecordForDate(202L, 2026, Calendar.OCTOBER, 13)
+
+        // Semana 3: 19 e 20 de Outubro
+        val rec5 = createRecordForDate(301L, 2026, Calendar.OCTOBER, 19)
+        val rec6 = createRecordForDate(302L, 2026, Calendar.OCTOBER, 20)
+
+        // Semana 4 (mais recente): 26 e 27 de Outubro (dia 27 é o mais recente)
+        val rec7 = createRecordForDate(401L, 2026, Calendar.OCTOBER, 26)
+        val rec8 = createRecordForDate(402L, 2026, Calendar.OCTOBER, 27)
+
+        val records = listOf(rec1, rec2, rec3, rec4, rec5, rec6, rec7, rec8)
+
+        // 1. Verificação lógica do cálculo dos conjuntos de expansão inicial
+        val grouped = groupRecordsHierarchically(records, isAscending = false)
+        val weekHeaders = grouped.filterIsInstance<HistoryListItem.WeekHeader>()
+        assertEquals(4, weekHeaders.size)
+
+        val initialExpandedWeeks = weekHeaders.maxByOrNull { it.weekStartMillis }
+            ?.let { setOf(getHistoryListItemKey(it)) } ?: emptySet()
+        assertEquals("Apenas 1 semana deve estar no conjunto de semanas expandidas", 1, initialExpandedWeeks.size)
+        val mostRecentWeekKey = getHistoryListItemKey(weekHeaders.maxByOrNull { it.weekStartMillis }!!)
+        assertTrue("A semana expandida deve ser a mais recente", initialExpandedWeeks.contains(mostRecentWeekKey))
+
+        val dayHeaders = grouped.filterIsInstance<HistoryListItem.DayHeader>()
+        assertEquals(8, dayHeaders.size)
+        val initialExpandedDays = dayHeaders.maxByOrNull { it.dateTimestamp }
+            ?.let { setOf(getHistoryListItemKey(it)) } ?: emptySet()
+        assertEquals("Apenas 1 dia deve estar no conjunto de dias expandidos", 1, initialExpandedDays.size)
+        val mostRecentDayKey = getHistoryListItemKey(dayHeaders.maxByOrNull { it.dateTimestamp }!!)
+        assertTrue("O dia expandido deve ser o mais recente", initialExpandedDays.contains(mostRecentDayKey))
+
+        // 2. Verificação no componente HistoryScreen
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val viewModel = GiroCustoViewModel(app)
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                HistoryScreen(
+                    viewModel = viewModel,
+                    vehicle = null,
+                    records = records
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        val labelOct27 = formatDayLabel(rec8.dateTimestamp)
+        val labelOct26 = formatDayLabel(rec7.dateTimestamp)
+
+        // Semana 4 (mais recente) está expandida: seus dias aparecem na lista
+        composeTestRule.onNodeWithTag("history_list")
+            .performScrollToNode(hasText(labelOct27))
+        composeTestRule.onNodeWithText(labelOct27).assertIsDisplayed()
+
+        // O dia 27 (mais recente) está expandido: seu registro aparece
+        composeTestRule.onNodeWithTag("history_list")
+            .performScrollToNode(hasTestTag("history_item_402"))
+        composeTestRule.onNodeWithTag("history_item_402").assertIsDisplayed()
+
+        // O dia 26 está na semana 4, portanto seu cabeçalho aparece
+        composeTestRule.onNodeWithTag("history_list")
+            .performScrollToNode(hasText(labelOct26))
+        composeTestRule.onNodeWithText(labelOct26).assertIsDisplayed()
+
+        // O dia 26 está recolhido: seu registro NÃO deve estar na árvore
+        composeTestRule.onNodeWithTag("history_item_401").assertDoesNotExist()
+
+        // Semanas 1, 2 e 3 estão recolhidas: seus cabeçalhos de dia NÃO devem estar na árvore
+        val labelOct20 = formatDayLabel(rec6.dateTimestamp)
+        val labelOct13 = formatDayLabel(rec4.dateTimestamp)
+        val labelOct6 = formatDayLabel(rec2.dateTimestamp)
+        composeTestRule.onNodeWithText(labelOct20).assertDoesNotExist()
+        composeTestRule.onNodeWithText(labelOct13).assertDoesNotExist()
+        composeTestRule.onNodeWithText(labelOct6).assertDoesNotExist()
+
+        // Registros de semanas recolhidas também NÃO devem estar na árvore
+        composeTestRule.onNodeWithTag("history_item_301").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("history_item_201").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("history_item_101").assertDoesNotExist()
+    }
+
+    @Test
+    fun testHistoryRecordCard_workTimeFormatting_variations() {
+        // Cenário 1: Horas e minutos ("5h 10m Online") -> 5h 10m = 310 minutos
+        val rec5h10m = createRecordForDate(
+            id = 501L,
+            year = 2026,
+            month = Calendar.OCTOBER,
+            day = 10,
+            startTime = "08:00",
+            endTime = "13:10",
+            pauseDuration = "00:00"
+        )
+
+        // Cenário 2: Apenas horas ("2h Online") -> 2h 00m = 120 minutos
+        val rec2h = createRecordForDate(
+            id = 502L,
+            year = 2026,
+            month = Calendar.OCTOBER,
+            day = 11,
+            startTime = "08:00",
+            endTime = "10:00",
+            pauseDuration = "00:00"
+        )
+
+        // Cenário 3: Apenas minutos ("45m Online") -> 45 minutos
+        val rec45m = createRecordForDate(
+            id = 503L,
+            year = 2026,
+            month = Calendar.OCTOBER,
+            day = 12,
+            startTime = "08:00",
+            endTime = "08:45",
+            pauseDuration = "00:00"
+        )
+
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                androidx.compose.foundation.layout.Column {
+                    HistoryRecordCard(
+                        record = rec5h10m,
+                        onEditClick = {},
+                        onDeleteClick = {}
+                    )
+                    HistoryRecordCard(
+                        record = rec2h,
+                        onEditClick = {},
+                        onDeleteClick = {}
+                    )
+                    HistoryRecordCard(
+                        record = rec45m,
+                        onEditClick = {},
+                        onDeleteClick = {}
+                    )
+                }
+            }
+        }
+
+        // Verifica formatação exata para cada caso
+        composeTestRule.onNodeWithText("5h 10m Online").assertIsDisplayed()
+        composeTestRule.onNodeWithText("2h Online").assertIsDisplayed()
+        composeTestRule.onNodeWithText("45m Online").assertIsDisplayed()
+    }
+
+    @Test
+    fun testHistoryRecordCard_grossValueColorAdaptsToLightThemeAndDarkTheme() {
+        val record = createDummyRecord(77L, "Uber", 160.00, 140.00)
+        var isDarkTheme by mutableStateOf(false)
+        var currentIsDarkDetected = false
+        var currentOnSurface: Color = Color.Unspecified
+        var currentResolvedColor: Color = Color.Unspecified
+
+        composeTestRule.setContent {
+            MyApplicationTheme(darkTheme = isDarkTheme) {
+                val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                currentIsDarkDetected = isDark
+                currentOnSurface = MaterialTheme.colorScheme.onSurface
+                currentResolvedColor = if (isDark) MaterialTheme.colorScheme.onSurface else Color.Black
+
+                HistoryRecordCard(
+                    record = record,
+                    onEditClick = {},
+                    onDeleteClick = {}
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // 1. Tema Claro
+        assertEquals("No tema claro, isDarkTheme deve ser falso", false, currentIsDarkDetected)
+        assertEquals("No tema claro, a cor do texto bruto deve ser Color.Black", Color.Black, currentResolvedColor)
+        composeTestRule.onNodeWithText("R$ 160,00").assertIsDisplayed()
+
+        // 2. Muda para Tema Escuro
+        isDarkTheme = true
+        composeTestRule.waitForIdle()
+
+        assertEquals("No tema escuro, isDarkTheme deve ser verdadeiro", true, currentIsDarkDetected)
+        assertEquals("No tema escuro, a cor do texto bruto deve ser onSurface", currentOnSurface, currentResolvedColor)
+        assertTrue("A cor onSurface do tema escuro deve ser diferente de Color.Black", currentOnSurface != Color.Black)
+        composeTestRule.onNodeWithText("R$ 160,00").assertIsDisplayed()
     }
 }

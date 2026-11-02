@@ -11,7 +11,16 @@ import java.util.*
 
 class HistoryGroupingTest {
 
-    private fun createMockRecord(id: Long, year: Int, month: Int, day: Int, gross: Double, net: Double): DailyRecord {
+    private fun createMockRecord(
+        id: Long,
+        year: Int,
+        month: Int,
+        day: Int,
+        gross: Double,
+        net: Double,
+        startOdometer: Double = 100.0,
+        endOdometer: Double = 150.0
+    ): DailyRecord {
         val cal = Calendar.getInstance().apply {
             set(Calendar.YEAR, year)
             set(Calendar.MONTH, month)
@@ -28,8 +37,8 @@ class HistoryGroupingTest {
             platform = "iFood",
             grossEarnings = gross,
             deliveriesCount = 5,
-            startOdometer = 100.0,
-            endOdometer = 150.0,
+            startOdometer = startOdometer,
+            endOdometer = endOdometer,
             fuelPrice = 5.0,
             foodExpense = 10.0,
             fuelCost = 20.0,
@@ -217,5 +226,66 @@ class HistoryGroupingTest {
         assertEquals(250.0, header2026.dailyAverage, 0.001)
         org.junit.Assert.assertNull(header2026.growthPercentage)
         org.junit.Assert.assertNull(header2026.netGrowthPercentage)
+    }
+
+    @Test
+    fun testWeekHeader_accumulatesTotalKm_multipleDaysInSameWeek() {
+        // Semana de 12 a 18 de Outubro de 2026
+        // Segunda-feira (12/10): 2 registros no mesmo dia
+        val recMon1 = createMockRecord(1, 2026, Calendar.OCTOBER, 12, 120.0, 80.0, startOdometer = 100.0, endOdometer = 145.5) // 45.5 km
+        val recMon2 = createMockRecord(2, 2026, Calendar.OCTOBER, 12, 80.0, 50.0, startOdometer = 145.5, endOdometer = 160.7)  // 15.2 km
+
+        // Quarta-feira (14/10): 1 registro com casa decimal
+        val recWed = createMockRecord(3, 2026, Calendar.OCTOBER, 14, 150.0, 95.0, startOdometer = 200.0, endOdometer = 232.3)   // 32.3 km
+
+        // Sexta-feira (16/10): 1 registro com zero km e 1 registro normal
+        val recFri1 = createMockRecord(4, 2026, Calendar.OCTOBER, 16, 50.0, 30.0, startOdometer = 300.0, endOdometer = 300.0)    // 0.0 km
+        val recFri2 = createMockRecord(5, 2026, Calendar.OCTOBER, 16, 100.0, 65.0, startOdometer = 300.0, endOdometer = 313.0)  // 13.0 km
+
+        // Segunda semana para verificar isolamento (19/10/2026)
+        val recNextWeek = createMockRecord(6, 2026, Calendar.OCTOBER, 19, 200.0, 130.0, startOdometer = 400.0, endOdometer = 454.8) // 54.8 km
+
+        val result = groupRecordsHierarchically(
+            listOf(recMon1, recMon2, recWed, recFri1, recFri2, recNextWeek),
+            isAscending = false
+        )
+
+        val weekHeaders = result.filterIsInstance<HistoryListItem.WeekHeader>()
+        assertEquals(2, weekHeaders.size)
+
+        // Semana mais recente (19/10): totalKm = 54.8
+        val week2 = weekHeaders[0]
+        assertEquals(54.8, week2.totalKm, 0.001)
+
+        // Semana anterior (12 a 18/10): totalKm = 45.5 + 15.2 + 32.3 + 0.0 + 13.0 = 106.0
+        val week1 = weekHeaders[1]
+        assertEquals(106.0, week1.totalKm, 0.001)
+
+        // MonthHeader deve acumular o total das duas semanas = 106.0 + 54.8 = 160.8
+        val monthHeader = result.filterIsInstance<HistoryListItem.MonthHeader>().first()
+        assertEquals(160.8, monthHeader.totalKm, 0.001)
+    }
+
+    @Test
+    fun testWeekHeader_edgeCases_decimalsZeroKmAndInvertedOdometer() {
+        // Semana com casos de borda:
+        // 1. Zero km (start == end)
+        val recZeroKm = createMockRecord(1, 2026, Calendar.OCTOBER, 12, 50.0, 30.0, startOdometer = 500.0, endOdometer = 500.0) // 0.0 km
+
+        // 2. Odômetro invertido (start > end) -> kmRodados coerceAtLeast(0.0) -> 0.0 km
+        val recInverted = createMockRecord(2, 2026, Calendar.OCTOBER, 13, 60.0, 40.0, startOdometer = 550.0, endOdometer = 520.0) // 0.0 km
+
+        // 3. Decimais de alta precisão (12.35 km + 7.65 km = 20.0 km)
+        val recDec1 = createMockRecord(3, 2026, Calendar.OCTOBER, 14, 100.0, 70.0, startOdometer = 10.0, endOdometer = 22.35)   // 12.35 km
+        val recDec2 = createMockRecord(4, 2026, Calendar.OCTOBER, 15, 80.0, 50.0, startOdometer = 22.35, endOdometer = 30.00)   // 7.65 km
+
+        val result = groupRecordsHierarchically(
+            listOf(recZeroKm, recInverted, recDec1, recDec2),
+            isAscending = false
+        )
+
+        val weekHeader = result.filterIsInstance<HistoryListItem.WeekHeader>().first()
+        // 0.0 + 0.0 + 12.35 + 7.65 = 20.0 km
+        assertEquals(20.0, weekHeader.totalKm, 0.001)
     }
 }

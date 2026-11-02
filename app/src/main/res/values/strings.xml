@@ -383,6 +383,20 @@
     <string name="history_export_hint">Toque para exportar extrato em PDF/CSV.</string>
     <string name="history_masked_currency">R$ ••••••</string>
 
+    <!-- Linha do Tempo e Cards do Histórico -->
+    <string name="history_record_deliveries_count">%1$d Ent.</string>
+    <string name="history_record_km_formatted">%1$s KM</string>
+    <string name="history_record_time_online_hm">%1$dh %2$dm Online</string>
+    <string name="history_record_time_online_h">%1$dh Online</string>
+    <string name="history_record_time_online_m">%1$dm Online</string>
+    <string name="cd_record_deliveries">Pacotes ou pedidos entregues</string>
+    <string name="cd_record_km">Quilômetros rodados</string>
+    <string name="cd_record_time_online">Tempo trabalhado online</string>
+    <string name="cd_week_metric_deliveries">Total de entregas da semana</string>
+    <string name="cd_week_metric_time">Tempo trabalhado online na semana</string>
+    <string name="cd_week_metric_rate">Média de ganho por hora na semana</string>
+    <string name="cd_week_metric_km">Total de quilômetros rodados na semana</string>
+
     <!-- Abastecimento e Subcomponentes (T-25C [ACC-02C]) -->
     <string name="cd_fuel_alert_icon">Alerta</string>
     <string name="cd_fuel_tank_alert">Alerta Tanque</string>

@@ -31,6 +31,8 @@ import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -50,6 +52,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -220,34 +223,94 @@ fun HistoryRecordCard(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(
-                            text = record.platform,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        val workMins = record.totalWorkMinutes
-                        val durH = workMins / 60
-                        val durM = workMins % 60
-                        val durStr = if (durH > 0 && durM > 0) "${durH}h${durM}m" else if (durH > 0) "${durH}h" else "${durM}m"
-                        val kmStr = String.format(Locale.GERMAN, "%.1f km", record.kmRodados)
-                        val subtitle = "${record.deliveriesCount} entregas • $durStr • $kmStr"
+                        // Linha 1: [📦] X Ent. e [📍] X,X KM
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // 1.2.a. Quantidade Pacotes/Pedidos Entregue: "X Ent."
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Inventory2,
+                                    contentDescription = stringResource(R.string.cd_record_deliveries),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "${record.deliveriesCount} Ent.",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
 
-                        Text(
-                            text = subtitle,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                            // 1.2.b. Quantos KM rodados: "X,X KM"
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.LocationOn,
+                                    contentDescription = stringResource(R.string.cd_record_km),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                val kmFormatted = String.format(Locale.GERMAN, "%.1f KM", record.kmRodados)
+                                Text(
+                                    text = kmFormatted,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(3.dp))
+
+                        // Linha 2: [🕒] Xh Ym Online
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Schedule,
+                                contentDescription = stringResource(R.string.cd_record_time_online),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            val workMins = record.totalWorkMinutes
+                            val durH = workMins / 60
+                            val durM = workMins % 60
+                            val timeOnlineStr = if (durH > 0 && durM > 0) {
+                                "${durH}h ${durM}m Online"
+                            } else if (durH > 0) {
+                                "${durH}h Online"
+                            } else {
+                                "${durM}m Online"
+                            }
+                            Text(
+                                text = timeOnlineStr,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.width(6.dp))
 
                     // Lado direito: Valor bruto + Chevron
+                    val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                    val grossTextColor = if (isDarkTheme) MaterialTheme.colorScheme.onSurface else Color.Black
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -256,8 +319,8 @@ fun HistoryRecordCard(
                         Text(
                             text = formatHistoryCurrency(grossVal, isPrivacyEnabled),
                             fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = MaterialTheme.colorScheme.onSurface
+                            fontSize = 17.sp,
+                            color = grossTextColor
                         )
                         Icon(
                             imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,

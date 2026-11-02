@@ -44,7 +44,8 @@ sealed class HistoryListItem {
         val weekNumber: Int = 1,
         val totalDeliveries: Int = 0,
         val totalWorkMinutes: Long = 0L,
-        val hourlyRate: Double = 0.0
+        val hourlyRate: Double = 0.0,
+        val totalKm: Double = 0.0
     ) : HistoryListItem()
 
     data class DayHeader(
@@ -302,7 +303,8 @@ fun groupRecordsHierarchically(records: List<DailyRecord>, isAscending: Boolean)
                         weekNumber = weekNum,
                         totalDeliveries = weekDeliveries,
                         totalWorkMinutes = weekWorkMinutes,
-                        hourlyRate = weekHourlyRate
+                        hourlyRate = weekHourlyRate,
+                        totalKm = weekKm
                     )
                 )
                 monthItems.addAll(weekItems)

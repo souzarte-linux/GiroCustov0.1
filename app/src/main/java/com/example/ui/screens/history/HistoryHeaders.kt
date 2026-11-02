@@ -992,10 +992,20 @@ fun WeekHeaderCard(
     totalDeliveries: Int = 0,
     totalWorkMinutes: Long = 0L,
     hourlyRate: Double = 0.0,
+    totalKm: Double = 0.0,
     isPrivacyEnabled: Boolean = false,
     isExpanded: Boolean = true,
     onToggleExpand: () -> Unit = {}
 ) {
+    val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+
+    val subCardBg = if (isDarkTheme) {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    }
+    val subCardBorder = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -1059,25 +1069,28 @@ fun WeekHeaderCard(
                 }
             }
 
-            // Linha 2: 3 botões / chips compactos horizontais com cantos arredondados (8.dp)
+            // Grid 2 colunas e 2 linhas de métricas semanais
+            // Linha 1: [LocalShipping] $totalDeliveries entregas | [Speed] Média: $rateStr/h
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Chip 1: Entregas (azul piscina / primary)
+                // Linha 1 a esquerda: Quantidade Entregue
                 Row(
                     modifier = Modifier
                         .weight(1f)
+                        .testTag("week_metric_deliveries")
                         .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+                        .background(subCardBg)
+                        .border(subCardBorder, RoundedCornerShape(8.dp))
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
                         imageVector = Icons.Filled.LocalShipping,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.cd_week_metric_deliveries),
                         tint = Color(0xFF38BDF8),
                         modifier = Modifier.size(14.dp)
                     )
@@ -1092,26 +1105,72 @@ fun WeekHeaderCard(
                     )
                 }
 
-                // Chip 2: Horas online (ciano / tertiary)
+                // Linha 1 a direita: Valor médio ganho na semana
                 Row(
                     modifier = Modifier
                         .weight(1f)
+                        .testTag("week_metric_rate")
                         .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+                        .background(subCardBg)
+                        .border(subCardBorder, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Speed,
+                        contentDescription = stringResource(R.string.cd_week_metric_rate),
+                        tint = Color(0xFF818CF8),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    val rateStr = if (isPrivacyEnabled) "••••" else String.format(Locale.GERMAN, "R$ %.2f", hourlyRate)
+                    Text(
+                        text = "Média: $rateStr/h",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // Linha 2: [Schedule] Tempo Online | [LocationOn] KM Rodados
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Linha 2 a esquerda: Tempo Online
+                val onlineHours = totalWorkMinutes / 60
+                val onlineMinutes = totalWorkMinutes % 60
+                val timeStr = if (onlineMinutes > 0L) {
+                    "${onlineHours}h ${onlineMinutes}m Online"
+                } else {
+                    "${onlineHours}h Online"
+                }
+
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("week_metric_time")
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(subCardBg)
+                        .border(subCardBorder, RoundedCornerShape(8.dp))
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Schedule,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.cd_week_metric_time),
                         tint = Color(0xFF34D399),
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    val onlineHours = totalWorkMinutes / 60
                     Text(
-                        text = "${onlineHours}h Online",
+                        text = timeStr,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -1120,26 +1179,33 @@ fun WeekHeaderCard(
                     )
                 }
 
-                // Chip 3: Média R$/h (lilás / secondary)
+                // Linha 2 a direita: KM Rodados
+                val kmStr = if (totalKm == totalKm.toLong().toDouble()) {
+                    "${totalKm.toLong()} km"
+                } else {
+                    String.format(Locale.GERMAN, "%.1f km", totalKm)
+                }
+
                 Row(
                     modifier = Modifier
-                        .weight(1.2f)
+                        .weight(1f)
+                        .testTag("week_metric_km")
                         .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+                        .background(subCardBg)
+                        .border(subCardBorder, RoundedCornerShape(8.dp))
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Speed,
-                        contentDescription = null,
-                        tint = Color(0xFF818CF8),
+                        imageVector = Icons.Outlined.LocationOn,
+                        contentDescription = stringResource(R.string.cd_week_metric_km),
+                        tint = Color(0xFFFBBF24),
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    val rateStr = if (isPrivacyEnabled) "••••" else String.format(Locale.GERMAN, "R$ %.2f", hourlyRate)
                     Text(
-                        text = "Média: $rateStr/h",
+                        text = kmStr,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface,
