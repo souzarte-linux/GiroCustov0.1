@@ -169,12 +169,79 @@ class HistoryRefactorTest {
         composeTestRule.onNodeWithText("Outubro 2026").assertIsDisplayed()
         composeTestRule.onNodeWithText("24 dias em rota ativa").assertIsDisplayed()
 
+        // Verifica a exibição dos 4 blocos do grid 2x2 via testTags semânticas na árvore desmesclada (o card pai possui .clickable)
+        composeTestRule.onNodeWithTag("month_metric_packages", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithTag("month_metric_km", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithTag("month_metric_gross", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithTag("month_metric_net", useUnmergedTree = true).assertExists()
+
         // Quando colapsado, mostra o texto de exportação
         composeTestRule.onNodeWithText("Toque para exportar extrato em PDF/CSV.").assertIsDisplayed()
 
         // Clica para expandir
         composeTestRule.onNodeWithTag("month_header_Outubro 2026").performClick()
         assertTrue("onToggleExpand deve ter sido disparado", toggleClicked)
+    }
+
+    @Test
+    fun testMonthHeaderCard_grid2x2Submetrics_displaysCorrectLabelsValuesAndMinHeight() {
+        composeTestRule.setContent {
+            MyApplicationTheme {
+                MonthHeaderCard(
+                    monthLabel = "Outubro 2026",
+                    totalGross = 5480.50,
+                    totalNet = 4660.50,
+                    activeDays = 24,
+                    totalDeliveries = 218,
+                    totalKm = 1420.0,
+                    isExpanded = true,
+                    isPrivacyEnabled = false
+                )
+            }
+        }
+
+        // Validação da Linha 1 (Pacotes e KM)
+        composeTestRule.onNodeWithTag("month_metric_packages", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Pacotes", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("218", useUnmergedTree = true).assertExists()
+
+        composeTestRule.onNodeWithTag("month_metric_km", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("KM", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("1.420 km", useUnmergedTree = true).assertExists()
+
+        // Validação da Linha 2 (Ganho Bruto e Lucro Líquido)
+        composeTestRule.onNodeWithTag("month_metric_gross", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Ganho\nBruto", useUnmergedTree = true).assertExists()
+        composeTestRule.onAllNodesWithText("R$ 5.480,50", useUnmergedTree = true).fetchSemanticsNodes().let { nodes ->
+            assertTrue("R$ 5.480,50 deve aparecer no cabeçalho e no bloco Ganho Bruto", nodes.size >= 2)
+        }
+
+        composeTestRule.onNodeWithTag("month_metric_net", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Lucro\nLíquido", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("R$ 4.660,50", useUnmergedTree = true).assertExists()
+
+        // Validação de altura mínima de 52dp em todos os blocos da matriz 2x2
+        val packagesBounds = composeTestRule.onNodeWithTag("month_metric_packages", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val kmBounds = composeTestRule.onNodeWithTag("month_metric_km", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val grossBounds = composeTestRule.onNodeWithTag("month_metric_gross", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val netBounds = composeTestRule.onNodeWithTag("month_metric_net", useUnmergedTree = true).getUnclippedBoundsInRoot()
+
+        assertTrue(
+            "Bloco Pacotes deve respeitar minHeight de 52dp (altura atual: ${packagesBounds.height})",
+            packagesBounds.height.value >= 52.0f
+        )
+        assertTrue(
+            "Bloco KM deve respeitar minHeight de 52dp (altura atual: ${kmBounds.height})",
+            kmBounds.height.value >= 52.0f
+        )
+        assertTrue(
+            "Bloco Ganho Bruto deve respeitar minHeight de 52dp (altura atual: ${grossBounds.height})",
+            grossBounds.height.value >= 52.0f
+        )
+        assertTrue(
+            "Bloco Lucro Líquido deve respeitar minHeight de 52dp (altura atual: ${netBounds.height})",
+            netBounds.height.value >= 52.0f
+        )
     }
 
     @Test

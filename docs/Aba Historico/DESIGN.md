@@ -251,3 +251,18 @@ The design uses level `2` roundedness to balance modern Material 3 geometry with
 ### Input Fields & Controls
 - **Text Inputs**: Outlined Jetpack Compose style, 56dp height, `12dp` corner radius, base surface `#151F36`, border `#334155`. Label transitions from `body-md` inside the field to `label-sm` floating above the boundary on focus.
 - **Switches & Radios**: Platform active/inactive toggles use `#38BDF8` active tracks with `#0F172A` thumbs, recessed when inactive to `#334155`.
+
+### MonthHeaderCard (Nível 1 - Resumo Mensal Sanfonado)
+O componente `MonthHeaderCard` atua como o agregador mensal do histórico (Nível 1 na hierarquia visual cronológica). Ele integra o cabeçalho sanfonado colapsável com uma matriz estruturada de sub-métricas chave.
+
+- **Arquitetura Grid 2x2**: Para eliminar sobreposições de texto e truncamento em telas de dimensões compactas (<380dp), a faixa de sub-métricas foi refatorada de uma linha horizontal de 3 blocos estreitos para um layout `Column` contendo 2 `Row`s balanceadas (grid 2x2), com espaçamento vertical e horizontal uniforme de `8dp`.
+- **Linha 1 (Volume e Distância)**:
+  - **Bloco Pacotes (`month_metric_packages`)**: `Box` com peso `1f`, altura mínima de `52.dp`, ícone `Icons.Outlined.Inventory2` (18.dp) solto alinhado à esquerda com tint `onSurfaceVariant`, rótulo `history_month_metric_packages` ("Pacotes") em `onSurfaceVariant` e valor numérico `totalDeliveries` em `onSurface` com tipografia em negrito de `15.sp`.
+  - **Bloco KM (`month_metric_km`)**: `Box` com peso `1f`, altura mínima de `52.dp`, ícone `Icons.Outlined.LocationOn` (18.dp) solto alinhado à esquerda com tint `onSurfaceVariant`, rótulo `history_month_metric_km` ("KM") em `onSurfaceVariant` e valor de quilometragem formatado (`%.0f km`) em `onSurface` com tipografia de `15.sp` em negrito.
+- **Linha 2 (Métricas Financeiras)**:
+  - **Bloco Ganho Bruto (`month_metric_gross`)**: `Box` com peso `1f`, altura mínima de `52.dp`, ícone `Icons.Outlined.AccountBalanceWallet` (18.dp) solto alinhado à esquerda com tint `primary`, rótulo `history_month_metric_gross` ("Ganho\nBruto") com quebra de linha permitida para acomodação segura, e valor monetário formatado em `primary` com tipografia de `15.sp` em negrito.
+  - **Bloco Lucro Líquido (`month_metric_net`)**: `Box` com peso `1f`, altura mínima de `52.dp`, ícone `Icons.Outlined.Savings` (18.dp) solto alinhado à esquerda com tint dinâmico (`tertiary` quando não-negativo, `error` quando negativo), rótulo `history_month_metric_net` ("Lucro\nLíquido") e valor monetário formatado em `15.sp` em negrito respeitando o estado de privacidade do motorista.
+- **Tokens Material 3 & Acessibilidade**:
+  - Superfícies baseadas estritamente em `MaterialTheme.colorScheme` (`surface`, `surfaceVariant`, `outline`, `primary`, `tertiary`, `onSurface`, `onSurfaceVariant`, `error`), sem cores hexadecimais hardcoded.
+  - Cantos arredondados de `8dp` com borda sutil de `1dp` (`outline` com 25% de opacidade) e `contentDescription` inclusivo em todos os ícones (`cd_history_metric_*`).
+  - Tags semânticas de teste (`month_metric_packages`, `month_metric_km`, `month_metric_gross`, `month_metric_net`) para asserções e estabilidade de testes instrumentados e unitários.
