@@ -174,5 +174,5 @@ Para validar pessoalmente no smartphone físico:
 ## 8. Commit e sincronização
 
 - **Branch de trabalho**: `feature/ajuste-layout-historico-mes`
-- **Hash do commit**: `a8a990c` (atualizado no amend)
+- **Hash do commit**: `8d83e75`
 - **Status do push**: Sincronizado com `origin/feature/ajuste-layout-historico-mes`
