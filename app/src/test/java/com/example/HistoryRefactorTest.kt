@@ -200,7 +200,7 @@ class HistoryRefactorTest {
             }
         }
 
-        // Validação da Linha 1 (Pacotes e KM)
+        // Validação da Coluna Esquerda (Pacotes e KM empilhados)
         composeTestRule.onNodeWithTag("month_metric_packages", useUnmergedTree = true).assertExists()
         composeTestRule.onNodeWithText("Pacotes", useUnmergedTree = true).assertExists()
         composeTestRule.onNodeWithText("218", useUnmergedTree = true).assertExists()
@@ -209,37 +209,37 @@ class HistoryRefactorTest {
         composeTestRule.onNodeWithText("KM", useUnmergedTree = true).assertExists()
         composeTestRule.onNodeWithText("1.420 km", useUnmergedTree = true).assertExists()
 
-        // Validação da Linha 2 (Ganho Bruto e Lucro Líquido)
+        // Validação das Colunas Central e Direita (Bruto e Líquido)
         composeTestRule.onNodeWithTag("month_metric_gross", useUnmergedTree = true).assertExists()
-        composeTestRule.onNodeWithText("Ganho\nBruto", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Bruto", useUnmergedTree = true).assertExists()
         composeTestRule.onAllNodesWithText("R$ 5.480,50", useUnmergedTree = true).fetchSemanticsNodes().let { nodes ->
-            assertTrue("R$ 5.480,50 deve aparecer no cabeçalho e no bloco Ganho Bruto", nodes.size >= 2)
+            assertTrue("R$ 5.480,50 deve aparecer no cabeçalho e no bloco Bruto", nodes.size >= 2)
         }
 
         composeTestRule.onNodeWithTag("month_metric_net", useUnmergedTree = true).assertExists()
-        composeTestRule.onNodeWithText("Lucro\nLíquido", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Líquido", useUnmergedTree = true).assertExists()
         composeTestRule.onNodeWithText("R$ 4.660,50", useUnmergedTree = true).assertExists()
 
-        // Validação de altura mínima de 52dp em todos os blocos da matriz 2x2
+        // Validação de altura mínima de 52dp nos blocos Bruto e Líquido e renderização dos subcards empilhados
         val packagesBounds = composeTestRule.onNodeWithTag("month_metric_packages", useUnmergedTree = true).getUnclippedBoundsInRoot()
         val kmBounds = composeTestRule.onNodeWithTag("month_metric_km", useUnmergedTree = true).getUnclippedBoundsInRoot()
         val grossBounds = composeTestRule.onNodeWithTag("month_metric_gross", useUnmergedTree = true).getUnclippedBoundsInRoot()
         val netBounds = composeTestRule.onNodeWithTag("month_metric_net", useUnmergedTree = true).getUnclippedBoundsInRoot()
 
         assertTrue(
-            "Bloco Pacotes deve respeitar minHeight de 52dp (altura atual: ${packagesBounds.height})",
-            packagesBounds.height.value >= 52.0f
+            "Subcard Pacotes deve ter altura renderizada positiva (altura atual: ${packagesBounds.height})",
+            packagesBounds.height.value > 0f
         )
         assertTrue(
-            "Bloco KM deve respeitar minHeight de 52dp (altura atual: ${kmBounds.height})",
-            kmBounds.height.value >= 52.0f
+            "Subcard KM deve ter altura renderizada positiva (altura atual: ${kmBounds.height})",
+            kmBounds.height.value > 0f
         )
         assertTrue(
-            "Bloco Ganho Bruto deve respeitar minHeight de 52dp (altura atual: ${grossBounds.height})",
+            "Bloco Bruto deve respeitar minHeight de 52dp (altura atual: ${grossBounds.height})",
             grossBounds.height.value >= 52.0f
         )
         assertTrue(
-            "Bloco Lucro Líquido deve respeitar minHeight de 52dp (altura atual: ${netBounds.height})",
+            "Bloco Líquido deve respeitar minHeight de 52dp (altura atual: ${netBounds.height})",
             netBounds.height.value >= 52.0f
         )
     }

@@ -368,8 +368,8 @@
     <string name="history_month_active_days">%1$d dias em rota ativa</string>
     <string name="history_month_metric_packages">Pacotes</string>
     <string name="history_month_metric_km">KM</string>
-    <string name="history_month_metric_gross">Ganho\nBruto</string>
-    <string name="history_month_metric_net">Lucro\nLíquido</string>
+    <string name="history_month_metric_gross">Bruto</string>
+    <string name="history_month_metric_net">Líquido</string>
     <string name="cd_history_metric_packages">Ícone de entregas e pacotes</string>
     <string name="cd_history_metric_km">Ícone de quilometragem percorrida</string>
     <string name="cd_history_metric_gross">Ícone de ganho bruto</string>
