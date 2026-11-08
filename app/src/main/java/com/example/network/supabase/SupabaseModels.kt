@@ -236,8 +236,44 @@ data class UserGoalsDto(
     @Json(name = "monthly_goal_km") val monthlyGoalKm: Double,
     @Json(name = "monthly_goal_deliveries") val monthlyGoalDeliveries: Int,
     @Json(name = "annual_goal_net") val annualGoalNet: Double = 0.0,
+    @Json(name = "annual_goal_gross") val annualGoalGross: Double = 0.0,
+    @Json(name = "annual_goal_km") val annualGoalKm: Double = 0.0,
+    @Json(name = "annual_goal_deliveries") val annualGoalDeliveries: Int = 0,
+    @Json(name = "work_days_per_week") val workDaysPerWeek: Int = 5,
+    @Json(name = "work_days_per_month") val workDaysPerMonth: Double = 21.67,
+    @Json(name = "work_months_per_year") val workMonthsPerYear: Int = 12,
+    @Json(name = "work_days_per_month_is_custom") val workDaysPerMonthIsCustom: Boolean = false,
+    @Json(name = "annual_gross_origin") val annualGrossOrigin: String = GoalOrigin.LEGACY_UNKNOWN,
+    @Json(name = "annual_net_origin") val annualNetOrigin: String = GoalOrigin.LEGACY_UNKNOWN,
+    @Json(name = "annual_km_origin") val annualKmOrigin: String = GoalOrigin.LEGACY_UNKNOWN,
+    @Json(name = "annual_deliveries_origin") val annualDeliveriesOrigin: String = GoalOrigin.LEGACY_UNKNOWN,
+    @Json(name = "annual_goals_initialized") val annualGoalsInitialized: Boolean = false,
+    @Json(name = "revision") val revision: Long = 1L,
+    @Json(name = "user_modified_at") val userModifiedAt: String? = null,
     @Json(name = "created_at") val createdAt: String? = null,
     @Json(name = "updated_at") val updatedAt: String? = null,
     @Json(name = "deleted_at") val deletedAt: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class UserGoalsSyncPatchDto(
+    @Json(name = "operation_id") val operationId: String,
+    @Json(name = "base_revision") val baseRevision: Long,
+    @Json(name = "user_modified_at") val userModifiedAt: String,
+    @Json(name = "fields") val fields: Map<String, Any>,
+    @Json(name = "provenance") val provenance: Map<String, String>,
+    @Json(name = "explicit_user_override") val explicitUserOverride: Map<String, Boolean>
+)
+
+@JsonClass(generateAdapter = true)
+data class SyncUserGoalsRpcRequest(@Json(name = "payload") val payload: UserGoalsSyncPatchDto)
+
+@JsonClass(generateAdapter = true)
+data class SyncRpcResponseDto(
+    @Json(name = "status") val status: String,
+    @Json(name = "message") val message: String? = null,
+    @Json(name = "conflicting_fields") val conflictingFields: List<String>? = null,
+    @Json(name = "current_revision") val currentRevision: Long? = null,
+    @Json(name = "data") val data: UserGoalsDto? = null
 )
 

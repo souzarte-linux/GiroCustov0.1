@@ -95,6 +95,7 @@ class SupabaseSessionRefreshAndSyncTest {
             override suspend fun deleteMaintenanceRecord(idFilter: String): Response<Unit> = Response.success(Unit)
             override suspend fun getUserGoals(select: String, updatedAtFilter: String?): List<UserGoalsDto> = emptyList()
             override suspend fun upsertUserGoals(goals: List<UserGoalsDto>): List<UserGoalsDto> = goals
+    override suspend fun syncUserGoals(request: SyncUserGoalsRpcRequest): SyncRpcResponseDto = SyncRpcResponseDto(status = "SUCCESS")
             override suspend fun deleteUserAccount(): Response<Unit> = Response.success(Unit)
         }
     }

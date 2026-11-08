@@ -9,8 +9,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Vehicle::class, VehiclePart::class, DailyRecord::class, UserProfile::class, Platform::class, FuelRefill::class, MaintenanceRecord::class, UserGoals::class],
-    version = 16,
+    entities = [Vehicle::class, VehiclePart::class, DailyRecord::class, UserProfile::class, Platform::class, FuelRefill::class, MaintenanceRecord::class, UserGoals::class, SyncOutboxOperation::class],
+    version = 17,
     exportSchema = true
 )
 abstract class GiroCustoDatabase : RoomDatabase() {
@@ -22,6 +22,7 @@ abstract class GiroCustoDatabase : RoomDatabase() {
     abstract fun fuelRefillDao(): FuelRefillDao
     abstract fun maintenanceRecordDao(): MaintenanceRecordDao
     abstract fun userGoalsDao(): UserGoalsDao
+    abstract fun syncOutboxDao(): SyncOutboxDao
 
     companion object {
         @Volatile
@@ -498,6 +499,42 @@ abstract class GiroCustoDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `user_goals` ADD COLUMN `annualGoalGross` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `user_goals` ADD COLUMN `annualGoalKm` REAL NOT NULL DEFAULT 0.0")
+                db.execSQL("ALTER TABLE `user_goals` ADD COLUMN `annualGoalDeliveries` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `user_goals` ADD COLUMN `workDaysPerWeek` INTEGER NOT NULL DEFAULT 5")
+                db.execSQL("ALTER TABLE `user_goals` ADD COLUMN `workDaysPerMonth` REAL NOT NULL DEFAULT 21.67")
+                db.execSQL("ALTER TABLE `user_goals` ADD COLUMN `workMonthsPerYear` INTEGER NOT NULL DEFAULT 12")
+                db.execSQL("ALTER TABLE `user_goals` ADD COLUMN `workDaysPerMonthIsCustom` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `user_goals` ADD COLUMN `annualGrossOrigin` TEXT NOT NULL DEFAULT 'LEGACY_UNKNOWN'")
+                db.execSQL("ALTER TABLE `user_goals` ADD COLUMN `annualNetOrigin` TEXT NOT NULL DEFAULT 'LEGACY_UNKNOWN'")
+                db.execSQL("ALTER TABLE `user_goals` ADD COLUMN `annualKmOrigin` TEXT NOT NULL DEFAULT 'LEGACY_UNKNOWN'")
+                db.execSQL("ALTER TABLE `user_goals` ADD COLUMN `annualDeliveriesOrigin` TEXT NOT NULL DEFAULT 'LEGACY_UNKNOWN'")
+                db.execSQL("ALTER TABLE `user_goals` ADD COLUMN `annualGoalsInitialized` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `user_goals` ADD COLUMN `revision` INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE `user_goals` ADD COLUMN `userModifiedAt` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `sync_outbox` (
+                        `operationId` TEXT NOT NULL,
+                        `userId` TEXT NOT NULL,
+                        `operationType` TEXT NOT NULL,
+                        `serializedPayload` TEXT NOT NULL,
+                        `baseRevision` INTEGER NOT NULL,
+                        `state` TEXT NOT NULL,
+                        `createdAt` INTEGER NOT NULL,
+                        `lastAttemptAt` INTEGER,
+                        `attemptCount` INTEGER NOT NULL DEFAULT 0,
+                        `lastError` TEXT,
+                        PRIMARY KEY(`operationId`)
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS `idx_sync_outbox_state_created` ON `sync_outbox` (`state`, `createdAt`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `idx_sync_outbox_user_id` ON `sync_outbox` (`userId`)")
+            }
+        }
+
         fun getDatabase(context: Context): GiroCustoDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -505,7 +542,7 @@ abstract class GiroCustoDatabase : RoomDatabase() {
                     GiroCustoDatabase::class.java,
                     "giro_custo_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
                 .build()
                 INSTANCE = instance
                 instance

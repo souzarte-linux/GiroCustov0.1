@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.withContext
 import com.example.util.CurrencyUtils
+import com.example.network.supabase.SupabaseMappers
+import com.example.network.supabase.UserGoalsSyncPatchDto
+import com.squareup.moshi.Moshi
 import java.util.*
 
 class GiroCustoRepository(
@@ -25,6 +28,7 @@ class GiroCustoRepository(
     private val fuelRefillDao = db.fuelRefillDao()
     private val maintenanceRecordDao = db.maintenanceRecordDao()
     private val userGoalsDao = db.userGoalsDao()
+    private val syncOutboxDao = db.syncOutboxDao()
 
     private val syncDelegate = RepositorySyncDelegate(db, dataOwnerStorage, ioDispatcher)
 
@@ -139,18 +143,87 @@ class GiroCustoRepository(
             existing?.remoteId?.isNotBlank() == true -> existing.remoteId
             else -> UUID.randomUUID().toString()
         }
-        val toSave = goals.copy(
+        val now = System.currentTimeMillis()
+        var toSave = goals.copy(
             id = 1,
             remoteId = remoteId,
             syncStatus = SyncStatus.PENDING_UPDATE,
-            updatedAt = System.currentTimeMillis(),
+            updatedAt = now,
+            userModifiedAt = now,
             isDeleted = false
         )
-        userGoalsDao.insertOrUpdateUserGoals(toSave)
+        val patch = toSave.toSyncPatch(existing, now)
+        // An annual target changed through the UI is an explicit choice by the driver.
+        if (patch.fields.containsKey("annual_goal_net")) {
+            toSave = toSave.copy(annualNetOrigin = GoalOrigin.USER_DEFINED)
+        }
+        val ownerId = dataOwnerStorage?.getDataOwnerId()
+        db.withTransaction {
+            userGoalsDao.insertOrUpdateUserGoals(toSave)
+            if (ownerId != null) {
+                val finalizedPatch = toSave.toSyncPatch(existing, now)
+                syncOutboxDao.insert(
+                    SyncOutboxOperation(
+                        operationId = finalizedPatch.operationId,
+                        userId = ownerId,
+                        operationType = "SYNC_USER_GOALS_PATCH",
+                        serializedPayload = Moshi.Builder().build().adapter(UserGoalsSyncPatchDto::class.java).toJson(finalizedPatch),
+                        baseRevision = finalizedPatch.baseRevision
+                    )
+                )
+            }
+        }
     }
 
     suspend fun insertInitialUserGoals(goals: UserGoals) {
         userGoalsDao.insertOrUpdateUserGoals(goals.copy(id = 1))
+    }
+
+    private fun UserGoals.toSyncPatch(previous: UserGoals?, modifiedAt: Long): UserGoalsSyncPatchDto {
+        val current = linkedMapOf<String, Any>(
+            "daily_goal_gross" to CurrencyUtils.centsToDouble(dailyGoalGross),
+            "daily_goal_net" to CurrencyUtils.centsToDouble(dailyGoalNet),
+            "daily_goal_km" to dailyGoalKm,
+            "daily_goal_deliveries" to dailyGoalDeliveries,
+            "weekly_goal_gross" to CurrencyUtils.centsToDouble(weeklyGoalGross),
+            "weekly_goal_net" to CurrencyUtils.centsToDouble(weeklyGoalNet),
+            "weekly_goal_km" to weeklyGoalKm,
+            "weekly_goal_deliveries" to weeklyGoalDeliveries,
+            "monthly_goal_gross" to CurrencyUtils.centsToDouble(monthlyGoalGross),
+            "monthly_goal_net" to CurrencyUtils.centsToDouble(monthlyGoalNet),
+            "monthly_goal_km" to monthlyGoalKm,
+            "monthly_goal_deliveries" to monthlyGoalDeliveries,
+            "annual_goal_gross" to CurrencyUtils.centsToDouble(annualGoalGross),
+            "annual_goal_net" to CurrencyUtils.centsToDouble(annualGoalNet),
+            "annual_goal_km" to annualGoalKm,
+            "annual_goal_deliveries" to annualGoalDeliveries,
+            "work_days_per_week" to workDaysPerWeek,
+            "work_days_per_month" to workDaysPerMonth,
+            "work_months_per_year" to workMonthsPerYear,
+            "work_days_per_month_is_custom" to workDaysPerMonthIsCustom
+        )
+        val previousValues = previous?.let { old -> old.toSyncPatch(null, modifiedAt).fields }
+        val changed = if (previousValues == null) current else current.filter { (key, value) -> previousValues[key] != value }
+        val provenance = mapOf(
+            "annual_gross_origin" to annualGrossOrigin,
+            "annual_net_origin" to annualNetOrigin,
+            "annual_km_origin" to annualKmOrigin,
+            "annual_deliveries_origin" to annualDeliveriesOrigin
+        )
+        val overrides = mapOf(
+            "annual_gross" to (annualGrossOrigin == GoalOrigin.USER_DEFINED),
+            "annual_net" to (annualNetOrigin == GoalOrigin.USER_DEFINED),
+            "annual_km" to (annualKmOrigin == GoalOrigin.USER_DEFINED),
+            "annual_deliveries" to (annualDeliveriesOrigin == GoalOrigin.USER_DEFINED)
+        )
+        return UserGoalsSyncPatchDto(
+            operationId = UUID.randomUUID().toString(),
+            baseRevision = previous?.revision ?: 0L,
+            userModifiedAt = SupabaseMappers.toIsoString(modifiedAt),
+            fields = changed,
+            provenance = provenance,
+            explicitUserOverride = overrides
+        )
     }
 
     suspend fun migrateLegacyGoalsIfNeeded(context: Context) {

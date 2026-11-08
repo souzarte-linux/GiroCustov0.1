@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.room.withTransaction
 import com.example.data.*
 import com.example.util.CurrencyUtils
+import com.squareup.moshi.Moshi
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -31,6 +32,8 @@ class SupabaseSyncManager(
     private val fuelRefillDao = db.fuelRefillDao()
     private val maintenanceRecordDao = db.maintenanceRecordDao()
     private val userGoalsDao = db.userGoalsDao()
+    private val syncOutboxDao = db.syncOutboxDao()
+    private val goalsPatchAdapter = Moshi.Builder().build().adapter(UserGoalsSyncPatchDto::class.java)
 
     internal suspend fun hasAnyLocalData(): Boolean {
         return vehicleDao.getAllVehicles().isNotEmpty() ||
@@ -242,13 +245,90 @@ class SupabaseSyncManager(
         }
 
         // --- 8. METAS DO USUÁRIO ---
+        dispatchGoalsOutbox(userId)
+    }
+
+    /**
+     * Goal changes are sent through the RPC exclusively.  Unlike the former upsert,
+     * this preserves the same operation id across process death and retries.
+     */
+    private suspend fun dispatchGoalsOutbox(userId: String) {
         val pendingGoals = userGoalsDao.getPendingUserGoals()
-        if (pendingGoals != null) {
-            val remId = if (pendingGoals.remoteId.isNotBlank()) pendingGoals.remoteId else UUID.randomUUID().toString()
-            val dto = pendingGoals.copy(remoteId = remId).toDto(userId)
-            restApi.upsertUserGoals(listOf(dto))
-            userGoalsDao.insertOrUpdateUserGoals(pendingGoals.copy(remoteId = dto.id, syncStatus = SyncStatus.SYNCED))
+        if (pendingGoals != null && syncOutboxDao.getDispatchableForUser(userId).isEmpty()) {
+            val patch = pendingGoals.toFullGoalsPatch()
+            db.withTransaction {
+                syncOutboxDao.insert(
+                    SyncOutboxOperation(
+                        operationId = patch.operationId,
+                        userId = userId,
+                        operationType = "SYNC_USER_GOALS_PATCH",
+                        serializedPayload = goalsPatchAdapter.toJson(patch),
+                        baseRevision = patch.baseRevision
+                    )
+                )
+            }
         }
+        for (operation in syncOutboxDao.getDispatchableForUser(userId)) {
+            if (operation.attemptCount >= MAX_GOALS_SYNC_ATTEMPTS) {
+                syncOutboxDao.setState(operation.operationId, OutboxState.DEAD_LETTER, "Limite de tentativas atingido")
+                continue
+            }
+            val patch = goalsPatchAdapter.fromJson(operation.serializedPayload)
+            if (patch == null || patch.operationId != operation.operationId) {
+                syncOutboxDao.setState(operation.operationId, OutboxState.DEAD_LETTER, "Payload local inválido")
+                continue
+            }
+            syncOutboxDao.markInFlight(operation.operationId)
+            try {
+                val response = restApi.syncUserGoals(SyncUserGoalsRpcRequest(patch))
+                when (response.status) {
+                    "SUCCESS", "NO_OP" -> db.withTransaction {
+                        response.data?.let { userGoalsDao.insertOrUpdateUserGoals(it.toEntity(existingId = 1)) }
+                        syncOutboxDao.setState(operation.operationId, OutboxState.SUCCESS)
+                    }
+                    "CONFLICT" -> syncOutboxDao.setState(
+                        operation.operationId,
+                        OutboxState.CONFLICT,
+                        response.conflictingFields?.joinToString(",") ?: response.message
+                    )
+                    else -> syncOutboxDao.setState(operation.operationId, OutboxState.DEAD_LETTER, response.message ?: "Resposta RPC inválida")
+                }
+            } catch (error: Exception) {
+                syncOutboxDao.setState(operation.operationId, OutboxState.FAILED_RETRYABLE, error.message)
+                throw error
+            }
+        }
+        syncOutboxDao.deleteSuccessfulBefore(System.currentTimeMillis() - OUTBOX_SUCCESS_RETENTION_MS)
+    }
+
+    private fun UserGoals.toFullGoalsPatch(): UserGoalsSyncPatchDto = UserGoalsSyncPatchDto(
+        operationId = UUID.randomUUID().toString(),
+        baseRevision = revision,
+        userModifiedAt = SupabaseMappers.toIsoString(userModifiedAt.takeIf { it > 0 } ?: System.currentTimeMillis()),
+        fields = linkedMapOf(
+            "daily_goal_gross" to CurrencyUtils.centsToDouble(dailyGoalGross), "daily_goal_net" to CurrencyUtils.centsToDouble(dailyGoalNet),
+            "daily_goal_km" to dailyGoalKm, "daily_goal_deliveries" to dailyGoalDeliveries,
+            "weekly_goal_gross" to CurrencyUtils.centsToDouble(weeklyGoalGross), "weekly_goal_net" to CurrencyUtils.centsToDouble(weeklyGoalNet),
+            "weekly_goal_km" to weeklyGoalKm, "weekly_goal_deliveries" to weeklyGoalDeliveries,
+            "monthly_goal_gross" to CurrencyUtils.centsToDouble(monthlyGoalGross), "monthly_goal_net" to CurrencyUtils.centsToDouble(monthlyGoalNet),
+            "monthly_goal_km" to monthlyGoalKm, "monthly_goal_deliveries" to monthlyGoalDeliveries,
+            "annual_goal_gross" to CurrencyUtils.centsToDouble(annualGoalGross), "annual_goal_net" to CurrencyUtils.centsToDouble(annualGoalNet),
+            "annual_goal_km" to annualGoalKm, "annual_goal_deliveries" to annualGoalDeliveries,
+            "work_days_per_week" to workDaysPerWeek, "work_days_per_month" to workDaysPerMonth,
+            "work_months_per_year" to workMonthsPerYear, "work_days_per_month_is_custom" to workDaysPerMonthIsCustom
+        ),
+        provenance = mapOf("annual_gross_origin" to annualGrossOrigin, "annual_net_origin" to annualNetOrigin, "annual_km_origin" to annualKmOrigin, "annual_deliveries_origin" to annualDeliveriesOrigin),
+        explicitUserOverride = mapOf(
+            "annual_gross" to (annualGrossOrigin == GoalOrigin.USER_DEFINED),
+            "annual_net" to (annualNetOrigin == GoalOrigin.USER_DEFINED),
+            "annual_km" to (annualKmOrigin == GoalOrigin.USER_DEFINED),
+            "annual_deliveries" to (annualDeliveriesOrigin == GoalOrigin.USER_DEFINED)
+        )
+    )
+
+    private companion object {
+        const val MAX_GOALS_SYNC_ATTEMPTS = 10
+        const val OUTBOX_SUCCESS_RETENTION_MS = 7L * 24 * 60 * 60 * 1000
     }
 
     // =========================================================================

@@ -279,3 +279,21 @@ interface UserGoalsDao {
     suspend fun deleteAllGoals()
 }
 
+@Dao
+interface SyncOutboxDao {
+    @Query("SELECT * FROM sync_outbox WHERE userId = :userId AND state IN ('PENDING', 'FAILED_RETRYABLE', 'IN_FLIGHT') ORDER BY createdAt ASC")
+    suspend fun getDispatchableForUser(userId: String): List<SyncOutboxOperation>
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insert(operation: SyncOutboxOperation)
+
+    @Query("UPDATE sync_outbox SET state = :state, lastAttemptAt = :attemptedAt, attemptCount = attemptCount + 1, lastError = NULL WHERE operationId = :operationId")
+    suspend fun markInFlight(operationId: String, state: String = OutboxState.IN_FLIGHT, attemptedAt: Long = System.currentTimeMillis())
+
+    @Query("UPDATE sync_outbox SET state = :state, lastError = :error WHERE operationId = :operationId")
+    suspend fun setState(operationId: String, state: String, error: String? = null)
+
+    @Query("DELETE FROM sync_outbox WHERE state = 'SUCCESS' AND createdAt < :before")
+    suspend fun deleteSuccessfulBefore(before: Long)
+}
+

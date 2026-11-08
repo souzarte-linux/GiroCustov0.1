@@ -2695,6 +2695,7 @@ class FakeSupabaseRestApi : SupabaseRestApi {
     }
 
     override suspend fun upsertUserGoals(goals: List<UserGoalsDto>): List<UserGoalsDto> {
+    override suspend fun syncUserGoals(request: SyncUserGoalsRpcRequest): SyncRpcResponseDto = SyncRpcResponseDto(status = "SUCCESS")
         if (shouldFail) throw IOException("Falha de rede simulada")
         upsertedUserGoals.addAll(goals)
         for (g in goals) {

@@ -170,6 +170,9 @@ interface SupabaseRestApi {
         @Body goals: List<UserGoalsDto>
     ): List<UserGoalsDto>
 
+    @POST("rest/v1/rpc/sync_user_goals_rpc")
+    suspend fun syncUserGoals(@Body request: SyncUserGoalsRpcRequest): SyncRpcResponseDto
+
     // RPC DE EXCLUSÃO DE CONTA (LGPD)
     @POST("rest/v1/rpc/delete_user_account")
     suspend fun deleteUserAccount(): Response<Unit>

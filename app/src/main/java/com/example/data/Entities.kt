@@ -486,9 +486,37 @@ data class UserGoals(
     val monthlyGoalKm: Double = 2500.0,
     val monthlyGoalDeliveries: Int = 400,
 
-    // Meta Anual
+    // Metas anuais e parâmetros de cálculo. Valores monetários são centavos.
+    @ColumnInfo(defaultValue = "0")
+    val annualGoalGross: Long = 0L,
     @ColumnInfo(defaultValue = "0")
     val annualGoalNet: Long = 0L,
+    @ColumnInfo(defaultValue = "0.0")
+    val annualGoalKm: Double = 0.0,
+    @ColumnInfo(defaultValue = "0")
+    val annualGoalDeliveries: Int = 0,
+    @ColumnInfo(defaultValue = "5")
+    val workDaysPerWeek: Int = 5,
+    @ColumnInfo(defaultValue = "21.67")
+    val workDaysPerMonth: Double = 21.67,
+    @ColumnInfo(defaultValue = "12")
+    val workMonthsPerYear: Int = 12,
+    @ColumnInfo(defaultValue = "0")
+    val workDaysPerMonthIsCustom: Boolean = false,
+    @ColumnInfo(defaultValue = "LEGACY_UNKNOWN")
+    val annualGrossOrigin: String = GoalOrigin.LEGACY_UNKNOWN,
+    @ColumnInfo(defaultValue = "LEGACY_UNKNOWN")
+    val annualNetOrigin: String = GoalOrigin.LEGACY_UNKNOWN,
+    @ColumnInfo(defaultValue = "LEGACY_UNKNOWN")
+    val annualKmOrigin: String = GoalOrigin.LEGACY_UNKNOWN,
+    @ColumnInfo(defaultValue = "LEGACY_UNKNOWN")
+    val annualDeliveriesOrigin: String = GoalOrigin.LEGACY_UNKNOWN,
+    @ColumnInfo(defaultValue = "0")
+    val annualGoalsInitialized: Boolean = false,
+    @ColumnInfo(defaultValue = "1")
+    val revision: Long = 1L,
+    @ColumnInfo(defaultValue = "0")
+    val userModifiedAt: Long = 0L,
 
     // Campos de Sincronização e Resolução de Conflitos
     @ColumnInfo(defaultValue = "")
@@ -541,4 +569,40 @@ data class UserGoals(
         isDeleted = isDeleted
     )
 }
+
+/** Proveniência de uma meta anual. Mantida como String para compatibilidade com Room. */
+object GoalOrigin {
+    const val DERIVED = "DERIVED"
+    const val USER_DEFINED = "USER_DEFINED"
+    const val LEGACY_UNKNOWN = "LEGACY_UNKNOWN"
+}
+
+object OutboxState {
+    const val PENDING = "PENDING"
+    const val IN_FLIGHT = "IN_FLIGHT"
+    const val SUCCESS = "SUCCESS"
+    const val FAILED_RETRYABLE = "FAILED_RETRYABLE"
+    const val CONFLICT = "CONFLICT"
+    const val DEAD_LETTER = "DEAD_LETTER"
+}
+
+@Entity(
+    tableName = "sync_outbox",
+    indices = [
+        Index(value = ["state", "createdAt"], name = "idx_sync_outbox_state_created"),
+        Index(value = ["userId"], name = "idx_sync_outbox_user_id")
+    ]
+)
+data class SyncOutboxOperation(
+    @PrimaryKey val operationId: String,
+    val userId: String,
+    val operationType: String,
+    val serializedPayload: String,
+    val baseRevision: Long,
+    val state: String = OutboxState.PENDING,
+    val createdAt: Long = System.currentTimeMillis(),
+    val lastAttemptAt: Long? = null,
+    val attemptCount: Int = 0,
+    val lastError: String? = null
+)
 
