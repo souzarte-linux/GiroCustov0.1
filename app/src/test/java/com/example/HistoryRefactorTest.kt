@@ -1022,9 +1022,8 @@ class HistoryRefactorTest {
         composeTestRule.onNodeWithTag("history_item_${rec.id}").performClick()
         composeTestRule.waitForIdle()
 
-        // Rola até o botão de excluir
-        composeTestRule.onNodeWithTag("history_list")
-            .performScrollToNode(hasTestTag("delete_record_btn_${rec.id}"))
+        // Rola até o botão de excluir no modo visualização
+        composeTestRule.onNodeWithTag("delete_record_btn_${rec.id}").performScrollTo()
 
         // Clica no botão de excluir (lixeira)
         composeTestRule.onNodeWithTag("delete_record_btn_${rec.id}").performClick()
@@ -1042,8 +1041,7 @@ class HistoryRefactorTest {
         composeTestRule.onNodeWithTag("delete_record_confirm_dialog").assertDoesNotExist()
 
         // Clica novamente na lixeira
-        composeTestRule.onNodeWithTag("history_list")
-            .performScrollToNode(hasTestTag("delete_record_btn_${rec.id}"))
+        composeTestRule.onNodeWithTag("delete_record_btn_${rec.id}").performScrollTo()
         composeTestRule.onNodeWithTag("delete_record_btn_${rec.id}").performClick()
         composeTestRule.waitForIdle()
 

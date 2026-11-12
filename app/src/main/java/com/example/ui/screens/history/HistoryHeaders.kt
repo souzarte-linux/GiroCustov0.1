@@ -70,6 +70,8 @@ import java.text.NumberFormat
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
@@ -1243,23 +1245,38 @@ fun DayHeaderView(
             .testTag("day_header_$label"),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Coluna da Timeline à esquerda (largura 32.dp, alinhamento central)
+        // Coluna da Timeline à esquerda (largura 32.dp, alinhamento central) com linha contínua entre os dias
         Column(
             modifier = Modifier
                 .width(32.dp)
-                .fillMaxHeight(),
+                .fillMaxHeight()
+                .drawBehind {
+                    val lineX = size.width / 2f
+                    val strokePx = 2.dp.toPx()
+                    val overflowPx = 14.dp.toPx()
+                    val nodeCenterY = 8.dp.toPx() + 10.dp.toPx()
+                    val nodeRadius = 10.dp.toPx()
+
+                    if (showTopLine) {
+                        drawLine(
+                            color = Color(0xFF334155),
+                            start = Offset(lineX, -overflowPx),
+                            end = Offset(lineX, nodeCenterY - nodeRadius),
+                            strokeWidth = strokePx
+                        )
+                    }
+                    if (showBottomLine) {
+                        drawLine(
+                            color = Color(0xFF334155),
+                            start = Offset(lineX, nodeCenterY + nodeRadius),
+                            end = Offset(lineX, size.height + overflowPx),
+                            strokeWidth = strokePx
+                        )
+                    }
+                },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (showTopLine) {
-                Box(
-                    modifier = Modifier
-                        .width(2.dp)
-                        .height(8.dp)
-                        .background(Color(0xFF334155))
-                )
-            } else {
-                Spacer(modifier = Modifier.height(8.dp))
-            }
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Nó luminoso circular (altura e largura 20.dp)
             Box(
@@ -1289,16 +1306,7 @@ fun DayHeaderView(
                 )
             }
 
-            if (showBottomLine) {
-                Box(
-                    modifier = Modifier
-                        .width(2.dp)
-                        .weight(1f)
-                        .background(Color(0xFF334155))
-                )
-            } else {
-                Spacer(modifier = Modifier.weight(1f))
-            }
+            Spacer(modifier = Modifier.weight(1f))
         }
 
         Spacer(modifier = Modifier.width(8.dp))

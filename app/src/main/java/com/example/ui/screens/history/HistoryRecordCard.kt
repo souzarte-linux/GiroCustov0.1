@@ -156,7 +156,8 @@ fun HistoryRecordCard(
     isPrivacyEnabled: Boolean = false,
     isInTimeline: Boolean = false,
     isLastInDay: Boolean = false,
-    initiallyExpanded: Boolean = false
+    initiallyExpanded: Boolean = false,
+    onCardClick: (() -> Unit)? = null
 ) {
     var expanded by remember { mutableStateOf(initiallyExpanded) }
     val badgeInfo = remember(record.platform) { getPlatformBrandBadge(record.platform) }
@@ -167,7 +168,13 @@ fun HistoryRecordCard(
                 .fillMaxWidth()
                 .testTag("history_item_${record.id}")
                 .clip(RoundedCornerShape(12.dp))
-                .clickable { expanded = !expanded },
+                .clickable {
+                    if (onCardClick != null) {
+                        onCardClick()
+                    } else {
+                        expanded = !expanded
+                    }
+                },
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
             shape = RoundedCornerShape(12.dp),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
@@ -541,16 +548,19 @@ fun HistoryRecordCard(
             Box(
                 modifier = Modifier
                     .width(32.dp)
-                    .fillMaxHeight(),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .width(2.dp)
-                        .fillMaxHeight()
-                        .background(Color(0xFF334155))
-                )
-            }
+                    .fillMaxHeight()
+                    .drawBehind {
+                        val lineX = size.width / 2f
+                        val strokePx = 2.dp.toPx()
+                        val overflowPx = 14.dp.toPx()
+                        drawLine(
+                            color = Color(0xFF334155),
+                            start = Offset(lineX, -overflowPx),
+                            end = Offset(lineX, size.height + overflowPx),
+                            strokeWidth = strokePx
+                        )
+                    }
+            )
             Box(modifier = Modifier.weight(1f)) {
                 cardContent()
             }

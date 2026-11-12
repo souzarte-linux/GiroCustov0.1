@@ -772,4 +772,41 @@
     <string name="cd_theme_select">Selecionar tema %1$s</string>
     <string name="cd_theme_selected">Tema %1$s selecionado atualmente</string>
     <string name="drawer_section_settings_appearance">CONFIGURAÇÕES &amp; APARÊNCIA</string>
+
+    <!-- Histórico: Modo Visualização e Compartilhamento -->
+    <string name="history_view_mode_title">Modo Visualização</string>
+    <string name="history_share_dialog_title">Compartilhar Registro</string>
+    <string name="history_share_dialog_subtitle">Escolha o formato para envio:</string>
+    <string name="history_share_option_image">Imagem (PNG)</string>
+    <string name="history_share_option_pdf">Documento (PDF)</string>
+    <string name="history_share_chooser_title">Compartilhar comprovante de rota</string>
+    <string name="history_route_default_name">Origem: Base ➔ Destino: Região de Entrega</string>
+    <string name="history_card_route_total_value">VALOR TOTAL DA ROTA</string>
+    <string name="history_card_distance_traveled">DISTÂNCIA PERCORRIDA</string>
+    <string name="history_odo_initial_line">ODÔMETRO INICIAL: %1$s KM</string>
+    <string name="history_odo_final_line">ODÔMETRO FINAL: %1$s KM</string>
+    <string name="history_dist_traveled_line">DIST. PERCORRIDO: %1$s KM</string>
+    <string name="history_card_shift_time">HORÁRIO DA JORNADA</string>
+    <string name="history_card_deliveries_prod">ENTREGAS &amp; PRODUTIVIDADE</string>
+    <string name="history_card_operating_costs">CUSTOS OPERACIONAIS</string>
+    <string name="history_card_net_result">LUCRO LÍQUIDO</string>
+    <string name="history_shift_start_label">Início</string>
+    <string name="history_shift_end_label">Término</string>
+    <string name="history_shift_pause_label">Pausa</string>
+    <string name="history_shift_total_work_label">Tempo Online</string>
+    <string name="history_metric_total_deliveries">Total de Entregas</string>
+    <string name="history_metric_hourly_rate">Média por Hora</string>
+    <string name="history_metric_km_per_delivery">Km por Entrega</string>
+    <string name="history_cost_fuel">Combustível</string>
+    <string name="history_cost_wear">Desgaste de Peças</string>
+    <string name="history_cost_food">Alimentação / Outros</string>
+    <string name="history_cost_fixed">Custo Fixo Diário</string>
+    <string name="history_total_cost">Custo Total</string>
+    <string name="history_gross_route_subtitle">Faturamento bruto apurado na rota</string>
+    <string name="history_net_route_subtitle">Saldo limpo após todos os descontos operacionais</string>
+    <string name="cd_share_record">Compartilhar registro</string>
+    <string name="cd_edit_record_view">Editar registro</string>
+    <string name="cd_back_from_detail">Voltar para a lista do histórico</string>
+    <string name="history_share_success">Comprovante gerado com sucesso</string>
+    <string name="history_share_error">Não foi possível gerar o arquivo para compartilhamento</string>
 </resources>

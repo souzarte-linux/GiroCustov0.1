@@ -40,6 +40,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import com.example.ui.screens.history.HistoryRecordDetailScreen
 
 
 @Composable
@@ -65,6 +66,7 @@ fun HistoryScreen(
 
     var showEditDialog by remember { mutableStateOf(false) }
     var recordToEdit by remember { mutableStateOf<DailyRecord?>(null) }
+    var selectedRecordForDetail by remember { mutableStateOf<DailyRecord?>(null) }
 
     // Busca Textual
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -118,13 +120,31 @@ fun HistoryScreen(
         filterAndSortHistoryRecords(records, filterState, searchQuery)
     }
 
+    val activeDetailRecord = remember(records, selectedRecordForDetail) {
+        selectedRecordForDetail?.let { sel -> records.find { it.id == sel.id } ?: sel }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        if (activeDetailRecord != null) {
+            HistoryRecordDetailScreen(
+                record = activeDetailRecord,
+                onBack = { selectedRecordForDetail = null },
+                onEdit = {
+                    recordToEdit = activeDetailRecord
+                    showEditDialog = true
+                },
+                onDelete = {
+                    recordToDelete = activeDetailRecord
+                },
+                isPrivacyEnabled = isPrivacyEnabled
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
         // TopBar: Título + Botão de Privacidade + Botão de Tema
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -410,7 +430,10 @@ fun HistoryScreen(
                                         recordToDelete = item.record
                                     },
                                     isPrivacyEnabled = isPrivacyEnabled,
-                                    isInTimeline = true
+                                    isInTimeline = true,
+                                    onCardClick = {
+                                        selectedRecordForDetail = item.record
+                                    }
                                 )
                             }
                         }
@@ -429,11 +452,15 @@ fun HistoryScreen(
                             onDeleteClick = {
                                 recordToDelete = record
                             },
-                            isPrivacyEnabled = isPrivacyEnabled
+                            isPrivacyEnabled = isPrivacyEnabled,
+                            onCardClick = {
+                                selectedRecordForDetail = record
+                            }
                         )
                     }
                 }
             }
+        }
         }
     }
 
@@ -500,6 +527,9 @@ fun HistoryScreen(
                     onClick = {
                         val target = toDelete
                         recordToDelete = null
+                        if (selectedRecordForDetail?.id == target.id) {
+                            selectedRecordForDetail = null
+                        }
                         viewModel.deleteDailyRecord(target)
                         coroutineScope.launch {
                             val result = snackbarHostState.showSnackbar(
